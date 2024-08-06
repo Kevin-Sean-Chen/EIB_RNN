@@ -44,8 +44,8 @@ def phi(x):
 pc = 0.5  # connection probability (fraction that are 0)
 K = pc*Ne  # degree of connectivity
 rescale_c = 1/((K)**0.5)*2  # am not sure if this is correct...
-c_ee, c_ei, c_ie, c_ii = dilute_net(Ne, pc)*1, dilute_net(Ne, pc)*1,\
-                         dilute_net(Ne, pc)*1, dilute_net(Ne, pc)*1
+c_ee, c_ei, c_ie, c_ii = dilute_net(Ne, pc), dilute_net(Ne, pc),\
+                         dilute_net(Ne, pc), dilute_net(Ne, pc)
 
 ### weights and rescaling
 Jee = 1.0*rescale_c  # recurrent weights
@@ -73,6 +73,7 @@ rit = vit*1
 measure_e = np.zeros(lt)
 measure_i = np.zeros(lt)
 
+### for stimulus scanning
 stim = np.zeros(lt) + Je0
 # stim[lt//2:] = 2  # lifting input
 
@@ -103,25 +104,17 @@ for tt in range(lt-1):
 offset = 50  # to remove effects from initial condition
 select_n = 20
 plt.figure()
-plt.plot(time[offset:], ret[:select_n, offset:].T)
+plt.plot(time[offset:], ret[:select_n, offset:].T/dt)
 plt.xlabel('time (s)', fontsize=20)
-plt.ylabel('rate', fontsize=20)
-
-# %%
-plt.figure()
-plt.plot(time[offset:], -np.mean(vet,0)[offset:], label='excitation')
-plt.plot(time[offset:], np.mean(vit,0)[offset:], label='inhibition')
-plt.plot(time[offset:], (np.mean(vet,0)-np.mean(vit,0))[offset:],'--', label='total')
-# plt.plot(time[offset:], np.mean(ret,0)[offset:], 'k')
-plt.legend(fontsize=10)
-plt.xlabel('time (s)', fontsize=20)
-plt.ylabel('population r', fontsize=20)
-# plt.xlim([0.9, 1.1])
+plt.ylabel('rate (Hz)', fontsize=20)
+plt.title('firing rate', fontsize=20)
 
 # %%
 plt.figure()
 plt.plot(time[offset:], measure_e[offset:], label='excitation')
 plt.plot(time[offset:], measure_i[offset:], label='inhibition')
 plt.plot(time[offset:], (measure_e + measure_i)[offset:], '--', label='total')
-
-
+plt.legend(fontsize=10)
+plt.xlabel('time (s)', fontsize=20)
+plt.ylabel('input current', fontsize=20)
+plt.title('balancing input', fontsize=20)
