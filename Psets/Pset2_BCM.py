@@ -80,7 +80,7 @@ time = np.arange(0,T,dt)
 lt = len(time)
 def NL(x):
     # nl = np.where(x > 0, x, 0)   ### ReLU
-    rmax, theta, beta = 10, -10, 1/10
+    rmax, theta, beta = 10, -5, 1/10
     nl = rmax/(1+np.exp(-beta*(x - theta)))  ### sigmoid version
     return nl
 

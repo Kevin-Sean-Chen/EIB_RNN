@@ -58,15 +58,15 @@ matplotlib.rc('ytick', labelsize=20)
 N = 70  # neurons
 tau_e = 0.005  # time constant ( 5ms in seconds )
 sig_e = 0.1  # spatial kernel
-tau_i, sig_i = 15*0.001, 0.1
+tau_i, sig_i = 12*0.001, 0.1
 
-rescale = (N*sig_e*np.pi*1)**0.5 #1
-Wee = 1.*(N*sig_e*np.pi*1)**0.5  # recurrent weights
-Wei = -2.*(N*sig_i*np.pi*1)**0.5
-Wie = 1.*(N*sig_e*np.pi*1)**0.5
-Wii = -2.*(N*sig_i*np.pi*1)**0.5
-mu_e = 1.*(N*sig_i*np.pi*1)**0.5  #1e-8#.001*1  # offset
-mu_i = 1.*(N*sig_i*np.pi*1)**0.5  #1e-8#.001*1
+rescale = 1.7 ##(N*sig_e*np.pi*1)**0.5 #1
+Wee = 1.*(N*sig_e*np.pi*1)**0.5 *rescale  # recurrent weights
+Wei = -2.*(N*sig_i*np.pi*1)**0.5 *rescale
+Wie = 1.*(N*sig_e*np.pi*1)**0.5 *rescale
+Wii = -2.*(N*sig_i*np.pi*1)**0.5 *rescale
+mu_e = 1.*(N*sig_i*np.pi*1)**0.5 *rescale  #1e-8#.001*1  # offset
+mu_i = 1.*(N*sig_i*np.pi*1)**0.5 *rescale  #1e-8#.001*1
 
 # %% network setup
 ### setting up space and time
@@ -152,6 +152,7 @@ plt.plot(time[offset:], measure_i[offset:])
 plt.plot(time[offset:], (measure_e+measure_i)[offset:])
 plt.xlabel('time (s)', fontsize=20)
 plt.ylabel('current', fontsize=20)
+plt.title('spatial balancing', fontsize=20)
 
 # %% plot dynamics
 offset = 1

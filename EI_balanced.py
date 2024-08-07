@@ -21,8 +21,8 @@ matplotlib.rc('ytick', labelsize=20)
 
 # %% EI-RNN setup
 ### network and weights
-Ne = 500  # E neurons
-Ni = 500  # I neurons
+Ne = 1000  # E neurons
+Ni = 1000  # I neurons
 
 def dilute_net(size, pc):
     cij = np.zeros((size, size))
@@ -35,15 +35,16 @@ def dilute_net(size, pc):
     ###
     return cij
 def phi(x):
-    # nl = np.where(x > 0, x, 0)  # ReLU nonlinearity
-    nl = np.where(x > 0, np.tanh(x), 0)  # nonlinearity for rate equation
+    nl = np.where(x > 0, x, 0)  # ReLU nonlinearity
+    # nl = np.where(x > 0, np.tanh(x), 0)  # nonlinearity for rate equation
     return nl
 
+finite_scale = 1.5  ### this is hand-tuned to correct for finite size
 ### N = total number of neurons.
 ### K = mean number of connections per neuron
-pc = 0.5  # connection probability (fraction that are 0)
-K = pc*Ne  # degree of connectivity
-rescale_c = 1/((K)**0.5)*2  # am not sure if this is correct...
+pc = 0.6  # connection probability (fraction that are 0)
+K = pc*(Ne)  # degree of connectivity
+rescale_c = 1/(K**0.5)*finite_scale  # am not sure if this is correct... but might be for finite size network
 c_ee, c_ei, c_ie, c_ii = dilute_net(Ne, pc), dilute_net(Ne, pc),\
                          dilute_net(Ne, pc), dilute_net(Ne, pc)
 
@@ -51,13 +52,12 @@ c_ee, c_ei, c_ie, c_ii = dilute_net(Ne, pc), dilute_net(Ne, pc),\
 Jee = 1.0*rescale_c  # recurrent weights
 Jei = -2.0*rescale_c
 Jie = 1.0*rescale_c
-Jii = -2.0*rescale_c# -1.8
+Jii = -2.0*rescale_c # -1.8
 Je0 = 1.0*rescale_c
 Ji0 = 1.0*rescale_c #0.8
 
-
 ### time scales
-tau = 0.005  # in seconds
+tau = 0.01  # in seconds
 dt = 0.001  # time step
 T = 2.
 time = np.arange(0, T, dt)
@@ -91,8 +91,8 @@ for tt in range(lt-1):
     rit[:,tt+1] = phi(vit[:,tt+1])*1
     
     ### measuring the input current
-    measure_e[tt] = (Jee*c_ee@phi(vet[:,tt]) + Je0)[30]
-    measure_i[tt] = (Jei*c_ei@phi(vit[:,tt]))[30]
+    measure_e[tt+1] = (Jee*c_ee@phi(vet[:,tt+1]) + Je0)[30]
+    measure_i[tt+1] = (Jei*c_ei@phi(vit[:,tt+1]))[30]
         
 # %% for stimulus tuning
 # plt.figure()
@@ -111,10 +111,11 @@ plt.title('firing rate', fontsize=20)
 
 # %%
 plt.figure()
-plt.plot(time[offset:], measure_e[offset:], label='excitation')
-plt.plot(time[offset:], measure_i[offset:], label='inhibition')
-plt.plot(time[offset:], (measure_e + measure_i)[offset:], '--', label='total')
+plt.plot(time[offset:], measure_e[offset:]/(dt/tau), label='excitation')
+plt.plot(time[offset:], measure_i[offset:]/(dt/tau), label='inhibition')
+plt.plot(time[offset:], (measure_e + measure_i)[offset:]/(dt/tau), '--', label='total')
 plt.legend(fontsize=10)
 plt.xlabel('time (s)', fontsize=20)
 plt.ylabel('input current', fontsize=20)
 plt.title('balancing input', fontsize=20)
+# plt.xlim([0,0.3])
