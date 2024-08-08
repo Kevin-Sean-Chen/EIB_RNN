@@ -39,10 +39,10 @@ def phi(x):
     # nl = np.where(x > 0, np.tanh(x), 0)  # nonlinearity for rate equation
     return nl
 
-finite_scale = 1.5  ### this is hand-tuned to correct for finite size
+finite_scale = 2.  ### this is hand-tuned to correct for finite size
 ### N = total number of neurons.
 ### K = mean number of connections per neuron
-pc = 0.6  # connection probability (fraction that are 0)
+pc = 0.5 # connection probability (fraction that are 0)
 K = pc*(Ne)  # degree of connectivity
 rescale_c = 1/(K**0.5)*finite_scale  # am not sure if this is correct... but might be for finite size network
 c_ee, c_ei, c_ie, c_ii = dilute_net(Ne, pc), dilute_net(Ne, pc),\
@@ -52,12 +52,12 @@ c_ee, c_ei, c_ie, c_ii = dilute_net(Ne, pc), dilute_net(Ne, pc),\
 Jee = 1.0*rescale_c  # recurrent weights
 Jei = -2.0*rescale_c
 Jie = 1.0*rescale_c
-Jii = -2.0*rescale_c # -1.8
-Je0 = 1.0*rescale_c
-Ji0 = 1.0*rescale_c #0.8
+Jii = -1.8*rescale_c # -1.8
+Je0 = 0.9*1 #rescale_c   # does NOT scale with K if we are using a baseline!
+Ji0 = 0.5*1 #rescale_c #0.8
 
 ### time scales
-tau = 0.01  # in seconds
+tau = 0.009  # in seconds
 dt = 0.001  # time step
 T = 2.
 time = np.arange(0, T, dt)
@@ -110,10 +110,11 @@ plt.ylabel('rate (Hz)', fontsize=20)
 plt.title('firing rate', fontsize=20)
 
 # %%
+per_time = 1
 plt.figure()
-plt.plot(time[offset:], measure_e[offset:]/(dt/tau), label='excitation')
-plt.plot(time[offset:], measure_i[offset:]/(dt/tau), label='inhibition')
-plt.plot(time[offset:], (measure_e + measure_i)[offset:]/(dt/tau), '--', label='total')
+plt.plot(time[offset:], measure_e[offset:]/(per_time), label='excitation')  # input across a window
+plt.plot(time[offset:], measure_i[offset:]/(per_time), label='inhibition')
+plt.plot(time[offset:], (measure_e + measure_i)[offset:]/(per_time), '--', label='total')
 plt.legend(fontsize=10)
 plt.xlabel('time (s)', fontsize=20)
 plt.ylabel('input current', fontsize=20)

@@ -58,15 +58,19 @@ matplotlib.rc('ytick', labelsize=20)
 N = 70  # neurons
 tau_e = 0.005  # time constant ( 5ms in seconds )
 sig_e = 0.1  # spatial kernel
-tau_i, sig_i = 12*0.001, 0.1
+tau_i, sig_i = 10*0.001, 0.1   ### imporat parameters!!
+### moving dots 5ms, 0.2
+### little coherence 5ms, 0.1
+### chaotic waves 10ms, 0.1
+### drifting changing blobs 10ms, 0.2
 
-rescale = 1.7 ##(N*sig_e*np.pi*1)**0.5 #1
-Wee = 1.*(N*sig_e*np.pi*1)**0.5 *rescale  # recurrent weights
-Wei = -2.*(N*sig_i*np.pi*1)**0.5 *rescale
-Wie = 1.*(N*sig_e*np.pi*1)**0.5 *rescale
-Wii = -2.*(N*sig_i*np.pi*1)**0.5 *rescale
-mu_e = 1.*(N*sig_i*np.pi*1)**0.5 *rescale  #1e-8#.001*1  # offset
-mu_i = 1.*(N*sig_i*np.pi*1)**0.5 *rescale  #1e-8#.001*1
+rescale = 2. ##(N*sig_e*np.pi*1)**0.5 #1
+Wee = 1.*(N**2*sig_e**2*np.pi*1)**0.5 *rescale  # recurrent weights
+Wei = -2.*(N**2*sig_i**2*np.pi*1)**0.5 *rescale
+Wie = 1.*(N**2*sig_e**2*np.pi*1)**0.5 *rescale
+Wii = -2.*(N**2*sig_i**2*np.pi*1)**0.5 *rescale
+mu_e = 1.*rescale #*(N*sig_i*np.pi*1)**0.5 *rescale  #1e-8#.001*1  # offset
+mu_i = 1.*rescale #*(N*sig_i*np.pi*1)**0.5 *rescale  #1e-8#.001*1
 
 # %% network setup
 ### setting up space and time
@@ -92,9 +96,9 @@ def phi(x):
     rectified quardratic nonlinearity
     """
     # nl = np.where(x > 0, x**2, 0)
-    nl = np.where(x > 0, x*1, 0)  ### why a scaling factor needed!?????????????????????
+    # nl = np.where(x > 0, x*10, 0)  ### why a scaling factor needed!?????????????????????
     # nl = 1/(1+np.exp(-x))
-    # nl = np.where(x > 0, np.tanh(x)*10, 0)
+    nl = np.where(x > 0, np.tanh(x)*1, 0)
     return nl
 
 def g_kernel(sigma, size=kernel_size):
@@ -165,15 +169,6 @@ plt.ylabel('rate (Hz)', fontsize=20)
 # plt.xlim([0.1,0.14])
 
 # %%
-plt.figure()
-plt.plot(time[offset:], np.mean(np.mean(re_xy[:,:,offset:],0),0), label='excitation')
-plt.plot(time[offset:], -np.mean(np.mean(ri_xy[:,:,offset:],0),0), label='inhibition')
-plt.plot(time[offset:], np.mean(np.mean(ri_xy[:,:,offset:],0)) - np.mean(np.mean(ri_xy[:,:,offset:],0),0), label='total')
-plt.xlabel('time (s)', fontsize=20)
-plt.ylabel('population rate (Hz)', fontsize=20)
-plt.legend(fontsize=15)
-
-# %%
 # plt.figure()
 # plt.plot(time[offset:]-.25, np.mean(np.mean(re_xy[:,:,offset:],0),0), label='sigma=.1')
 # plt.plot(time[offset:]-.25, temp, label='sigma=.15')
@@ -198,7 +193,8 @@ ani = FuncAnimation(fig, update, frames=data.shape[-1], blit=False)
 plt.show()
 
 # %% make video
-# ###Generate example data (random 10x10x100 tensor)
+###Generate example data (random 10x10x100 tensor)
+# gif_name = 'wave_like'
 # data = re_xy[:,:,100:]*1
 
 # # Function to create a frame with the iteration number in the title
@@ -221,10 +217,10 @@ plt.show()
 #     frames.append(Image.fromarray(image))
 
 # # Save frames as a GIF
-# frames[0].save('animation.gif', save_all=True, append_images=frames[1:], duration=100, loop=0)
+# frames[0].save(gif_name+'.gif', save_all=True, append_images=frames[1:], duration=100, loop=0)
 
 # # Check if the GIF plays correctly
 # from IPython.display import display, Image as IPImage
-# display(IPImage(filename='animation.gif'))
+# display(IPImage(filename=gif_name+'.gif'))
 
 
