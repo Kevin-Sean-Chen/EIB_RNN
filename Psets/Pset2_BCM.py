@@ -72,7 +72,7 @@ Jac = np.array([[-1+ws, wo],
 ###############################################################################
 # %% (II) perceptual rivalry
 ###############################################################################
-ws = 0.2
+ws = 0.2*1
 wo = -0.7*10
 W = np.array([[ws, wo],[wo, ws]])
 T = 100  # in seconds
@@ -80,12 +80,12 @@ time = np.arange(0,T,dt)
 lt = len(time)
 def NL(x):
     # nl = np.where(x > 0, x, 0)   ### ReLU
-    rmax, theta, beta = 10, -5, 1/10
+    rmax, theta, beta = 10, -0, 1/4
     nl = rmax/(1+np.exp(-beta*(x - theta)))  ### sigmoid version
     return nl
 
 ### new input and noist parameter
-It = np.zeros((2,lt)) + np.array([50, 50])[:,None] 
+It = np.zeros((2,lt)) + np.array([20, 20])[:,None] 
 vt = np.zeros((2,lt))
 rt = vt*1
 D = 100  # noise level
@@ -99,6 +99,7 @@ plt.figure()
 plt.plot(time, rt.T)
 plt.xlabel('time', fontsize=20)
 plt.ylabel('activity', fontsize=20)
+# plt.xlim([0,50])
 
 # %% bistable proof
 plt.figure()

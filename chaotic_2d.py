@@ -55,10 +55,10 @@ matplotlib.rc('ytick', labelsize=20)
 ### D, chaotic solution (τi = 12.8, σi = 0.096).
 
 # %% test to simplify
-N = 70  # neurons
+N = 100  # neurons
 tau_e = 0.005  # time constant ( 5ms in seconds )
 sig_e = 0.1  # spatial kernel
-tau_i, sig_i = 10*0.001, 0.1   ### imporat parameters!!
+tau_i, sig_i = 15*0.001, 0.1   ### imporat parameters!!
 ### moving dots 5ms, 0.2
 ### little coherence 5ms, 0.1
 ### chaotic waves 10ms, 0.1
@@ -70,7 +70,7 @@ Wei = -2.*(N**2*sig_i**2*np.pi*1)**0.5 *rescale
 Wie = 1.*(N**2*sig_e**2*np.pi*1)**0.5 *rescale
 Wii = -2.*(N**2*sig_i**2*np.pi*1)**0.5 *rescale
 mu_e = 1.*rescale #*(N*sig_i*np.pi*1)**0.5 *rescale  #1e-8#.001*1  # offset
-mu_i = 1.*rescale #*(N*sig_i*np.pi*1)**0.5 *rescale  #1e-8#.001*1
+mu_i = .8*rescale #*(N*sig_i*np.pi*1)**0.5 *rescale  #1e-8#.001*1
 
 # %% network setup
 ### setting up space and time
@@ -86,17 +86,24 @@ kernel_size = 20  # pick this for numerical convolution
 ### random initial conditions
 re_xy[:,:,0] = np.random.rand(N,N)*.1
 ri_xy[:,:,0] = np.random.rand(N,N)*.1
+# re_xy[0,49,0] = 20
 he_xy = re_xy*1
 hi_xy = ri_xy*1
+
+### measure one cell
 measure_e = np.zeros(lt)
 measure_i = np.zeros(lt)
+
+### measure the field
+measure_mu = np.zeros((N,N,lt))
+measure_mu_ex = np.zeros((N,N,lt))
 
 def phi(x):
     """
     rectified quardratic nonlinearity
     """
     # nl = np.where(x > 0, x**2, 0)
-    # nl = np.where(x > 0, x*10, 0)  ### why a scaling factor needed!?????????????????????
+    # nl = np.where(x > 0, x*1, 0)  ### why a scaling factor needed!?????????????????????
     # nl = 1/(1+np.exp(-x))
     nl = np.where(x > 0, np.tanh(x)*1, 0)
     return nl
@@ -148,6 +155,11 @@ for tt in range(lt-1):
     measure_e[tt+1] = (Wee*ge_conv_re + mu_e)[20,20]
     measure_i[tt+1] = (Wei*gi_conv_ri)[20,20]
     
+    
+    ### mean measurements
+    measure_mu[:,:,tt+1] = np.abs(  (Wee*(ge_conv_re) + Wei*(gi_conv_ri) + mu_e) )
+    measure_mu_ex[:,:,tt+1] = (Wee*ge_conv_re + mu_e)
+    
 # %%
 offset = 50
 plt.figure()
@@ -176,7 +188,10 @@ plt.ylabel('rate (Hz)', fontsize=20)
 # plt.xlim([-0.04, 0.04])
 
 # %% visualize
-data = re_xy[:,:,1:]*1
+### for rate
+# data = re_xy[:,:,1:]*1
+### for beta
+data = measure_mu / measure_mu_ex
 fig, ax = plt.subplots()
 cax = ax.matshow(data[:, :, 0], cmap='gray')
 fig.colorbar(cax)
@@ -186,6 +201,35 @@ def update(frame):
     cax = ax.matshow(data[:, :, frame], cmap='gray')
     ax.set_title(f"Iteration {frame+1}")
     return cax,
+
+# Create the animation
+ani = FuncAnimation(fig, update, frames=data.shape[-1], blit=False)
+
+plt.show()
+
+# %% for beta comparison
+
+data_r = re_xy*1  # excitatroy network
+beta_t = measure_mu / measure_mu_ex  # beta dynamics
+
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 5))
+
+# Initial plots for the first frame
+cax1 = ax1.matshow(data_r[:, :, 0], cmap='gray')
+cax2 = ax2.matshow(beta_t[:, :, 0], cmap='gray')
+
+# Add colorbars
+fig.colorbar(cax1, ax=ax1)
+fig.colorbar(cax2, ax=ax2)
+
+def update(frame):
+    ax1.clear()
+    ax2.clear()
+    cax1 = ax1.matshow(data_r[:, :, frame], cmap='gray')
+    cax2 = ax2.matshow(beta_t[:, :, frame], cmap='gray')
+    ax1.set_title(f"Iteration {frame+1} - Subplot 1")
+    ax2.set_title(f"Iteration {frame+1} - Subplot 2")
+    return cax1, cax2
 
 # Create the animation
 ani = FuncAnimation(fig, update, frames=data.shape[-1], blit=False)
