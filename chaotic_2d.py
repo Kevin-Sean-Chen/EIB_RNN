@@ -40,38 +40,38 @@ matplotlib.rc('ytick', labelsize=20)
 
 ###############################################################################
 # %% network parameters
-# N = 70  # neurons
-# Wee = 80*2  # recurrent weights
-# Wei = -160*2
-# Wie = 80*2
-# Wii = -150*2
-# tau_e = 0.005  # time constant ( 5ms in seconds )
-# sig_e = 0.1  # spatial kernel
-# mu_e = 0.48*10  # offset
-# mu_i = 0.32*10
-# tau_i, sig_i = 6*0.001, 0.11
-# ### A, traveling waves solution (τi = 8, σi = 0.1). 
-# ### B, alternating bumps solution (τi = 9, σi = 0.06). 
-# ### C, alternating stripes solution (τi = 9, σi = 0.1). 
-# ### D, chaotic solution (τi = 12.8, σi = 0.096).
-
-# %% test to simplify
 N = 70  # neurons
+Wee = 80*1  # recurrent weights
+Wei = -160*1
+Wie = 80*1
+Wii = -150*1
 tau_e = 0.005  # time constant ( 5ms in seconds )
 sig_e = 0.1  # spatial kernel
-tau_i, sig_i = 12*0.001, 0.2   ### imporat parameters!!
-### moving dots 5ms, 0.2
-### little coherence 5ms, 0.1
-### chaotic waves 10ms, 0.1
-### drifting changing blobs 10ms, 0.2
+mu_e = 0.48*10  # offset
+mu_i = 0.32*10
+tau_i, sig_i = 6*0.001, 0.11
+### A, traveling waves solution (τi = 8, σi = 0.1). 
+### B, alternating bumps solution (τi = 9, σi = 0.06). 
+### C, alternating stripes solution (τi = 9, σi = 0.1). 
+### D, chaotic solution (τi = 12.8, σi = 0.096).
 
-rescale = 2. ##(N*sig_e*np.pi*1)**0.5 #1
-Wee = 1.*(N**2*sig_e**2*np.pi*1)**0.5 *rescale  # recurrent weights
-Wei = -2.*(N**2*sig_i**2*np.pi*1)**0.5 *rescale
-Wie = 1.*(N**2*sig_e**2*np.pi*1)**0.5 *rescale
-Wii = -2.*(N**2*sig_i**2*np.pi*1)**0.5 *rescale
-mu_e = .7*rescale #*(N*sig_i*np.pi*1)**0.5 *rescale  #1e-8#.001*1  # offset
-mu_i = .7*rescale #*(N*sig_i*np.pi*1)**0.5 *rescale  #1e-8#.001*1
+# %% test to simplify
+# N = 70  # neurons
+# tau_e = 0.005  # time constant ( 5ms in seconds )
+# sig_e = 0.1  # spatial kernel
+# tau_i, sig_i = 10*0.001, 0.3   ### imporat parameters!!
+# ### moving dots 5ms, 0.2
+# ### little coherence 5ms, 0.1
+# ### chaotic waves 10ms, 0.1
+# ### drifting changing blobs 10ms, 0.2
+
+# rescale = 2. ##(N*sig_e*np.pi*1)**0.5 #1
+# Wee = 1.*(N**2*sig_e**2*np.pi*1)**0.5 *rescale  # recurrent weights
+# Wei = -2.*(N**2*sig_i**2*np.pi*1)**0.5 *rescale
+# Wie = 1.*(N**2*sig_e**2*np.pi*1)**0.5 *rescale
+# Wii = -2.*(N**2*sig_i**2*np.pi*1)**0.5 *rescale
+# mu_e = .7*rescale #*(N*sig_i*np.pi*1)**0.5 *rescale  #1e-8#.001*1  # offset
+# mu_i = .7*rescale #*(N*sig_i*np.pi*1)**0.5 *rescale  #1e-8#.001*1
 
 # %% network setup
 ### setting up space and time
@@ -313,9 +313,11 @@ def group_spectrum(data, dt=dt):
 
 plt.figure()
 test,ff = group_spectrum(re_xy)
-plt.loglog(ff,test)
+# plt.loglog(ff,test)
+plt.plot(ff[2:],test[2:])
 plt.xlabel('Frequency (Hz)', fontsize=20)
 plt.ylabel('Power', fontsize=20)
+plt.xlim([1,200])
 
 # %%
 # def spatial_cross_correlation(data, window):
@@ -349,9 +351,3 @@ plt.ylabel('Power', fontsize=20)
 #             cross_corr_matrix[j, i] = cross_corr[t-1]
     
 #     return cross_corr_matrix
-
-# %% analysis 
-
-
-
-

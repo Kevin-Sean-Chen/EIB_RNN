@@ -104,7 +104,7 @@ for tt in range(lt-1):
 offset = 50  # to remove effects from initial condition
 select_n = 20
 plt.figure()
-plt.plot(time[offset:], ret[:select_n, offset:].T/1)
+plt.plot(time[offset:], ret[:select_n, offset:].T/dt)
 plt.xlabel('time (s)', fontsize=20)
 plt.ylabel('rate (Hz)', fontsize=20)
 plt.title('firing rate', fontsize=20)
