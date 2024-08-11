@@ -43,11 +43,12 @@ rescale = 2. ### seems to matter for finite size(?)
 # %% time and space setup
 ### setting up space and time
 dt = 0.001  # 1ms time steps
-T = 1.0  # a few seconds of simulation
+T = 2.0  # a few seconds of simulation
 time = np.arange(0, T, dt)
 lt = len(time)
 space_vec = np.linspace(0,1,N)
 kernel_size = 23  # pick this for numerical convolution
+offset = 50  ### remove initial part to get rid of transient effects
 
 # %% scanning choices
 sig_ie = np.array([0.5, 1.0, 1.5, 2.0])  # ratio between i and e length scales
@@ -105,13 +106,27 @@ def group_spectrum(data, dt=dt):
 
 # %% 2D-conv network function
 def chaotic_2d_net(sig_i, tau_i):
+    
+    #################################################
+    ######## Mean field condition
+    Wee = 80*2  # recurrent weights
+    Wei = -160*2
+    Wie = 80*2
+    Wii = -150*2
+    mu_e = 0.48*10  # offset
+    mu_i = 0.32*10
+    #################################################
+    #################################################
+    ######## Balancing condition 
+    #################################################
     ### rescaling parameters for balance condition
-    Wee = 1.*(N**2*sig_e**2*np.pi*1)**0.5 *rescale  # recurrent weights
-    Wei = -2.*(N**2*sig_i**2*np.pi*1)**0.5 *rescale
-    Wie = 1.*(N**2*sig_e**2*np.pi*1)**0.5 *rescale
-    Wii = -2.*(N**2*sig_i**2*np.pi*1)**0.5 *rescale
-    mu_e = .7*rescale
-    mu_i = .7*rescale
+    # Wee = 1.*(N**2*sig_e**2*np.pi*1)**0.5 *rescale  # recurrent weights
+    # Wei = -2.*(N**2*sig_i**2*np.pi*1)**0.5 *rescale
+    # Wie = 1.*(N**2*sig_e**2*np.pi*1)**0.5 *rescale
+    # Wii = -2.*(N**2*sig_i**2*np.pi*1)**0.5 *rescale
+    # mu_e = .7*rescale
+    # mu_i = .7*rescale
+    #################################################
     
     ### initialization
     ### random initial conditions
@@ -152,14 +167,14 @@ def chaotic_2d_net(sig_i, tau_i):
 # %% scanning
 
 # Create a directory to save the files if it doesn't exist
-output_dir = 'sims'  ## the sims data folder
+output_dir = 'sims_mf'  ## the sims data folder
 os.makedirs(output_dir, exist_ok=True)
 
 # Number of iterations
 num_iterations = 5
 
-for ii in range(len(tau_ie)):
-    for jj in range(len(sig_ie)):
+for ii in range(len(sig_ie)):
+    for jj in range(len(tau_ie)):
         print(ii)
         print(jj)
         
@@ -174,7 +189,7 @@ for ii in range(len(tau_ie)):
         beta_t = measure_mu / measure_mu_ex 
         
         ### spectral analysis
-        pp,ff = group_spectrum(re_xy)
+        pp,ff = group_spectrum(re_xy[:,:,offset:])
         
         ### record data and information
         # Combine the matrix and the extra information into a dictionary
