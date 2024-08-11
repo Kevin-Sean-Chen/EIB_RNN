@@ -35,11 +35,11 @@ def dilute_net(size, pc):
     ###
     return cij
 def phi(x):
-    nl = np.where(x > 0, x, 0)  # ReLU nonlinearity
-    # nl = np.where(x > 0, np.tanh(x), 0)  # nonlinearity for rate equation
+    # nl = np.where(x > 0, x, 0)  # ReLU nonlinearity
+    nl = np.where(x > 0, np.tanh(x), 0)  # nonlinearity for rate equation
     return nl
 
-finite_scale = 2.  ### this is hand-tuned to correct for finite size
+finite_scale = 2. ### this is hand-tuned to correct for finite size
 ### N = total number of neurons.
 ### K = mean number of connections per neuron
 pc = 0.5 # connection probability (fraction that are 0)
@@ -53,8 +53,8 @@ Jee = 1.0*rescale_c  # recurrent weights
 Jei = -2.0*rescale_c
 Jie = 1.0*rescale_c
 Jii = -1.8*rescale_c # -1.8
-Je0 = 0.9*1 #rescale_c   # does NOT scale with K if we are using a baseline!
-Ji0 = 0.5*1 #rescale_c #0.8
+Je0 = 1.*1 #rescale_c   # does NOT scale with K if we are using a baseline!
+Ji0 = .8*1 #rescale_c #0.8
 
 ### time scales
 tau = 0.009  # in seconds
@@ -104,7 +104,7 @@ for tt in range(lt-1):
 offset = 50  # to remove effects from initial condition
 select_n = 20
 plt.figure()
-plt.plot(time[offset:], ret[:select_n, offset:].T/dt)
+plt.plot(time[offset:], ret[:select_n, offset:].T/1)
 plt.xlabel('time (s)', fontsize=20)
 plt.ylabel('rate (Hz)', fontsize=20)
 plt.title('firing rate', fontsize=20)
@@ -120,3 +120,24 @@ plt.xlabel('time (s)', fontsize=20)
 plt.ylabel('input current', fontsize=20)
 plt.title('balancing input', fontsize=20)
 # plt.xlim([0,0.3])
+
+# %% beta measurement
+plt.figure()
+plt.plot(time, np.abs(measure_e+measure_i)/measure_e)
+plt.xlabel('time (s)', fontsize=20)
+plt.ylabel('beta', fontsize=20)
+
+# %% plotting population
+plt.figure(figsize=(7,15))
+plt.imshow(ret[:,offset:], cmap='hot')   ######################### understand the value here!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!???
+plt.xlabel('time', fontsize=20)
+plt.ylabel('cells', fontsize=20)
+# plt.colorbar()
+
+plt.figure()
+# plt.hist(ret[:,offset:].reshape(-1)/1, 20)
+plt.hist(np.mean(ret[:,offset:],1)/dt, 30)
+# plt.yscale('log')
+plt.xlabel('rate', fontsize=20)
+plt.ylabel('count', fontsize=20)
+plt.title('firing rate distribution', fontsize=20)
