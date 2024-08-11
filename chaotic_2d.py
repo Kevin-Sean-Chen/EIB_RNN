@@ -10,6 +10,7 @@ from scipy.signal import convolve2d
 from scipy.linalg import expm
 from matplotlib.animation import FuncAnimation, PillowWriter
 from PIL import Image
+from scipy.signal import correlate
 
 import scipy as sp
 import numpy as np
@@ -25,8 +26,8 @@ matplotlib.rc('ytick', labelsize=20)
 # The plan is to implement 2D chaotic neural model and explore its dynamics/computation
 # then study the input-output computation of this model, as well as effects from random connections (is there a transition?)
 # further exporations: 
-#   1. effects of short-term synaptic plasiticity in space
-#   2. possible optimization for tasks
+#   1. possible optimization for tasks
+#   2. effects of short-term synaptic plasiticity in space
 #   3. fitting to data??
 
 ### Haim's suggestions: (here till Sunday and back on Thursday)
@@ -39,26 +40,26 @@ matplotlib.rc('ytick', labelsize=20)
 
 ###############################################################################
 # %% network parameters
-# N = 50  # neurons
-# Wee = 80  # recurrent weights
-# Wei = -160
-# Wie = 80
-# Wii = -150
+# N = 70  # neurons
+# Wee = 80*2  # recurrent weights
+# Wei = -160*2
+# Wie = 80*2
+# Wii = -150*2
 # tau_e = 0.005  # time constant ( 5ms in seconds )
 # sig_e = 0.1  # spatial kernel
 # mu_e = 0.48*10  # offset
 # mu_i = 0.32*10
-# tau_i, sig_i = 9*0.001, 0.096
-### A, traveling waves solution (τi = 8, σi = 0.1). 
-### B, alternating bumps solution (τi = 9, σi = 0.06). 
-### C, alternating stripes solution (τi = 9, σi = 0.1). 
-### D, chaotic solution (τi = 12.8, σi = 0.096).
+# tau_i, sig_i = 6*0.001, 0.11
+# ### A, traveling waves solution (τi = 8, σi = 0.1). 
+# ### B, alternating bumps solution (τi = 9, σi = 0.06). 
+# ### C, alternating stripes solution (τi = 9, σi = 0.1). 
+# ### D, chaotic solution (τi = 12.8, σi = 0.096).
 
 # %% test to simplify
-N = 100  # neurons
+N = 70  # neurons
 tau_e = 0.005  # time constant ( 5ms in seconds )
 sig_e = 0.1  # spatial kernel
-tau_i, sig_i = 15*0.001, 0.1   ### imporat parameters!!
+tau_i, sig_i = 12*0.001, 0.2   ### imporat parameters!!
 ### moving dots 5ms, 0.2
 ### little coherence 5ms, 0.1
 ### chaotic waves 10ms, 0.1
@@ -69,8 +70,8 @@ Wee = 1.*(N**2*sig_e**2*np.pi*1)**0.5 *rescale  # recurrent weights
 Wei = -2.*(N**2*sig_i**2*np.pi*1)**0.5 *rescale
 Wie = 1.*(N**2*sig_e**2*np.pi*1)**0.5 *rescale
 Wii = -2.*(N**2*sig_i**2*np.pi*1)**0.5 *rescale
-mu_e = 1.*rescale #*(N*sig_i*np.pi*1)**0.5 *rescale  #1e-8#.001*1  # offset
-mu_i = .8*rescale #*(N*sig_i*np.pi*1)**0.5 *rescale  #1e-8#.001*1
+mu_e = .7*rescale #*(N*sig_i*np.pi*1)**0.5 *rescale  #1e-8#.001*1  # offset
+mu_i = .7*rescale #*(N*sig_i*np.pi*1)**0.5 *rescale  #1e-8#.001*1
 
 # %% network setup
 ### setting up space and time
@@ -81,7 +82,7 @@ lt = len(time)
 re_xy = np.zeros((N,N, lt))
 ri_xy = re_xy*1
 space_vec = np.linspace(0,1,N)
-kernel_size = 20  # pick this for numerical convolution
+kernel_size = 23  # pick this for numerical convolution
 
 ### random initial conditions
 re_xy[:,:,0] = np.random.rand(N,N)*.1
@@ -163,12 +164,13 @@ for tt in range(lt-1):
 # %%
 offset = 50
 plt.figure()
-plt.plot(time[offset:], measure_e[offset:])
-plt.plot(time[offset:], measure_i[offset:])
-plt.plot(time[offset:], (measure_e+measure_i)[offset:])
+plt.plot(time[offset:], measure_e[offset:], label='E')
+plt.plot(time[offset:], measure_i[offset:], label='I')
+plt.plot(time[offset:], (measure_e+measure_i)[offset:],label='total')
 plt.xlabel('time (s)', fontsize=20)
 plt.ylabel('current', fontsize=20)
 plt.title('spatial balancing', fontsize=20)
+plt.legend(fontsize=15)
 
 # %% plot dynamics
 offset = 1
@@ -179,6 +181,14 @@ plt.plot(time[offset:], ri_xy[15,15,offset:].squeeze(),'-o')
 plt.xlabel('time (s)', fontsize=20)
 plt.ylabel('rate (Hz)', fontsize=20)
 # plt.xlim([0.1,0.14])
+
+# %% pot beta for a single cell
+beta_i = np.abs(measure_e + measure_i)/measure_e
+
+plt.figure()
+plt.plot(time, beta_i)
+plt.xlabel('time', fontsize=20)
+plt.ylabel('beta', fontsize=20)
 
 # %%
 # plt.figure()
@@ -238,8 +248,9 @@ plt.show()
 
 # %% make video
 ###Generate example data (random 10x10x100 tensor)
-# gif_name = 'wave_like'
+# gif_name = 'rate_E'
 # data = re_xy[:,:,100:]*1
+# # data = beta_t[:,:,100:]*1
 
 # # Function to create a frame with the iteration number in the title
 # def create_frame(data, frame):
@@ -266,5 +277,81 @@ plt.show()
 # # Check if the GIF plays correctly
 # from IPython.display import display, Image as IPImage
 # display(IPImage(filename=gif_name+'.gif'))
+
+# %% functions
+### write function for spatial x-corr
+### write for MLE calculation
+### power-spectrum calculation
+
+def spectrum_analysis(time_series, dt=dt):
+    fft_result = np.fft.fft(time_series)
+    
+    # Compute the power spectrum
+    power_spectrum = np.abs(fft_result) ** 2
+    
+    # Get the corresponding frequencies
+    frequencies = np.fft.fftfreq(len(time_series), d=dt)
+    
+    # Plot the power spectrum
+    # plt.figure(figsize=(10, 6))
+    # plt.plot(frequencies[:len(frequencies)//2], power_spectrum[:len(frequencies)//2])
+    # plt.title('Power Spectrum', fontsize=20)
+    # plt.xlabel('Frequency (Hz)', fontsize=20)
+    # plt.ylabel('Power', fontsize=20)
+    return power_spectrum[:len(frequencies)//2], frequencies[:len(frequencies)//2]
+    
+def group_spectrum(data, dt=dt):
+    N,_,T = data.shape
+    pp,ff = spectrum_analysis(data[0,0,:])
+    spec_all = np.zeros((N,N, len(ff)))  
+    for ii in range(N):
+        for jj in range(N):
+            temp = data[ii,jj,:].squeeze()
+            spec_all[ii,jj,:],_ = spectrum_analysis(temp)
+    return np.mean(np.mean(spec_all,0),0), ff
+            
+
+plt.figure()
+test,ff = group_spectrum(re_xy)
+plt.loglog(ff,test)
+plt.xlabel('Frequency (Hz)', fontsize=20)
+plt.ylabel('Power', fontsize=20)
+
+# %%
+# def spatial_cross_correlation(data, window):
+#     N, _, T = data.shape
+#     r = data*1
+    
+#     size_bound = N-window*2
+#     temp_d = np.zeros((size_bound, size_bound, T))
+#     temp_c = np.zeros((size_bound, size_bound, T))
+#     for tt in range(T):
+#         for ii in range(window, N-window):
+#             for jj in range(window, N-window):
+#                 remp_d[ii-window, jj-window] = r[ii,jj,tt] - np.mean(r[ii,jj,:],2)
+#                 remp_c[ii-window, jj-window] = r[ii,jj,tt] - np.mean(r[ii,jj,:],2)
+            
+#     var_xyt = np.var(data[window:N-window, window:N-window, :])  # var(x,y,t)_full
+    
+#     # Reshape each nxn spatial snapshot into a 1D vector of length n*n
+#     reshaped_matrix = matrix.reshape(n*n, t)
+    
+#     # Initialize a matrix to store the cross-correlation results
+#     cross_corr_matrix = np.zeros((n*n, n*n))
+    
+#     # Compute cross-correlation for each pair of spatial points
+#     for i in range(n*n):
+#         for j in range(i, n*n):
+#             # Correlate the time series of each pair of spatial points
+#             cross_corr = correlate(reshaped_matrix[i], reshaped_matrix[j], mode='full')
+#             # Store the peak (zero-lag) of the cross-correlation
+#             cross_corr_matrix[i, j] = cross_corr[t-1]
+#             cross_corr_matrix[j, i] = cross_corr[t-1]
+    
+#     return cross_corr_matrix
+
+# %% analysis 
+
+
 
 
