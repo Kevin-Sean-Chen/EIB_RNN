@@ -146,6 +146,7 @@ num_iterations = 5
 
 for rr in range(reps):
     
+    print(rr)
     ### simulate the 2D dynamics
     re_xy, ri_xy, measure_mu, measure_mu_ex, measure_mu_ix = chaotic_2d_net(sig_i, tau_i)
     

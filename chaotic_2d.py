@@ -242,7 +242,7 @@ def update(frame):
     return cax1, cax2
 
 # Create the animation
-ani = FuncAnimation(fig, update, frames=data.shape[-1], blit=False)
+ani = FuncAnimation(fig, update, frames=data_r.shape[-1], blit=False)
 
 plt.show()
 
