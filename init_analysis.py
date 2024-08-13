@@ -25,7 +25,8 @@ import pickle
 # %% parameter setup
 tau_e = 0.005  # time constant ( 5ms in seconds )
 sig_e = 0.1  # spatial kernel
-tau_i, sig_i = 3*tau_e, 1.5*sig_e   ### imporat parameters!!
+# tau_i, sig_i = 4*tau_e, 2.*sig_e   ### imporat parameters!!
+tau_i, sig_i = 5*0.001, 0.14  ### checking bistability
 
 N = 70  # neurons
 rescale = 2. ### seems to matter for finite size(?)
@@ -96,10 +97,10 @@ def chaotic_2d_net(sig_i, tau_i):
     ### rescaling parameters for balance condition
     Wee = 1.*(N**2*sig_e**2*np.pi*1)**0.5 *rescale  # recurrent weights
     Wei = -2.*(N**2*sig_i**2*np.pi*1)**0.5 *rescale
-    Wie = 1.*(N**2*sig_e**2*np.pi*1)**0.5 *rescale
-    Wii = -2.*(N**2*sig_i**2*np.pi*1)**0.5 *rescale
-    mu_e = .7*rescale
-    mu_i = .7*rescale
+    Wie = .99*(N**2*sig_e**2*np.pi*1)**0.5 *rescale
+    Wii = -1.8*(N**2*sig_i**2*np.pi*1)**0.5 *rescale
+    mu_e = 1.*rescale
+    mu_i = .8*rescale
     
     ### initialization
     ### random initial conditions
@@ -107,8 +108,8 @@ def chaotic_2d_net(sig_i, tau_i):
     ri_xy = re_xy*1
     he_xy = re_xy*1
     hi_xy = re_xy*1
-    re_xy[:,:,0] = np.random.randn(N,N)   ### initalizing with a different initial conditions
-    ri_xy[:,:,0] = np.random.randn(N,N)
+    re_xy[:,:,0] = np.random.rand(N,N)*.1   ### initalizing with a different initial conditions
+    ri_xy[:,:,0] = np.random.rand(N,N)*.1
     he_xy = re_xy*1
     hi_xy = ri_xy*1
     
@@ -138,7 +139,7 @@ def chaotic_2d_net(sig_i, tau_i):
 # %% testing with different initial conditions
 reps = 20
 # Create a directory to save the files if it doesn't exist
-output_dir = 'sims_init'  ## the sims data folder
+output_dir = 'sims_init_'  ## the sims data folder
 os.makedirs(output_dir, exist_ok=True)
 
 # Number of iterations

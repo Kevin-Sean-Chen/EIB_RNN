@@ -1,0 +1,4 @@
+sims: sqrt(K) but not balanced parameters
+sims_mf:  original mean-field parameter from Chengcheng's paper
+sims_init: initializing with same sqrt(K) not balanced parameters
+sims_balanced: sqrt(K) with balanced parameter conditions

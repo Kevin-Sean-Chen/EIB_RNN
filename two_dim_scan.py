@@ -24,12 +24,12 @@ import pickle
 
 # %% fixing initial condition to study chaos
 np.random.seed(13)
-N = 70
+N = 200
 init_2d_e = np.random.randn(N,N)
 init_2d_i = np.random.randn(N,N)
 
 # %% parameter setup
-N = 70  # neurons
+# N = 70  # neurons
 tau_e = 0.005  # time constant ( 5ms in seconds )
 sig_e = 0.1  # spatial kernel
 # tau_i, sig_i = 12*0.001, 0.2   ### imporat parameters!!
@@ -109,23 +109,31 @@ def chaotic_2d_net(sig_i, tau_i):
     
     #################################################
     ######## Mean field condition
-    Wee = 80*2  # recurrent weights
-    Wei = -160*2
-    Wie = 80*2
-    Wii = -150*2
-    mu_e = 0.48*10  # offset
-    mu_i = 0.32*10
+    # Wee = 80*2  # recurrent weights
+    # Wei = -160*2
+    # Wie = 80*2
+    # Wii = -150*2
+    # mu_e = 0.48*10  # offset
+    # mu_i = 0.32*10
     #################################################
     #################################################
     ######## Balancing condition 
     #################################################
-    ### rescaling parameters for balance condition
+    ### old param not balancing (ratio all the same)
     # Wee = 1.*(N**2*sig_e**2*np.pi*1)**0.5 *rescale  # recurrent weights
     # Wei = -2.*(N**2*sig_i**2*np.pi*1)**0.5 *rescale
     # Wie = 1.*(N**2*sig_e**2*np.pi*1)**0.5 *rescale
     # Wii = -2.*(N**2*sig_i**2*np.pi*1)**0.5 *rescale
-    # mu_e = .7*rescale
-    # mu_i = .7*rescale
+    # mu_e = .7*rescale #*(N*sig_i*np.pi*1)**0.5 *rescale  #1e-8#.001*1  # offset
+    # mu_i = .7*rescale #*(N*sig_i*np.pi*1)**0.5 *rescale  #1e-8#.001*1
+    
+    ### rescaling parameters for balance condition
+    Wee = 1.*(N**2*sig_e**2*np.pi*1)**0.5 *rescale  # recurrent weights
+    Wei = -2.*(N**2*sig_i**2*np.pi*1)**0.5 *rescale
+    Wie = .99*(N**2*sig_e**2*np.pi*1)**0.5 *rescale
+    Wii = -1.8*(N**2*sig_i**2*np.pi*1)**0.5 *rescale
+    mu_e = 1.*rescale
+    mu_i = .8*rescale
     #################################################
     
     ### initialization
@@ -167,11 +175,8 @@ def chaotic_2d_net(sig_i, tau_i):
 # %% scanning
 
 # Create a directory to save the files if it doesn't exist
-output_dir = 'sims_mf'  ## the sims data folder
+output_dir = 'sims_200'  ## the sims data folder
 os.makedirs(output_dir, exist_ok=True)
-
-# Number of iterations
-num_iterations = 5
 
 for ii in range(len(sig_ie)):
     for jj in range(len(tau_ie)):
