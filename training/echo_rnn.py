@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Created on Tue Aug 13 20:52:11 2024
+Created on Wed Aug 14 10:57:42 2024
 
 @author: kevin
 """
@@ -21,54 +21,27 @@ import matplotlib
 matplotlib.rc('xtick', labelsize=20) 
 matplotlib.rc('ytick', labelsize=20)
 
-# %% init 2D chaotic network
+# %% init random chaotic network that roughly matches the 2D case!
 N = 50  # neurons
-tau_e = 0.005  # time constant ( 5ms in seconds )
-sig_e = 0.1  # spatial kernel
-tau_i, sig_i = 5*0.001, 0.14   ### important parameters!!
-#### 5, 0.14  ### grid parameter
-#### 15, 0.2  ### chaos parameter
-#### 10, 0.11 ### waves/strips!!!
-#### 8,  0.2  ### blinking
-##################################
-
-rescale = 2. ##(N*sig_e*np.pi*1)**0.5 #1
-Wee = 1.*(N**2*sig_e**2*np.pi*1)**0.5 *rescale  # recurrent weights
-Wei = -2.*(N**2*sig_i**2*np.pi*1)**0.5 *rescale
-Wie = .99*(N**2*sig_e**2*np.pi*1)**0.5 *rescale
-Wii = -1.8*(N**2*sig_i**2*np.pi*1)**0.5 *rescale
-mu_e = 1.*rescale
-mu_i = .8*rescale
-
-### setting up space and time
-dt = 0.001  # 1ms time steps
-T = .5  # a few seconds of simulation
-time = np.arange(0, T, dt)
-lt = len(time)
-space_vec = np.linspace(0,1,N)
-kernel_size = 23 #37  # pick this for numerical convolution
-
-### random initial conditions
-re_init = np.random.rand(N,N)*.0
-ri_init = np.random.rand(N,N)*.0
-re_xy = np.zeros((N,N, lt))
-ri_xy = re_xy*1
-re_xy[:,:,0] = re_init
-ri_xy[:,:,0] = ri_init
-he_xy = re_xy*1
-hi_xy = ri_xy*1
+NN = N**2
 
 # %% functions
+def dilute_net(size, pc):
+    cij = np.zeros((size, size))
+    randM = np.random.rand(size,size)
+    pos = np.where(randM < pc)
+    cij[pos] = 1
+    return cij
+
 def phi(x):
-    """
-    rectified quardratic nonlinearity
-    """
-    # nl = np.where(x > 0, x**2, 0)
-    # nl = np.where(x > 0, x*1, 0)  ### why a scaling factor needed!?????????????????????
-    nl = np.where(x > 0, np.tanh(x)*1, 0)
+    # nl = np.where(x > 0, x, 0)  # ReLU nonlinearity
+    nl = np.where(x > 0, np.tanh(x), 0)  # nonlinearity for rate equation
     return nl
 
-def g_kernel(sigma, size=kernel_size):
+def wrap_to_pi(angle):
+    return (angle + np.pi) % (2 * np.pi) - np.pi
+
+def g_kernel(sigma, size):
     """
     Generates a 2D Gaussian kernel.
     """
@@ -87,8 +60,46 @@ def spatial_convolution(r,k):
     gr = sp.signal.convolve2d(r.squeeze(), k, mode='same',  boundary='wrap') #, fillvalue=0,
     return gr
 
-def wrap_to_pi(angle):
-    return (angle + np.pi) % (2 * np.pi) - np.pi
+# %% EI-RNN setup
+### network and weights
+Ne = NN*1  # E neurons
+Ni = NN*1  # I neurons
+
+finite_scale = 2. ### this is hand-tuned to correct for finite size
+### N = total number of neurons.
+### K = mean number of connections per neuron
+pc = 0.5 # connection probability (fraction that are 0)
+K = pc*(Ne)  # degree of connectivity
+rescale_c = 1/(K**0.5)*finite_scale  # am not sure if this is correct... but might be for finite size network
+c_ee, c_ei, c_ie, c_ii = dilute_net(Ne, pc), dilute_net(Ne, pc),\
+                         dilute_net(Ne, pc), dilute_net(Ne, pc)
+
+### weights and rescaling
+Jee = 1.0*rescale_c  # recurrent weights
+Jei = -2.0*rescale_c
+Jie = 1.0*rescale_c
+Jii = -1.8*rescale_c # -1.8
+Je0 = 1.*1 #rescale_c   # does NOT scale with K if we are using a baseline!
+Ji0 = .8*1 #rescale_c #0.8
+
+### time scales
+tau = 0.005  # in seconds
+dt = 0.001  # time step
+T = .5
+time = np.arange(0, T, dt)
+lt = len(time)
+
+# %% simple vanilla RNN setup
+g = 1.2  ### important parameter for chaotic dynamics
+pc = 0.5  ### sparsity parameter
+scale = 1.0/np.sqrt(pc*NN)  #scaling connectivity
+M = np.random.randn(NN,NN)*g*scale
+sparse = np.random.rand(NN,NN)
+#M[sparse>p] = 0
+mask = np.random.rand(NN,NN)
+mask[sparse>pc] = 0
+mask[sparse<=pc] = 1
+Jij = M * mask
 
 # %% create target I/O stimuli
 ### create a 2D spatial pattern
@@ -97,7 +108,7 @@ T = lt   # Number of time steps
 
 ### spatial pattern
 sigma_xy = 0.1
-tau = .5
+tau_stim = .5
 mu = 0
 sig_noise = 2
 temp_space = np.random.randn(N,N)
@@ -106,7 +117,7 @@ pattern = spatial_convolution(temp_space, temp_k)
 
 angt = np.zeros(lt)
 for tt in range(lt-1):
-    ang = angt[tt] + dt/tau*(mu - angt[tt]) + sig_noise*np.sqrt(dt)*np.random.randn()
+    ang = angt[tt] + dt/tau_stim*(mu - angt[tt]) + sig_noise*np.sqrt(dt)*np.random.randn()
     angt[tt+1] = wrap_to_pi(ang)
 
 angt = np.sin(time/dt/np.pi/20)*np.pi
@@ -114,6 +125,7 @@ distance = 100  # Fixed distance to shift
 
 plt.figure()
 plt.plot(angt)
+
 # %%
 # Step 3: Initialize the 3D matrix to store the shifted images
 shifted_images = np.zeros((N, N, T))
@@ -146,6 +158,8 @@ def update(frame):
 ani = FuncAnimation(fig, update, frames=data.shape[-1], blit=False)
 plt.show()
 
+# %%
+###############################################################################
 # %% neural dynamics with training !!!
 beta = 1
 NN = N*N  # real number of neurons
@@ -157,7 +171,7 @@ reps = 7
 
 ### I-O setup
 I_xy = shifted_images*1  # 2D input video
-Iamp = 2.*(N**2*sig_i**2*np.pi*1)**0.5 *rescale / 1
+Iamp = 1/np.max(I_xy)*1
 f_t = angt*1  # target
 y_t = np.zeros(lt)  # readout
 
@@ -166,27 +180,20 @@ for rr in range(reps):
     print(rr)
     
     ### testing with rand init each round ########
-    re_init = np.random.rand(N,N)
-    ri_init = np.random.rand(N,N)
-    re_xy = np.zeros((N,N, lt))
-    ri_xy = re_xy*1
-    re_xy[:,:,0] = re_init
-    ri_xy[:,:,0] = ri_init
+    rt = np.zeros((NN, lt))
+    rt_init = np.random.rand(NN)*.1
+    rt[:,0] = rt_init
+    xt = rt*1
     ##############################################
-    
     for tt in range(lt-1):
-        ### neural dynamics
-        ge_conv_re = spatial_convolution(re_xy[:,:,tt], g_kernel(sig_e))
-        gi_conv_ri = spatial_convolution(ri_xy[:,:,tt], g_kernel(sig_i))
-        he_xy[:,:,tt+1] = he_xy[:,:,tt] + dt/tau_e*( -he_xy[:,:,tt] + (Wee*(ge_conv_re) + Wei*(gi_conv_ri) + mu_e \
-                                                                       + I_xy[:,:,tt]*Iamp) )
-        hi_xy[:,:,tt+1] = hi_xy[:,:,tt] + dt/tau_i*( -hi_xy[:,:,tt] + (Wie*(ge_conv_re) + Wii*(gi_conv_ri) + mu_i) )
-        re_xy[:,:,tt+1] = phi(he_xy[:,:,tt+1])
-        ri_xy[:,:,tt+1] = phi(hi_xy[:,:,tt+1])
+        ### RNN dynamics
+        It = I_xy[:,:,tt].reshape(-1)  ### vectorized spatial pattern
+        xt[:,tt+1] = xt[:,tt] + dt/tau*(-xt[:,tt] + Jij @ rt[:,tt] + It*Iamp)  # RNN form
+        rt[:,tt+1] = np.tanh(xt[:,tt])
         
         ### training linear readout
-        temp = re_xy[:,:,tt+1].reshape(-1)
-        x = temp[subsamp]
+        temp = rt[:,tt+1]*1
+        x = temp[subsamp]  ### same subsample as 2D RNN
         
         y_t[tt] = np.dot(w,x)
         E_t = y_t[tt] - f_t[tt]
@@ -194,7 +201,7 @@ for rr in range(reps):
         P += dP
         dw = -E_t* x @ P
         w += dw
-    
+        
 # %%
 plt.figure()
 plt.plot(y_t, label='readout')
@@ -204,32 +211,54 @@ plt.ylabel('drift angle', fontsize=20)
 plt.xlabel('time steps', fontsize=20)
 plt.title('training (RLS)', fontsize=20)
 
+# %% dynamics with EI RNN for a better match...
+# vet = np.zeros((Ne, lt))
+# vet[:,0] = np.random.randn(Ne)
+# vit = np.zeros((Ni, lt))
+# vit[:,1] = np.random.randn(Ni)
+# ret = vet*1
+# rit = vit*1
+# measure_e = np.zeros(lt)
+# measure_i = np.zeros(lt)
+
+# ### for stimulus scanning
+# stim = np.zeros(lt) + Je0
+# # stim[lt//2:] = 2  # lifting input
+
+# # amps = np.array([1,1.5,2, 2.5,3])
+# # ei_responses = np.zeros(len(amps))
+# # for ss in range(len(amps)):
+# #     stim = np.zeros(lt) + Je0
+# #     stim[lt//2:] = amps[ss]
+
+# for tt in range(lt-1):
+#     ### EI-RNN dynamics
+#     vet[:,tt+1] = vet[:,tt] + dt/tau*( -vet[:,tt] + Jee*c_ee@phi(vet[:,tt]) + Jei*c_ei@phi(vit[:,tt]) + Je0*0 + stim[tt])
+#     vit[:,tt+1] = vit[:,tt] + dt/tau*( -vit[:,tt] + Jie*c_ie@phi(vet[:,tt]) + Jii*c_ii@phi(vit[:,tt]) + Ji0)
+#     ret[:,tt+1] = phi(vet[:,tt+1])*1
+#     rit[:,tt+1] = phi(vit[:,tt+1])*1
+    
+#     ### measuring the input current
+#     measure_e[tt+1] = (Jee*c_ee@phi(vet[:,tt+1]) + Je0)[30]
+#     measure_i[tt+1] = (Jei*c_ei@phi(vit[:,tt+1]))[30]
+        
 # %% testing!!!
 y_test = np.zeros(lt)
 ### initial condition
-re_xy = np.zeros((N,N, lt))
-ri_xy = re_xy*1
+rt = np.zeros((NN, lt))
+rt_init = np.random.rand(NN)
 ### perturbations
-re_xy[:,:,0] = re_init + np.random.rand(N,N)*.00 #
-# sig_i = 0.2
-# tau_i = 0.015
-ri_xy[:,:,0] = ri_init
-he_xy = re_xy*1
-hi_xy = ri_xy*1
+rt[:,0] = rt_init + np.random.rand(NN)*.000 #
 
 for tt in range(lt-1):
     ### neural dynamics
-    ge_conv_re = spatial_convolution(re_xy[:,:,tt], g_kernel(sig_e))
-    gi_conv_ri = spatial_convolution(ri_xy[:,:,tt], g_kernel(sig_i))
-    he_xy[:,:,tt+1] = he_xy[:,:,tt] + dt/tau_e*( -he_xy[:,:,tt] + (Wee*(ge_conv_re) + Wei*(gi_conv_ri) + mu_e \
-                                                                   + I_xy[:,:,tt]*Iamp) )
-    hi_xy[:,:,tt+1] = hi_xy[:,:,tt] + dt/tau_i*( -hi_xy[:,:,tt] + (Wie*(ge_conv_re) + Wii*(gi_conv_ri) + mu_i) )
-    re_xy[:,:,tt+1] = phi(he_xy[:,:,tt+1])
-    ri_xy[:,:,tt+1] = phi(hi_xy[:,:,tt+1])
+    It = I_xy[:,:,tt].reshape(-1)  ### vectorized spatial pattern
+    xt[:,tt+1] = xt[:,tt] + dt/tau*(-xt[:,tt] + Jij @ rt[:,tt] + It*Iamp)  # RNN form
+    rt[:,tt+1] = np.tanh(xt[:,tt])
     
     ### training linear readout
-    temp = re_xy[:,:,tt+1].reshape(-1)
-    x = temp[subsamp]
+    temp = rt[:,tt+1]*1
+    x = temp[subsamp]  ### same subsample as 2D RNN
     
     y_test[tt] = np.dot(w,x)
 
