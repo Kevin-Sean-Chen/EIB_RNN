@@ -49,8 +49,8 @@ space_vec = np.linspace(0,1,N)
 kernel_size = 23 #37  # pick this for numerical convolution
 
 ### random initial conditions
-re_init = np.random.rand(N,N)*.1
-ri_init = np.random.rand(N,N)*.1
+re_init = np.random.rand(N,N)*.0
+ri_init = np.random.rand(N,N)*.0
 re_xy = np.zeros((N,N, lt))
 ri_xy = re_xy*1
 re_xy[:,:,0] = re_init
@@ -193,13 +193,14 @@ plt.xlabel('time steps', fontsize=20)
 plt.title('training (RLS)', fontsize=20)
 
 # %% testing!!!
-sig_i = 0.2
-tau_i = 0.015
 y_test = np.zeros(lt)
 ### initial condition
 re_xy = np.zeros((N,N, lt))
 ri_xy = re_xy*1
-re_xy[:,:,0] = re_init #np.random.rand(N,N)*.1 #
+### perturbations
+re_xy[:,:,0] = re_init + np.random.rand(N,N)*.0 #
+# sig_i = 0.2
+# tau_i = 0.015
 ri_xy[:,:,0] = ri_init
 he_xy = re_xy*1
 hi_xy = ri_xy*1
