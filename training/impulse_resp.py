@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Created on Thu Aug  1 17:45:27 2024
+Created on Tue Aug 13 17:18:02 2024
 
 @author: kevin
 """
@@ -19,51 +19,19 @@ import matplotlib
 matplotlib.rc('xtick', labelsize=20) 
 matplotlib.rc('ytick', labelsize=20)
 
-# %% proposal: Exploring computation through spatiotemporal neural dynamics
+# %% impulse study
 ###############################################################################
-# Simple implementation of rate model from Noga Mosheiff, Bard Ermentrout, Chengcheng Huang 2023
-# which is a rate-based model for ChengCheng et al. 2019 (with spiking population)
-# The plan is to implement 2D chaotic neural model and explore its dynamics/computation
-# then study the input-output computation of this model, as well as effects from random connections (is there a transition?)
-# further exporations: 
-#   1. possible optimization for tasks
-#   2. effects of short-term synaptic plasiticity in space
-#   3. fitting to data??
-
-### Haim's suggestions: (here till Sunday and back on Thursday)
-    # use ReLu, order one units, and check equations and response timescales!!
-    # is it really balanced??
-    
-    # if yes, is it fluctuating around coherence? how does the dilution affect?
-    # even if not, anaylize initial condition effects and find the attractor through spatiotemporal analysis
-    # further think about encoding and working memory
-
+### study the transient impulse response in space
 ###############################################################################
-# %% network parameters
-# N = 70  # neurons
-# Wee = 80*1  # recurrent weights
-# Wei = -160*1
-# Wie = 80*1
-# Wii = -150*1
-# tau_e = 0.005  # time constant ( 5ms in seconds )
-# sig_e = 0.1  # spatial kernel
-# mu_e = 0.48*1  # offset
-# mu_i = 0.32*1
-# tau_i, sig_i = 8*0.001, 0.1
-# ### A, traveling waves solution (τi = 8, σi = 0.1). 
-# ### B, alternating bumps solution (τi = 9, σi = 0.06). 
-# ### C, alternating stripes solution (τi = 9, σi = 0.1). 
-# ### D, chaotic solution (τi = 12.8, σi = 0.096).
 
-# %% test to simplify
+# %% setup 2D network parameters
 N = 70  # neurons
 tau_e = 0.005  # time constant ( 5ms in seconds )
 sig_e = 0.1  # spatial kernel
-tau_i, sig_i = 8*0.001, 0.2   ### important parameters!!
+tau_i, sig_i = 10*0.001, 0.11   ### important parameters!!
 #### 5, 0.14  ### grid parameter
 #### 15, 0.2  ### chaos parameter
-#### 10, 0.11 ### waves/strips!!!
-#### 8,  0.2  ### blinking
+#### 10, 0.1  ### waves/strips!!!
 ##################################
 ### moving dots 5ms, 0.2
 ### little coherence 5ms, 0.1
@@ -71,12 +39,6 @@ tau_i, sig_i = 8*0.001, 0.2   ### important parameters!!
 ### drifting changing blobs 10ms, 0.2
 
 rescale = 2. ##(N*sig_e*np.pi*1)**0.5 #1
-# Wee = 1.*(N**2*sig_e**2*np.pi*1)**0.5 *rescale  # recurrent weights
-# Wei = -2.*(N**2*sig_i**2*np.pi*1)**0.5 *rescale
-# Wie = 1.*(N**2*sig_e**2*np.pi*1)**0.5 *rescale
-# Wii = -2.*(N**2*sig_i**2*np.pi*1)**0.5 *rescale
-# mu_e = .7*rescale #*(N*sig_i*np.pi*1)**0.5 *rescale  #1e-8#.001*1  # offset
-# mu_i = .7*rescale #*(N*sig_i*np.pi*1)**0.5 *rescale  #1e-8#.001*1
 
 Wee = 1.*(N**2*sig_e**2*np.pi*1)**0.5 *rescale  # recurrent weights
 Wei = -2.*(N**2*sig_i**2*np.pi*1)**0.5 *rescale
@@ -115,9 +77,7 @@ def phi(x):
     """
     rectified quardratic nonlinearity
     """
-    # nl = np.where(x > 0, x**2, 0)
     # nl = np.where(x > 0, x*1, 0)  ### why a scaling factor needed!?????????????????????
-    # nl = 1/(1+np.exp(-x))
     nl = np.where(x > 0, np.tanh(x)*1, 0)
     return nl
 
@@ -133,39 +93,37 @@ def g_kernel(sigma, size=kernel_size):
     )
     return kernel / np.sum(kernel)
 
+### input in space
+I_xy = g_kernel(.1, N)
+I_xy = I_xy/np.max(I_xy)*(N**2*sig_e**2*np.pi*1)**0.5 *rescale*1.
+start_t = 200
+end_t = start_t + int(tau_e/dt)
+
 # %% dynamics
 def spatial_convolution(r,k):
     """
     2D spatial convolution given kernel k and neural field r
     """
     gr = sp.signal.convolve2d(r.squeeze(), k, mode='same',  boundary='wrap') #, fillvalue=0,
-    # gr = sp.signal.convolve2d(r.squeeze(), k, mode='same', boundary='symm')
-    ###########################################################################
-    #### double check on setting boundary conditions!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    ###########################################################################
     return gr
 
 ### neural dynamics
 for tt in range(lt-1):
-    ### stim
-    # if tt>lt//2:
-        # mu_e = 5
-    ### Noga Mosheiff paper
-    # ge_conv_re = spatial_convolution(re_xy[:,:,tt], g_kernel(sig_e))
-    # gi_conv_ri = spatial_convolution(ri_xy[:,:,tt], g_kernel(sig_i))
-    # re_xy[:,:,tt+1] = re_xy[:,:,tt] + dt/tau_e*( -re_xy[:,:,tt] + phi(Wee*ge_conv_re + Wei*gi_conv_ri + mu_e) )
-    # ri_xy[:,:,tt+1] = ri_xy[:,:,tt] + dt/tau_i*( -ri_xy[:,:,tt] + phi(Wie*ge_conv_re + Wii*gi_conv_ri + mu_i) )
     
     ### modifying for 2D rate EI-RNN
     ge_conv_re = spatial_convolution(re_xy[:,:,tt], g_kernel(sig_e))
     gi_conv_ri = spatial_convolution(ri_xy[:,:,tt], g_kernel(sig_i))
     he_xy[:,:,tt+1] = he_xy[:,:,tt] + dt/tau_e*( -he_xy[:,:,tt] + (Wee*(ge_conv_re) + Wei*(gi_conv_ri) + mu_e) )
     hi_xy[:,:,tt+1] = hi_xy[:,:,tt] + dt/tau_i*( -hi_xy[:,:,tt] + (Wie*(ge_conv_re) + Wii*(gi_conv_ri) + mu_i) )
+    
+    ### transient response studies
+    if tt>start_t and tt<end_t:
+    #     re_xy[60:,60:,tt+1] = 1
+        he_xy[:,:,tt+1] = he_xy[:,:,tt] + dt/tau_e*( -he_xy[:,:,tt] + \
+                                                    (Wee*(ge_conv_re) + Wei*(gi_conv_ri) + mu_e + I_xy) )
+    
     re_xy[:,:,tt+1] = phi(he_xy[:,:,tt+1])
     ri_xy[:,:,tt+1] = phi(hi_xy[:,:,tt+1])
-    
-    # if tt>100:# and tt<110:
-    #     re_xy[60:,60:,tt+1] = 1
     
     ### make E-I measurements
     measure_e[tt+1] = (Wee*ge_conv_re + mu_e)[20,20]
@@ -206,11 +164,15 @@ plt.xlabel('time', fontsize=20)
 plt.ylabel('beta', fontsize=20)
 
 # %%
-# plt.figure()
-# plt.plot(time[offset:]-.25, np.mean(np.mean(re_xy[:,:,offset:],0),0), label='sigma=.1')
-# plt.plot(time[offset:]-.25, temp, label='sigma=.15')
-# plt.legend(fontsize=20)
-# plt.xlim([-0.04, 0.04])
+stim_vec = np.zeros(lt)
+stim_vec[start_t:end_t] = 1
+plt.figure()
+plt.plot(np.arange(0,lt)-start_t, re_xy[N//2,N//2,:], label='input site')
+plt.plot(np.arange(0,lt)-start_t, re_xy[N-1,N-1,:], label='far cell')
+plt.plot(np.arange(0,lt)-start_t, stim_vec,'k--', alpha=0.5)
+plt.ylabel('activity at input location', fontsize=20)
+plt.xlabel('time steps from stim', fontsize=20)
+plt.legend(fontsize=20)
 
 # %% visualize
 ### for rate
@@ -262,11 +224,10 @@ ani = FuncAnimation(fig, update, frames=data_r.shape[-1], blit=False)
 plt.show()
 
 # %% make video
-##Generate example data (random 10x10x100 tensor)
-# gif_name = 'input_train'
+###Generate example data (random 10x10x100 tensor)
+# gif_name = 'rate_E'
 # data = re_xy[:,:,100:]*1
 # # data = beta_t[:,:,100:]*1
-# # data = shifted_images*1
 
 # # Function to create a frame with the iteration number in the title
 # def create_frame(data, frame):
@@ -338,41 +299,8 @@ plt.ylabel('Power', fontsize=20)
 # %% spatial
 plt.figure()
 data4fft = re_xy[:,:,50:]*1
-_,_,lt = data4fft.shape
+_,_,flt = data4fft.shape
 data_fft = np.fft.fftn(data4fft)
 data_fft_shifted = np.fft.fftshift(data_fft)
 magnitude_spectrum = np.abs(data_fft_shifted)
-plt.imshow(np.log(magnitude_spectrum[:, :, lt//2]), cmap='gray')
-
-# %%
-# def spatial_cross_correlation(data, window):
-#     N, _, T = data.shape
-#     r = data*1
-    
-#     size_bound = N-window*2
-#     temp_d = np.zeros((size_bound, size_bound, T))
-#     temp_c = np.zeros((size_bound, size_bound, T))
-#     for tt in range(T):
-#         for ii in range(window, N-window):
-#             for jj in range(window, N-window):
-#                 remp_d[ii-window, jj-window] = r[ii,jj,tt] - np.mean(r[ii,jj,:],2)
-#                 remp_c[ii-window, jj-window] = r[ii,jj,tt] - np.mean(r[ii,jj,:],2)
-            
-#     var_xyt = np.var(data[window:N-window, window:N-window, :])  # var(x,y,t)_full
-    
-#     # Reshape each nxn spatial snapshot into a 1D vector of length n*n
-#     reshaped_matrix = matrix.reshape(n*n, t)
-    
-#     # Initialize a matrix to store the cross-correlation results
-#     cross_corr_matrix = np.zeros((n*n, n*n))
-    
-#     # Compute cross-correlation for each pair of spatial points
-#     for i in range(n*n):
-#         for j in range(i, n*n):
-#             # Correlate the time series of each pair of spatial points
-#             cross_corr = correlate(reshaped_matrix[i], reshaped_matrix[j], mode='full')
-#             # Store the peak (zero-lag) of the cross-correlation
-#             cross_corr_matrix[i, j] = cross_corr[t-1]
-#             cross_corr_matrix[j, i] = cross_corr[t-1]
-    
-#     return cross_corr_matrix
+plt.imshow(np.log(magnitude_spectrum[:, :, flt//2]), cmap='gray')

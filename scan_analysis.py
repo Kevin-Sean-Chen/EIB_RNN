@@ -74,23 +74,23 @@ for ii in range(ni):
         #######################################################################
         ### for fourier in time
         #######################################################################
-        ax.loglog(ff, pp)
+        # ax.loglog(ff, pp)
         #######################################################################
         ### for fourier in space
         #######################################################################
-        # data4fft = temp_re[:,:,50:]*1
-        # _,_,lt = data4fft.shape
-        # data_fft = np.fft.fftn(data4fft)
-        # data_fft_shifted = np.fft.fftshift(data_fft)
-        # magnitude_spectrum = np.abs(data_fft_shifted)
-        # ax.imshow(np.log(magnitude_spectrum[:, :, 1*lt//2]), cmap='gray')
+        data4fft = temp_re[:,:,50:]*1
+        _,_,lt = data4fft.shape
+        data_fft = np.fft.fftn(data4fft)
+        data_fft_shifted = np.fft.fftshift(data_fft)
+        magnitude_spectrum = np.abs(data_fft_shifted)
+        ax.imshow(np.log(magnitude_spectrum[:, :, 1*lt//2]), cmap='gray')
         #######################################################################
         ### for activity histogram
         #######################################################################
         ### in time
         # temp = np.mean(np.mean(temp_re,0),0)   ### in time
         # ax.set_xlim([0, 1.])
-        # # temp = np.mean(temp_re,2).reshape(-1)  ### in space
+        # temp = np.mean(temp_re,2).reshape(-1)  ### in space
         # ax.hist(temp,50)
         
         ax.set_title(f'sigma={sig_}, tau={tau_}')
@@ -99,10 +99,10 @@ for ii in range(ni):
         ### for visualization
         # if fi-1 < (ni - 1) * nj:
             # ax.set_xticks([])
-ax.set_xlabel('Hz', fontsize=20)
-ax.set_ylabel('power', fontsize=20)
-# ax.set_xlabel('firing', fontsize=20)
-# ax.set_ylabel('count', fontsize=20)
+# ax.set_xlabel('Hz', fontsize=20)
+# ax.set_ylabel('power', fontsize=20)
+ax.set_xlabel('firing', fontsize=20)
+ax.set_ylabel('count', fontsize=20)
             
 # %%
 fig, ax = plt.subplots()
