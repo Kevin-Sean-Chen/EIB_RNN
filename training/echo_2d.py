@@ -22,10 +22,10 @@ matplotlib.rc('xtick', labelsize=20)
 matplotlib.rc('ytick', labelsize=20)
 
 # %% init 2D chaotic network
-N = 70  # neurons
+N = 50  # neurons
 tau_e = 0.005  # time constant ( 5ms in seconds )
 sig_e = 0.1  # spatial kernel
-tau_i, sig_i = 15*0.001, 0.2   ### important parameters!!
+tau_i, sig_i = 5*0.001, 0.14   ### important parameters!!
 #### 5, 0.14  ### grid parameter
 #### 15, 0.2  ### chaos parameter
 #### 10, 0.11 ### waves/strips!!!
@@ -112,6 +112,9 @@ for tt in range(lt-1):
 angt = np.sin(time/dt/np.pi/20)*np.pi
 distance = 100  # Fixed distance to shift
 
+plt.figure()
+plt.plot(angt)
+# %%
 # Step 3: Initialize the 3D matrix to store the shifted images
 shifted_images = np.zeros((N, N, T))
 
@@ -126,22 +129,22 @@ for i, angle in enumerate(angt):
 
     # Store the shifted image in the 3D matrix
     shifted_images[:, :, i] = shifted_image
-    
+
 # %% take a look
-# data = shifted_images*1
-# fig, ax = plt.subplots()
-# cax = ax.matshow(data[:, :, 0], cmap='gray')
-# fig.colorbar(cax)
+data = shifted_images*1
+fig, ax = plt.subplots()
+cax = ax.matshow(data[:, :, 0], cmap='gray')
+fig.colorbar(cax)
 
-# def update(frame):
-#     ax.clear()
-#     cax = ax.matshow(data[:, :, frame], cmap='gray')
-#     ax.set_title(f"Iteration {frame+1}")
-#     return cax,
+def update(frame):
+    ax.clear()
+    cax = ax.matshow(data[:, :, frame], cmap='gray')
+    ax.set_title(f"Iteration {frame+1}")
+    return cax,
 
-# # Create the animation
-# ani = FuncAnimation(fig, update, frames=data.shape[-1], blit=False)
-# plt.show()
+# Create the animation
+ani = FuncAnimation(fig, update, frames=data.shape[-1], blit=False)
+plt.show()
 
 # %% neural dynamics with training !!!
 beta = 1
@@ -150,11 +153,11 @@ w_dim = 1000
 subsamp = random.sample(range(NN), w_dim)
 P = np.eye(w_dim)
 w = np.random.randn(w_dim)*0.1
-reps = 5
+reps = 7
 
 ### I-O setup
 I_xy = shifted_images*1  # 2D input video
-Iamp = 2.*(N**2*sig_i**2*np.pi*1)**0.5 *rescale
+Iamp = 2.*(N**2*sig_i**2*np.pi*1)**0.5 *rescale / 1
 f_t = angt*1  # target
 y_t = np.zeros(lt)  # readout
 
@@ -162,12 +165,17 @@ y_t = np.zeros(lt)  # readout
 for rr in range(reps):
     print(rr)
     
+    ### testing with rand init each round ########
+    re_init = np.random.rand(N,N)
+    ri_init = np.random.rand(N,N)
+    ##############################################
+    
     for tt in range(lt-1):
         ### neural dynamics
         ge_conv_re = spatial_convolution(re_xy[:,:,tt], g_kernel(sig_e))
         gi_conv_ri = spatial_convolution(ri_xy[:,:,tt], g_kernel(sig_i))
         he_xy[:,:,tt+1] = he_xy[:,:,tt] + dt/tau_e*( -he_xy[:,:,tt] + (Wee*(ge_conv_re) + Wei*(gi_conv_ri) + mu_e \
-                                                                       + I_xy[:,:,tt]) )
+                                                                       + I_xy[:,:,tt]*Iamp) )
         hi_xy[:,:,tt+1] = hi_xy[:,:,tt] + dt/tau_i*( -hi_xy[:,:,tt] + (Wie*(ge_conv_re) + Wii*(gi_conv_ri) + mu_i) )
         re_xy[:,:,tt+1] = phi(he_xy[:,:,tt+1])
         ri_xy[:,:,tt+1] = phi(hi_xy[:,:,tt+1])
@@ -198,7 +206,7 @@ y_test = np.zeros(lt)
 re_xy = np.zeros((N,N, lt))
 ri_xy = re_xy*1
 ### perturbations
-re_xy[:,:,0] = re_init + np.random.rand(N,N)*.0 #
+re_xy[:,:,0] = re_init + np.random.rand(N,N)*.000 #
 # sig_i = 0.2
 # tau_i = 0.015
 ri_xy[:,:,0] = ri_init
@@ -210,7 +218,7 @@ for tt in range(lt-1):
     ge_conv_re = spatial_convolution(re_xy[:,:,tt], g_kernel(sig_e))
     gi_conv_ri = spatial_convolution(ri_xy[:,:,tt], g_kernel(sig_i))
     he_xy[:,:,tt+1] = he_xy[:,:,tt] + dt/tau_e*( -he_xy[:,:,tt] + (Wee*(ge_conv_re) + Wei*(gi_conv_ri) + mu_e \
-                                                                   + I_xy[:,:,tt]) )
+                                                                   + I_xy[:,:,tt]*Iamp) )
     hi_xy[:,:,tt+1] = hi_xy[:,:,tt] + dt/tau_i*( -hi_xy[:,:,tt] + (Wie*(ge_conv_re) + Wii*(gi_conv_ri) + mu_i) )
     re_xy[:,:,tt+1] = phi(he_xy[:,:,tt+1])
     ri_xy[:,:,tt+1] = phi(hi_xy[:,:,tt+1])
