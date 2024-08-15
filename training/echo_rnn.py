@@ -90,7 +90,7 @@ time = np.arange(0, T, dt)
 lt = len(time)
 
 # %% simple vanilla RNN setup
-g = 1.2  ### important parameter for chaotic dynamics
+g = 1.5  ### important parameter for chaotic dynamics
 pc = 0.5  ### sparsity parameter
 scale = 1.0/np.sqrt(pc*NN)  #scaling connectivity
 M = np.random.randn(NN,NN)*g*scale
@@ -181,7 +181,7 @@ for rr in range(reps):
     
     ### testing with rand init each round ########
     rt = np.zeros((NN, lt))
-    rt_init = np.random.rand(NN)*.1
+    rt_init = np.random.rand(NN)*1.
     rt[:,0] = rt_init
     xt = rt*1
     ##############################################
@@ -246,7 +246,7 @@ plt.title('training (RLS)', fontsize=20)
 y_test = np.zeros(lt)
 ### initial condition
 rt = np.zeros((NN, lt))
-rt_init = np.random.rand(NN)
+rt_init = np.random.rand(NN)*1.
 ### perturbations
 rt[:,0] = rt_init + np.random.rand(NN)*.000 #
 
