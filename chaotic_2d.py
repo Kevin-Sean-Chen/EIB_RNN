@@ -214,9 +214,9 @@ plt.ylabel('beta', fontsize=20)
 
 # %% visualize
 ### for rate
-# data = re_xy[:,:,1:]*1
+data = re_xy[:,:,1:]*1
 ### for beta
-data = measure_mu / measure_mu_ex
+# data = measure_mu / measure_mu_ex
 fig, ax = plt.subplots()
 cax = ax.matshow(data[:, :, 0], cmap='gray')
 fig.colorbar(cax)
@@ -263,10 +263,11 @@ plt.show()
 
 # %% make video
 ##Generate example data (random 10x10x100 tensor)
-# gif_name = 'input_train'
-# data = re_xy[:,:,100:]*1
+# gif_name = 'input_chaos'
+# # data = re_xy[:,:,100:]*1
 # # data = beta_t[:,:,100:]*1
 # # data = shifted_images*1
+# data = I_xy*1
 
 # # Function to create a frame with the iteration number in the title
 # def create_frame(data, frame):
