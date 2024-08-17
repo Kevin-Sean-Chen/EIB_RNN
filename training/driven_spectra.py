@@ -161,7 +161,7 @@ kernel_size = 23 #37  # pick this for numerical convolution
 
 ### stim configuration
 I_xy = lorenz_xy/np.max(lorenz_xy)  # 2D input video
-Iamp = 2.*(N**2*sig_i**2*np.pi*1)**0.5 *rescale / 1
+Iamp = 2.*(N**2*sig_i**2*np.pi*1)**0.5 *rescale *1
 
 # %%
 def make_chaotic(I_xy):

@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-Created on Wed Aug 14 17:47:17 2024
+Created on Fri Aug 16 22:45:16 2024
 
 @author: kevin
 """
 
-import torch
 from scipy.signal import convolve2d
 from scipy.linalg import expm
 from matplotlib.animation import FuncAnimation, PillowWriter
@@ -21,8 +20,15 @@ import matplotlib
 matplotlib.rc('xtick', labelsize=20) 
 matplotlib.rc('ytick', labelsize=20)
 
-# %%
+# %% alternative: simulate long Lorenz attractor,
+### then train on first half and test on the second half
+###############################################################################
+# %% time window for train and test
+init_t = 50
+train_t = 700
+test_t = 700
 
+# %%
 # Define the Lorenz system
 def lorenz(x, y, z, s=10, r=28, b=8/3):
     dx = s * (y - x)
@@ -32,13 +38,13 @@ def lorenz(x, y, z, s=10, r=28, b=8/3):
 
 # Parameters
 dt = 0.02  # Time step
-num_steps = 550  # Number of steps
+num_steps = init_t + train_t + test_t  # Number of steps  ### first 500 train and second 500 test
 
 # Initial conditions
 x = np.zeros(num_steps)
 y = np.zeros(num_steps)
 z = np.zeros(num_steps)
-x[0], y[0], z[0] = 0.0, 1.0, 1.05  # Initial position
+x[0], y[0], z[0] = 0.0, 1.0, 1.2  # Initial position
 
 # Euler method
 for i in range(1, num_steps):
@@ -51,9 +57,9 @@ for i in range(1, num_steps):
 fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')
 ax.plot(x, y, z, lw=0.5)
-ax.set_xlabel("x", fontsize=20)
-ax.set_ylabel("y", fontsize=20)
-ax.set_zlabel("z", fontsize=20)
+ax.set_xlabel("X Axis", fontsize=20)
+ax.set_ylabel("Y Axis", fontsize=20)
+ax.set_zlabel("Z Axis", fontsize=20)
 ax.set_title("Lorenz Attractor", fontsize=20)
 
 plt.show()
@@ -77,8 +83,7 @@ def phi(x):
     """
     rectified quardratic nonlinearity
     """
-    # nl = np.where(x > 0, x**2, 0)
-    # nl = np.where(x > 0, x*1, 0)  ### why a scaling factor needed!?????????????????????
+    # nl = np.where(x > 0, x**1, 0)
     nl = np.where(x > 0, np.tanh(x)*1, 0)
     return nl
 
@@ -138,51 +143,13 @@ ani = FuncAnimation(fig, update, frames=data.shape[-1], blit=False)
 plt.show()
 
 # %% function to generate Lorenz pattern
-def gen_spatail_Lorenz():
-    # Parameters
-    dt = 0.02  # Time step
-    num_steps = 550  # Number of steps
-    
-    # Initial conditions
-    x = np.zeros(num_steps)
-    y = np.zeros(num_steps)
-    z = np.zeros(num_steps)
-    x[0], y[0], z[0] = 0.0 + \
-        np.random.randn()*0.1, 1.0 + np.random.randn()*0.1, 1.05 + np.random.randn()*0.1  # Initial position
-
-    # Euler method
-    for i in range(1, num_steps):
-        dx, dy, dz = lorenz(x[i-1], y[i-1], z[i-1])
-        x[i] = x[i-1] + dx * dt
-        y[i] = y[i-1] + dy * dt
-        z[i] = z[i-1] + dz * dt
-    ### processing for image
-    offset = 50
-    x = x[offset:]
-    y = y[offset:]
-    z = z[offset:]
-    x = (x - np.mean(x))/np.max(x)
-    y = (y - np.mean(y))/np.max(y)
-    z = (z - np.mean(z))/np.max(z)
-    N = 50
-    lt = num_steps*1 - offset
-
-    ### make spatial patterns
-    temp_space1 = np.random.randn(N,N)
-    temp_space2 = np.random.randn(N,N)
-    temp_k = g_kernel(sigma_xy, N)
-    pattern1 = spatial_convolution(temp_space1, temp_k)
-    pattern2 = spatial_convolution(temp_space2, temp_k)
-
-    lorenz_xy = np.zeros((N,N, lt))
-
-    for tt in range(lt):
-        lorenz_xy[:,:,tt] = x[tt]*pattern1 + z[tt]*pattern2
-        
-    return lorenz_xy, y
-
-lorenz_xy_test, f_test = gen_spatail_Lorenz()
+lorenz_xy_test = lorenz_xy[:,:,:train_t]
+lorenz_xy_train = lorenz_xy[:,:,-test_t:]
 I_xy_test = lorenz_xy_test/np.max(lorenz_xy_test)
+I_xy_train = lorenz_xy_train/np.max(lorenz_xy_train)
+
+f_train = y[:train_t]
+f_test = y[-test_t:]
 
 # %% setup
 N = 50
@@ -239,9 +206,9 @@ mu_i = .8*rescale
 kernel_size = 23 #37  # pick this for numerical convolution
 
 ### random initial conditions
-re_init = np.random.rand(N,N)*.0
-ri_init = np.random.rand(N,N)*.0
-re_xy = np.zeros((N,N, lt))
+re_init = np.random.rand(N,N)*.1
+ri_init = np.random.rand(N,N)*.1
+re_xy = np.zeros((N,N, train_t))
 ri_xy = re_xy*1
 re_xy[:,:,0] = re_init
 ri_xy[:,:,0] = ri_init
@@ -251,68 +218,52 @@ hi_xy = ri_xy*1
 # %%
 beta = 1
 NN = N*N  # real number of neurons
-w_dim = 1000
+w_dim = 1500
 subsamp = random.sample(range(NN), w_dim)
 P = np.eye(w_dim)
 w = np.random.randn(w_dim)*0.1
-reps = 1 
+reps = 10 
 
 ### I-O setup
-I_xy = lorenz_xy/np.max(lorenz_xy)  # 2D input video
 Iamp = 2.*(N**2*sig_i**2*np.pi*1)**0.5 *rescale / 1
-f_t = y*1  # target
-y_t = np.zeros(lt)  # readout
+f_t = f_train*1  # target
+y_t = np.zeros(train_t)  # readout
 
-# %% training loop!
-for rr in range(reps):
-    print(rr)
+# %% training
+for tt in range(train_t-1):
+    ### neural dynamics
+    ge_conv_re = spatial_convolution(re_xy[:,:,tt], g_kernel(sig_e))
+    gi_conv_ri = spatial_convolution(ri_xy[:,:,tt], g_kernel(sig_i))
+    he_xy[:,:,tt+1] = he_xy[:,:,tt] + dt/tau_e*( -he_xy[:,:,tt] + (Wee*(ge_conv_re) + Wei*(gi_conv_ri) + mu_e \
+                                                                   + I_xy_train[:,:,tt]*Iamp + Iamp*y_t[tt]*pattern_w) )
+    hi_xy[:,:,tt+1] = hi_xy[:,:,tt] + dt/tau_i*( -hi_xy[:,:,tt] + (Wie*(ge_conv_re) + Wii*(gi_conv_ri) + mu_i) )
+    re_xy[:,:,tt+1] = phi(he_xy[:,:,tt+1])
+    ri_xy[:,:,tt+1] = phi(hi_xy[:,:,tt+1])
     
-    ### testing with rand init each round ########
-    re_init = np.random.rand(N,N)
-    ri_init = np.random.rand(N,N)
-    re_xy = np.zeros((N,N, lt))
-    ri_xy = re_xy*1
-    re_xy[:,:,0] = re_init
-    ri_xy[:,:,0] = ri_init
-    ### train with different Lorenz everytime! ###
-    lorenz_xy_train, f_train = gen_spatail_Lorenz()
-    I_xy = lorenz_xy_train/np.max(lorenz_xy_train)
-    ##############################################
+    ### training linear readout
+    temp = re_xy[:,:,tt+1].reshape(-1)
+    xx = temp[subsamp]
     
-    for tt in range(lt-1):
-        ### neural dynamics
-        ge_conv_re = spatial_convolution(re_xy[:,:,tt], g_kernel(sig_e))
-        gi_conv_ri = spatial_convolution(ri_xy[:,:,tt], g_kernel(sig_i))
-        he_xy[:,:,tt+1] = he_xy[:,:,tt] + dt/tau_e*( -he_xy[:,:,tt] + (Wee*(ge_conv_re) + Wei*(gi_conv_ri) + mu_e \
-                                                                       + I_xy[:,:,tt]*Iamp + Iamp*y_t[tt]*pattern_w) )
-        hi_xy[:,:,tt+1] = hi_xy[:,:,tt] + dt/tau_i*( -hi_xy[:,:,tt] + (Wie*(ge_conv_re) + Wii*(gi_conv_ri) + mu_i) )
-        re_xy[:,:,tt+1] = phi(he_xy[:,:,tt+1])
-        ri_xy[:,:,tt+1] = phi(hi_xy[:,:,tt+1])
-        
-        ### training linear readout
-        temp = re_xy[:,:,tt+1].reshape(-1)
-        xx = temp[subsamp]
-        
-        y_t[tt] = np.dot(w, xx)
-        E_t = y_t[tt] - f_train[tt]
-        dP = - beta/(1+xx@P@xx) * P @ np.outer(xx,xx) @ P  # IRLS
-        P += dP
-        dw = -E_t* xx @ P
-        w += dw
-    
+    y_t[tt] = np.dot(w, xx)
+    E_t = y_t[tt] - f_t[tt]
+    dP = - beta/(1+xx@P@xx) * P @ np.outer(xx,xx) @ P  # IRLS
+    P += dP
+    dw = -E_t* xx @ P
+    w += dw
+
 # %%
 plt.figure()
 plt.plot(y_t, label='readout')
-plt.plot(f_train, label='target')
+plt.plot(f_t, label='target')
 plt.legend(fontsize=20)
 plt.ylabel('drift angle', fontsize=20)
 plt.xlabel('time steps', fontsize=20)
 plt.title('training (RLS)', fontsize=20)
 
 # %% testing!!!
-y_test = np.zeros(lt)
+y_test = np.zeros(test_t)
 ### initial condition
-re_xy = np.zeros((N,N, lt))
+re_xy = np.zeros((N,N, test_t))
 ri_xy = re_xy*1
 ### perturbations
 re_xy[:,:,0] = re_init + np.random.rand(N,N)*1 #
@@ -322,21 +273,21 @@ ri_xy[:,:,0] = ri_init
 he_xy = re_xy*1
 hi_xy = ri_xy*1
 
-for tt in range(lt-1):
+for tt in range(test_t-1):
     ### neural dynamics
     ge_conv_re = spatial_convolution(re_xy[:,:,tt], g_kernel(sig_e))
     gi_conv_ri = spatial_convolution(ri_xy[:,:,tt], g_kernel(sig_i))
     he_xy[:,:,tt+1] = he_xy[:,:,tt] + dt/tau_e*( -he_xy[:,:,tt] + (Wee*(ge_conv_re) + Wei*(gi_conv_ri) + mu_e \
-                                                                   + I_xy[:,:,tt]*Iamp + Iamp*y_test[tt]*pattern_w) )
+                                                                   + I_xy_train[:,:,tt]*Iamp + Iamp*y_test[tt]*pattern_w) )
     hi_xy[:,:,tt+1] = hi_xy[:,:,tt] + dt/tau_i*( -hi_xy[:,:,tt] + (Wie*(ge_conv_re) + Wii*(gi_conv_ri) + mu_i) )
     re_xy[:,:,tt+1] = phi(he_xy[:,:,tt+1])
     ri_xy[:,:,tt+1] = phi(hi_xy[:,:,tt+1])
     
     ### training linear readout
     temp = re_xy[:,:,tt+1].reshape(-1)
-    x = temp[subsamp]
+    xx = temp[subsamp]
     
-    y_test[tt] = np.dot(w,x)
+    y_test[tt] = np.dot(w,xx)
 
 # %%
 plt.figure()
@@ -344,6 +295,18 @@ plt.plot(y_test, label='readout')
 # plt.plot(y_test_right,alpha=.5, label='alter sigma_i')
 plt.plot(f_train, label='target')
 plt.legend(fontsize=20)
-plt.ylabel('Lorenz z(t)', fontsize=20)
+plt.ylabel('drift angle', fontsize=20)
 plt.xlabel('time steps', fontsize=20)
-# plt.title('testing', fontsize=20)
+plt.title('testing', fontsize=20)
+
+# %% compare resonstructions
+###############################################################################
+# %%
+# Plot the results
+fig = plt.figure()
+ax = fig.add_subplot(111, projection='3d')
+ax.plot(x[:test_t], y[:test_t], z[:test_t], lw=0.5)
+ax.set_xlabel("X Axis", fontsize=20)
+ax.set_ylabel("Y Axis", fontsize=20)
+ax.set_zlabel("Z Axis", fontsize=20)
+ax.set_title("Lorenz Attractor", fontsize=20)

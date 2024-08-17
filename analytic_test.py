@@ -33,7 +33,7 @@ def A_matrix(params, n):
     return A
     
 # %% scanning
-nnn = 0
+nnn = 1
 wee, wei, wie, wii = 1, -2, 0.99, -1.8
 tau_e, sig_e = 0.005, 0.1
 
@@ -42,6 +42,7 @@ tau_ratios = np.arange(0.5,5,0.5)
 
 stabs = np.zeros((len(sig_ratios), len(tau_ratios)))
 
+# for nnn in range(20):
 for ii in range(len(sig_ratios)):
     for jj in range(len(tau_ratios)):
         sig_i = sig_e*sig_ratios[ii]
@@ -49,7 +50,13 @@ for ii in range(len(sig_ratios)):
         params = sig_e, sig_i, tau_e, tau_i, wee, wei, wie, wii
         Atemp = A_matrix(params, nnn)
         ee,vv = np.linalg.eig(Atemp)
+        
+        ### given one n
         stabs[ii,jj] = np.max(ee)
+        
+        ### looping through n-s
+        # stabs[ii,jj] += np.max(ee)
+        
         
 # %%
 sig_ratios = np.round(sig_ratios, 1)
@@ -61,7 +68,38 @@ plt.yticks(ticks=np.arange(len(sig_ratios)), labels=sig_ratios)
 plt.xticks(ticks=np.arange(len(tau_ratios)), labels=tau_ratios)
 plt.xlabel('tau_i/tau_e', fontsize=20)
 plt.ylabel('sig_i/sig_e', fontsize=20)
-# Flip the y-axis
-plt.gca().invert_yaxis()
+plt.gca().invert_yaxis()  # Flip the y-axis
 
-        
+# %% do it across frequencies
+nl = 15
+stabs_n = np.zeros((len(sig_ratios), len(tau_ratios), nl))  # sig x tau x n
+for nnn in range(nl):
+    for ii in range(len(sig_ratios)):
+        for jj in range(len(tau_ratios)):
+            sig_i = sig_e*sig_ratios[ii]
+            tau_i = tau_e*tau_ratios[jj]
+            params = sig_e, sig_i, tau_e, tau_i, wee, wei, wie, wii
+            Atemp = A_matrix(params, nnn)
+            ee,vv = np.linalg.eig(Atemp)
+            
+            ### given one n
+            stabs_n[ii,jj,nnn] = np.max(ee)
+
+# %%
+unstab_n = stabs*np.nan
+
+for ii in range(len(sig_ratios)):
+    for jj in range(len(tau_ratios)):
+        if np.max(stabs_n[ii,jj,:]) > 0:
+            unstab_n[ii,jj] = np.argmax(stabs_n[ii,jj,:])
+
+# %%
+plt.figure()
+plt.imshow(unstab_n)
+plt.yticks(ticks=np.arange(len(sig_ratios)), labels=sig_ratios)
+plt.xticks(ticks=np.arange(len(tau_ratios)), labels=tau_ratios)
+plt.xlabel('tau_i/tau_e', fontsize=20)
+plt.ylabel('sig_i/sig_e', fontsize=20)
+plt.gca().invert_yaxis()
+cbar = plt.colorbar()
+cbar.set_label('unstable spatial freq.', rotation=90, labelpad=15, fontsize=20)
