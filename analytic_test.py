@@ -37,8 +37,8 @@ nnn = 1
 wee, wei, wie, wii = 1, -2, 0.99, -1.8
 tau_e, sig_e = 0.005, 0.1
 
-sig_ratios = np.arange(0.5,2,0.2)
-tau_ratios = np.arange(0.5,5,0.5)
+sig_ratios = np.arange(0.5,2.1,0.2)
+tau_ratios = np.arange(0.5,4.5,0.5)
 
 stabs = np.zeros((len(sig_ratios), len(tau_ratios)))
 
@@ -98,8 +98,8 @@ plt.figure()
 plt.imshow(unstab_n)
 plt.yticks(ticks=np.arange(len(sig_ratios)), labels=sig_ratios)
 plt.xticks(ticks=np.arange(len(tau_ratios)), labels=tau_ratios)
-plt.xlabel('tau_i/tau_e', fontsize=20)
-plt.ylabel('sig_i/sig_e', fontsize=20)
+plt.xlabel(r'$\tau_i$/$\tau_e$', fontsize=20)
+plt.ylabel(r'$\sigma_i$/$\sigma_e$', fontsize=20)
 plt.gca().invert_yaxis()
 cbar = plt.colorbar()
-cbar.set_label('unstable spatial freq.', rotation=90, labelpad=15, fontsize=20)
+cbar.set_label('most unstable spatial freq.', rotation=90, labelpad=15, fontsize=20)

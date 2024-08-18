@@ -1,0 +1,24 @@
+\tau_e \frac{\partial h_e(x,t)}{\partial t} = -h_e + W_{ee}g_e*\phi(h_e) + W_{ei}g_i*\phi(h_i) + \mu_e
+\\
+\tau_i \frac{\partial h_i(x,t)}{\partial t} = -h_i + W_{ie}g_e*\phi(h_e) + W_{ii}g_i*\phi(h_i) + \mu_i
+
+
+\tilde{W}_{ee}\tilde{m}_e + \tilde{W}_{ei}\tilde{m}_i + \tilde{\mu}_e = 0
+
+
+\begin{bmatrix}
+-\epsilon + \tilde{W}_{ee}(n) &  \tilde{W}_{ei}(n) \\
+\tilde{W}_{ie}(n) & -\epsilon + \tilde{W}_{ii}(n)
+\end{bmatrix}
+
+
+\beta = \frac{|\mu_{net}|}{\mu_E+\mu_{inp}}
+
+
+\tau_e \dot{h}_e = -h_e + J^{ee}\phi(h_e) + J^{ei}\phi(h_i) + h^0_e
+\\
+\tau_i \dot{h}_i = -h_i + J^{ie}\phi(h_i) + J^{ii}\phi(h_i) + h^0_i
+
+\langle h_e \rangle = \sqrt{K}(J^{ee}m_e + J^{ei}m_i + m^0_e)
+\\
+\langle h_i \rangle = \sqrt{K}(J^{ie}m_e + J^{ii}m_i + m^0_i)

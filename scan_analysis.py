@@ -9,15 +9,15 @@ import scipy as sp
 import numpy as np
 from matplotlib import pyplot as plt
 import matplotlib 
-matplotlib.rc('xtick', labelsize=20) 
-matplotlib.rc('ytick', labelsize=20)
+matplotlib.rc('xtick', labelsize=10) 
+matplotlib.rc('ytick', labelsize=10)
 
 import os
 import pickle
 
 # %% get all simulated pkl files
 # Directory where the pickle files are saved
-input_dir = 'sims_200'
+input_dir = 'sims_balanced2'
 # Get a list of all files in the directory
 files = sorted([f for f in os.listdir(input_dir) if f.endswith('.pkl')])
 
@@ -47,7 +47,8 @@ sig_ratio = np.zeros(ni)
 tau_ratio = np.zeros(nj)
 
 fig, axs = plt.subplots(ni, nj, figsize=(15, 15))
-axs = axs.flatten()
+ax = axs#.flatten()
+row_change = np.arange(ni-1,-1,-1)
 for ii in range(ni):
     for jj in range(nj):
         
@@ -70,20 +71,24 @@ for ii in range(ni):
         beta_scan[ii,jj] = np.median(beta_t[:,:,50:])
         
         ### plotting
-        ax = axs[fi]
+        ax = axs[row_change[ii],jj]
         #######################################################################
         ### for fourier in time
         #######################################################################
-        # ax.loglog(ff, pp)
+        ax.loglog(ff, pp)
+        ax.set_xlim([0.1, 500])
+        ax.set_ylim([0.01, 10**5])
         #######################################################################
         ### for fourier in space
         #######################################################################
-        data4fft = temp_re[:,:,50:]*1
-        _,_,lt = data4fft.shape
-        data_fft = np.fft.fftn(data4fft)
-        data_fft_shifted = np.fft.fftshift(data_fft)
-        magnitude_spectrum = np.abs(data_fft_shifted)
-        ax.imshow(np.log(magnitude_spectrum[:, :, 1*lt//2]), cmap='gray')
+        # data4fft = temp_re[:,:,50:]*1
+        # _,_,lt = data4fft.shape
+        # data_fft = np.fft.fftn(data4fft)
+        # data_fft_shifted = np.fft.fftshift(data_fft)
+        # magnitude_spectrum = np.abs(data_fft_shifted)
+        # ax.imshow(np.log(magnitude_spectrum[:, :, 1*lt//2]), cmap='gray')
+        # ax.set_xticks([])  # Remove x ticks
+        # ax.set_yticks([]) 
         #######################################################################
         ### for activity histogram
         #######################################################################
@@ -93,7 +98,7 @@ for ii in range(ni):
         # temp = np.mean(temp_re,2).reshape(-1)  ### in space
         # ax.hist(temp,50)
         
-        ax.set_title(f'sigma={sig_}, tau={tau_}')
+        ax.set_title(rf'$\sigma$={sig_}, $\tau$={tau_}')
         fi += 1
         
         ### for visualization
@@ -101,8 +106,11 @@ for ii in range(ni):
             # ax.set_xticks([])
 # ax.set_xlabel('Hz', fontsize=20)
 # ax.set_ylabel('power', fontsize=20)
-ax.set_xlabel('firing', fontsize=20)
-ax.set_ylabel('count', fontsize=20)
+# ax.set_xlabel('firing', fontsize=20)
+# ax.set_ylabel('count', fontsize=20)
+
+# plt.tight_layout()
+plt.subplots_adjust(hspace=0.4, wspace=0.4)
             
 # %%
 fig, ax = plt.subplots()

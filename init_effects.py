@@ -88,3 +88,53 @@ plt.imshow(np.log(magnitude_spectrum[:, :, lt//2]), cmap='gray')
 plt.title('Magnitude Spectrum (log scale) at t = t/2')
 plt.colorbar()
 plt.show()
+
+###############################################################################
+# %% wave number and phase analysis
+###############################################################################
+# %%
+def k_xy(lattice):
+    Nx,Ny = lattice.shape
+    # Perform 2D FFT
+    fft_result = np.fft.fft2(lattice)
+    
+    # Shift the zero frequency component to the center
+    fft_shifted = np.fft.fftshift(fft_result)
+    
+    # Compute the magnitude spectrum
+    magnitude_spectrum = np.abs(fft_shifted)
+
+    # Compute wave numbers (k_x, k_y)
+    kx = np.fft.fftfreq(Nx, d=(1))
+    ky = np.fft.fftfreq(Ny, d=(1))
+    kx_shifted = np.fft.fftshift(kx)
+    ky_shifted = np.fft.fftshift(ky)
+
+    return magnitude_spectrum, kx_shifted, ky_shifted
+
+# %%
+lattice = temp_rep[rr,:,:,-1]
+kk, kx_shifted, ky_shifted = k_xy(lattice)
+
+plt.figure()
+plt.imshow(kk, extent=(kx_shifted[0], kx_shifted[-1], ky_shifted[0], ky_shifted[-1]), cmap='twilight_shifted')
+plt.colorbar(label='power')
+plt.title('2D FFT', fontsize=20)
+plt.xlabel('wave number k_x', fontsize=20)
+plt.ylabel('wave number k_y', fontsize=20)
+
+# %%
+N = re_space.shape[0]
+temp_rep = np.array(temp)
+k_space = np.zeros((N,N))
+for rr in range(20):
+    lattice = temp_rep[rr,:,:,-1]
+    kk, kx_shifted, ky_shifted = k_xy(lattice)
+    k_space += kk/20
+
+plt.figure()
+plt.imshow(k_space, extent=(kx_shifted[0], kx_shifted[-1], ky_shifted[0], ky_shifted[-1]), cmap='twilight_shifted')
+plt.colorbar(label='mean power')
+plt.title('2D FFT across inits', fontsize=20)
+plt.xlabel('wave number k_x', fontsize=20)
+plt.ylabel('wave number k_y', fontsize=20)

@@ -59,7 +59,7 @@ matplotlib.rc('ytick', labelsize=20)
 N = 70  # neurons
 tau_e = 0.005  # time constant ( 5ms in seconds )
 sig_e = 0.1  # spatial kernel
-tau_i, sig_i = 15*0.001, 0.2   ### important parameters!!
+tau_i, sig_i = 5*0.001, 0.1   ### important parameters!!
 #### 5, 0.14  ### grid parameter
 #### 15, 0.2  ### chaos parameter
 #### 10, 0.11 ### waves/strips!!!
@@ -164,7 +164,7 @@ for tt in range(lt-1):
     re_xy[:,:,tt+1] = phi(he_xy[:,:,tt+1])
     ri_xy[:,:,tt+1] = phi(hi_xy[:,:,tt+1])
     
-    # if tt>100:# and tt<110:
+    # if tt>100 and tt<110:
     #     re_xy[60:,60:,tt+1] = 1
     
     ### make E-I measurements
@@ -190,11 +190,14 @@ plt.legend(fontsize=15)
 # %% plot dynamics
 offset = 1
 plt.figure()
-plt.plot(time[offset:], re_xy[20,20,offset:].squeeze())
-plt.plot(time[offset:], re_xy[15,15,offset:].squeeze())
-plt.plot(time[offset:], ri_xy[15,15,offset:].squeeze(),'-o')
+plt.plot(time[offset:], re_xy[20,20,offset:].squeeze(), label='E cell1')
+plt.plot(time[offset:], re_xy[15,15,offset:].squeeze(), label='E cell2')
+plt.plot(time[offset:], ri_xy[15,15,offset:].squeeze(), label='I cell2')
 plt.xlabel('time (s)', fontsize=20)
-plt.ylabel('rate (Hz)', fontsize=20)
+plt.ylabel('activity', fontsize=20)
+plt.legend(loc='upper left', bbox_to_anchor=(1, 1), fontsize=20)
+# Adjust the layout to make room for the legend
+plt.tight_layout(rect=[0, 0, 0.75, 1])
 # plt.xlim([0.1,0.14])
 
 # %% pot beta for a single cell
@@ -263,7 +266,7 @@ plt.show()
 
 # %% make video
 ##Generate example data (random 10x10x100 tensor)
-# gif_name = 'input_chaos'
+# gif_name = 'input_train2'
 # # data = re_xy[:,:,100:]*1
 # # data = beta_t[:,:,100:]*1
 # # data = shifted_images*1
@@ -377,3 +380,21 @@ plt.imshow(np.log(magnitude_spectrum[:, :, lt//2]), cmap='gray')
 #             cross_corr_matrix[j, i] = cross_corr[t-1]
     
 #     return cross_corr_matrix
+
+# %% show time series
+time_points = np.array([90, 105, 160, 210, 260, 310])
+titls = ['pre-stim', 'stim', 'post-stim 50steps', 'post-stim 100steps', 'post-stim 150 steps', 'post-stim 200steps']
+
+fig, axs = plt.subplots(1, len(time_points), figsize=(20, 10))
+for ss in range(len(time_points)):
+    cax = axs[ss].imshow(re_xy[:,:,time_points[ss]])
+    axs[ss].set_title(titls[ss], fontsize=15)
+    axs[ss].set_xticks([])  # Remove x ticks
+    axs[ss].set_yticks([])
+    
+    # if ss==len(time_points)-1:
+        # fig.colorbar(cax, ax=axs[ss])
+# cbar = fig.colorbar(cax, ax=axs[ss], location='right', shrink=0.6)
+
+# Adjust the spacing of the subplots to make room for the colorbar
+# fig.subplots_adjust(wspace=0.3)

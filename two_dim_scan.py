@@ -24,7 +24,7 @@ import pickle
 
 # %% fixing initial condition to study chaos
 np.random.seed(13)
-N = 200
+N = 70 #200
 init_2d_e = np.random.randn(N,N)
 init_2d_i = np.random.randn(N,N)
 
@@ -38,7 +38,7 @@ sig_e = 0.1  # spatial kernel
 ### chaotic waves 10ms, 0.1
 ### drifting changing blobs 10ms, 0.2
 
-rescale = 2. ### seems to matter for finite size(?)
+rescale = 1. ### seems to matter for finite size(?)
 
 # %% time and space setup
 ### setting up space and time
@@ -175,7 +175,7 @@ def chaotic_2d_net(sig_i, tau_i):
 # %% scanning
 
 # Create a directory to save the files if it doesn't exist
-output_dir = 'sims_200'  ## the sims data folder
+output_dir = 'sims_balanced2'  ## the sims data folder
 os.makedirs(output_dir, exist_ok=True)
 
 for ii in range(len(sig_ie)):
