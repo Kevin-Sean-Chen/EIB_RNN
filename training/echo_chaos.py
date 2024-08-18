@@ -43,7 +43,7 @@ tau_t = (sawtooth_wave+1) + 1.5
 plt.figure()
 plt.plot(tau_t)
 plt.xlabel('time steps', fontsize=20)
-plt.ylabel('tau_i/tau_e', fontsize=20)
+plt.ylabel(r'$\tau_i$/$\tau_e$', fontsize=20)
 
 # %% init 2D chaotic network
 N = 50  # neurons
@@ -225,7 +225,7 @@ plt.figure()
 plt.plot(y_t[:-1], label='readout')
 plt.plot(f_t, label='target')
 plt.legend(fontsize=20)
-plt.ylabel('drift angle', fontsize=20)
+plt.ylabel(r'\tau_i/\tau_e', fontsize=20)
 plt.xlabel('time steps', fontsize=20)
 plt.title('training (RLS)', fontsize=20)
 
@@ -264,7 +264,6 @@ plt.plot(y_test[:-1], label='readout')
 # plt.plot(y_test_right,alpha=.5, label='alter sigma_i')
 plt.plot(f_t, label='target')
 plt.legend(fontsize=20)
-plt.ylabel('drift angle', fontsize=20)
+plt.ylabel(r'\tau_i/\tau_e', fontsize=20)
 plt.xlabel('time steps', fontsize=20)
-plt.title('testing', fontsize=20)
-
+# plt.title('testing', fontsize=20)

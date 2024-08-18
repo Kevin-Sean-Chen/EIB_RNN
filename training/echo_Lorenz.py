@@ -69,7 +69,7 @@ y = (y - np.mean(y))/np.max(y)
 z = (z - np.mean(z))/np.max(z)
 
 # %% setup
-N = 50
+N = 40
 lt = num_steps*1 - offset
 
 # %% functions
@@ -164,7 +164,7 @@ def gen_spatail_Lorenz():
     x = (x - np.mean(x))/np.max(x)
     y = (y - np.mean(y))/np.max(y)
     z = (z - np.mean(z))/np.max(z)
-    N = 50
+    # N = 50
     lt = num_steps*1 - offset
 
     ### make spatial patterns
@@ -184,9 +184,6 @@ def gen_spatail_Lorenz():
 lorenz_xy_test, f_test = gen_spatail_Lorenz()
 I_xy_test = lorenz_xy_test/np.max(lorenz_xy_test)
 
-# %% setup
-N = 50
-lt = num_steps*1 - offset
 
 # %% testing with Lorenz network
 ###############################################################################
@@ -220,7 +217,7 @@ lt = num_steps*1 - offset
 dt = 0.001
 tau_e = 0.005  # time constant ( 5ms in seconds )
 sig_e = 0.1  # spatial kernel
-tau_i, sig_i = 5*0.001, 0.11   ### important parameters!!
+tau_i, sig_i = 20*0.001, 0.3   ### important parameters!!
 #### 5, 0.14  ### grid parameter
 #### 15, 0.2  ### chaos parameter
 #### 10, 0.11 ### waves/strips!!!
@@ -255,11 +252,11 @@ w_dim = 1000
 subsamp = random.sample(range(NN), w_dim)
 P = np.eye(w_dim)
 w = np.random.randn(w_dim)*0.1
-reps = 1 
+reps = 10
 
 ### I-O setup
 I_xy = lorenz_xy/np.max(lorenz_xy)  # 2D input video
-Iamp = 2.*(N**2*sig_i**2*np.pi*1)**0.5 *rescale / 1
+Iamp = 2.*(N**2*sig_i**2*np.pi*1)**0.5 *rescale / 10
 f_t = y*1  # target
 y_t = np.zeros(lt)  # readout
 
@@ -274,6 +271,8 @@ for rr in range(reps):
     ri_xy = re_xy*1
     re_xy[:,:,0] = re_init
     ri_xy[:,:,0] = ri_init
+    he_xy = re_xy*1
+    hi_xy = ri_xy*1
     ### train with different Lorenz everytime! ###
     lorenz_xy_train, f_train = gen_spatail_Lorenz()
     I_xy = lorenz_xy_train/np.max(lorenz_xy_train)
@@ -315,7 +314,7 @@ y_test = np.zeros(lt)
 re_xy = np.zeros((N,N, lt))
 ri_xy = re_xy*1
 ### perturbations
-re_xy[:,:,0] = re_init + np.random.rand(N,N)*1 #
+re_xy[:,:,0] = re_init + np.random.rand(N,N)*0 #
 # sig_i = 0.2
 # tau_i = 0.015
 ri_xy[:,:,0] = ri_init
@@ -327,7 +326,7 @@ for tt in range(lt-1):
     ge_conv_re = spatial_convolution(re_xy[:,:,tt], g_kernel(sig_e))
     gi_conv_ri = spatial_convolution(ri_xy[:,:,tt], g_kernel(sig_i))
     he_xy[:,:,tt+1] = he_xy[:,:,tt] + dt/tau_e*( -he_xy[:,:,tt] + (Wee*(ge_conv_re) + Wei*(gi_conv_ri) + mu_e \
-                                                                   + I_xy[:,:,tt]*Iamp + Iamp*y_test[tt]*pattern_w) )
+                                                                   + I_xy_test[:,:,tt]*Iamp + Iamp*y_test[tt]*pattern_w) )
     hi_xy[:,:,tt+1] = hi_xy[:,:,tt] + dt/tau_i*( -hi_xy[:,:,tt] + (Wie*(ge_conv_re) + Wii*(gi_conv_ri) + mu_i) )
     re_xy[:,:,tt+1] = phi(he_xy[:,:,tt+1])
     ri_xy[:,:,tt+1] = phi(hi_xy[:,:,tt+1])
@@ -342,7 +341,7 @@ for tt in range(lt-1):
 plt.figure()
 plt.plot(y_test, label='readout')
 # plt.plot(y_test_right,alpha=.5, label='alter sigma_i')
-plt.plot(f_train, label='target')
+plt.plot(f_test, label='target')
 plt.legend(fontsize=20)
 plt.ylabel('Lorenz z(t)', fontsize=20)
 plt.xlabel('time steps', fontsize=20)
