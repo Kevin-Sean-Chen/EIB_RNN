@@ -9,15 +9,15 @@ import scipy as sp
 import numpy as np
 from matplotlib import pyplot as plt
 import matplotlib 
-matplotlib.rc('xtick', labelsize=10) 
-matplotlib.rc('ytick', labelsize=10)
+matplotlib.rc('xtick', labelsize=15) 
+matplotlib.rc('ytick', labelsize=15)
 
 import os
 import pickle
 
 # %% get all simulated pkl files
 # Directory where the pickle files are saved
-input_dir = 'sims_balanced2'
+input_dir = 'sims_balanced'
 # Get a list of all files in the directory
 files = sorted([f for f in os.listdir(input_dir) if f.endswith('.pkl')])
 
@@ -98,18 +98,21 @@ for ii in range(ni):
         # temp = np.mean(temp_re,2).reshape(-1)  ### in space
         # ax.hist(temp,50)
         
-        ax.set_title(rf'$\sigma$={sig_}, $\tau$={tau_}')
+        ax.set_title(rf'$\sigma$={sig_}, $\tau$={tau_}',fontsize=20)
         fi += 1
         
+        if ii==0 and jj==3:
+            ax.set_xlabel('Hz', fontsize=20)
+            ax.set_ylabel('power', fontsize=20)
         ### for visualization
         # if fi-1 < (ni - 1) * nj:
             # ax.set_xticks([])
-# ax.set_xlabel('Hz', fontsize=20)
-# ax.set_ylabel('power', fontsize=20)
+# ax.set_xlabel('Hz', fontsize=15)
+# ax.set_ylabel('power', fontsize=15)
 # ax.set_xlabel('firing', fontsize=20)
 # ax.set_ylabel('count', fontsize=20)
 
-# plt.tight_layout()
+plt.tight_layout()
 plt.subplots_adjust(hspace=0.4, wspace=0.4)
             
 # %%

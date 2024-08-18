@@ -59,7 +59,7 @@ matplotlib.rc('ytick', labelsize=20)
 N = 70  # neurons
 tau_e = 0.005  # time constant ( 5ms in seconds )
 sig_e = 0.1  # spatial kernel
-tau_i, sig_i = 5*0.001, 0.14   ### important parameters!!
+tau_i, sig_i = 15*0.001, 0.20    ### important parameters!!
 #### 5, 0.14  ### grid parameter
 #### 15, 0.2  ### chaos parameter
 #### 10, 0.11 ### waves/strips!!!
@@ -70,7 +70,7 @@ tau_i, sig_i = 5*0.001, 0.14   ### important parameters!!
 ### chaotic waves 10ms, 0.1
 ### drifting changing blobs 10ms, 0.2
 
-rescale = 2. ##(N*sig_e*np.pi*1)**0.5 #1
+rescale = 1. ##(N*sig_e*np.pi*1)**0.5 #1
 # Wee = 1.*(N**2*sig_e**2*np.pi*1)**0.5 *rescale  # recurrent weights
 # Wei = -2.*(N**2*sig_i**2*np.pi*1)**0.5 *rescale
 # Wie = 1.*(N**2*sig_e**2*np.pi*1)**0.5 *rescale
@@ -184,7 +184,7 @@ plt.plot(time[offset:], measure_i[offset:], label='I')
 plt.plot(time[offset:], (measure_e+measure_i)[offset:],label='total')
 plt.xlabel('time (s)', fontsize=20)
 plt.ylabel('current', fontsize=20)
-plt.title('spatial balancing', fontsize=20)
+# plt.title('spatial balancing', fontsize=20)
 plt.legend(fontsize=15)
 
 # %% plot dynamics
@@ -266,11 +266,11 @@ plt.show()
 
 # %% make video
 ##Generate example data (random 10x10x100 tensor)
-# gif_name = 'input_train2'
+# gif_name = 'beta_t3s2'
 # # data = re_xy[:,:,100:]*1
-# # data = beta_t[:,:,100:]*1
+# data = beta_t[:,:,100:]*1
 # # data = shifted_images*1
-# data = I_xy*1
+# # data = I_xy*1
 
 # # Function to create a frame with the iteration number in the title
 # def create_frame(data, frame):
@@ -398,3 +398,8 @@ for ss in range(len(time_points)):
 
 # Adjust the spacing of the subplots to make room for the colorbar
 # fig.subplots_adjust(wspace=0.3)
+
+# %%
+# plt.figure()
+# plt.plot([1,2,3,4], [np.nanstd(beta_50.reshape(-1)), np.nanstd(beta_100.reshape(-1)), \
+#                        np.nanstd(beta_150.reshape(-1)), np.nanstd(beta_200.reshape(-1))], '-o')
