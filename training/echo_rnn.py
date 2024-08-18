@@ -68,7 +68,7 @@ Ni = NN*1  # I neurons
 finite_scale = 2. ### this is hand-tuned to correct for finite size
 ### N = total number of neurons.
 ### K = mean number of connections per neuron
-pc = 0.5 # connection probability (fraction that are 0)
+pc = 0.1 # connection probability (fraction that are 0)
 K = pc*(Ne)  # degree of connectivity
 rescale_c = 1/(K**0.5)*finite_scale  # am not sure if this is correct... but might be for finite size network
 c_ee, c_ei, c_ie, c_ii = dilute_net(Ne, pc), dilute_net(Ne, pc),\
@@ -120,7 +120,9 @@ for tt in range(lt-1):
     ang = angt[tt] + dt/tau_stim*(mu - angt[tt]) + sig_noise*np.sqrt(dt)*np.random.randn()
     angt[tt+1] = wrap_to_pi(ang)
 
-angt = np.sin(time/dt/np.pi/20)*np.pi
+angt = np.sin(time/dt/np.pi/10)
+angt = angt + np.sin(time/dt/np.pi/30)
+angt = angt/np.max(angt)*np.pi
 distance = 100  # Fixed distance to shift
 
 plt.figure()
@@ -167,7 +169,7 @@ w_dim = 1000
 subsamp = random.sample(range(NN), w_dim)
 P = np.eye(w_dim)
 w = np.random.randn(w_dim)*0.1
-reps = 7
+reps = 1
 
 ### I-O setup
 I_xy = shifted_images*1  # 2D input video
@@ -271,3 +273,7 @@ plt.legend(fontsize=20)
 plt.ylabel('drift angle', fontsize=20)
 plt.xlabel('time steps', fontsize=20)
 plt.title('testing', fontsize=20)
+
+# %%
+MSE = np.mean((y_test-f_t)**2)
+print(MSE)

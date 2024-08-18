@@ -28,7 +28,7 @@ matplotlib.rc('ytick', labelsize=20)
 N = 70  # neurons
 tau_e = 0.005  # time constant ( 5ms in seconds )
 sig_e = 0.1  # spatial kernel
-tau_i, sig_i = 10*0.001, 0.11   ### important parameters!!
+tau_i, sig_i = 5*0.001, 0.14   ### important parameters!!
 #### 5, 0.14  ### grid parameter
 #### 15, 0.2  ### chaos parameter
 #### 10, 0.1  ### waves/strips!!!
@@ -96,7 +96,7 @@ def g_kernel(sigma, size=kernel_size):
 ### input in space
 I_xy = g_kernel(.1, N)
 I_xy = I_xy/np.max(I_xy)*(N**2*sig_e**2*np.pi*1)**0.5 *rescale*1.
-start_t = 200
+start_t = 100
 end_t = start_t + int(tau_e/dt)
 
 # %% dynamics

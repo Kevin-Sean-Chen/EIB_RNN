@@ -25,7 +25,7 @@ matplotlib.rc('ytick', labelsize=20)
 N = 50  # neurons
 tau_e = 0.005  # time constant ( 5ms in seconds )
 sig_e = 0.1  # spatial kernel
-tau_i, sig_i = 5*0.001, 0.14   ### important parameters!!
+tau_i, sig_i = 15*0.001, 0.2   ### important parameters!!
 #### 5, 0.14  ### grid parameter
 #### 15, 0.2  ### chaos parameter
 #### 10, 0.11 ### waves/strips!!!
@@ -109,7 +109,10 @@ for tt in range(lt-1):
     ang = angt[tt] + dt/tau*(mu - angt[tt]) + sig_noise*np.sqrt(dt)*np.random.randn()
     angt[tt+1] = wrap_to_pi(ang)
 
-angt = np.sin(time/dt/np.pi/20)*np.pi
+# angt = np.sin(time/dt/np.pi/20)*np.pi
+angt = np.sin(time/dt/np.pi/10)
+angt = angt + np.sin(time/dt/np.pi/30)
+angt = angt/np.max(angt)*np.pi
 distance = 100  # Fixed distance to shift
 
 plt.figure()
@@ -153,7 +156,7 @@ w_dim = 1000
 subsamp = random.sample(range(NN), w_dim)
 P = np.eye(w_dim)
 w = np.random.randn(w_dim)*0.1
-reps = 7
+reps = 1
 
 ### I-O setup
 I_xy = shifted_images*1  # 2D input video
@@ -242,3 +245,15 @@ plt.legend(fontsize=20)
 plt.ylabel('drift angle', fontsize=20)
 plt.xlabel('time steps', fontsize=20)
 plt.title('testing', fontsize=20)
+
+# %%
+MSE = np.mean((y_test-f_t)**2)
+print(MSE)
+
+# %%
+mse_2d = np.array([0.041, 0.074, 0.093, 0.096, 0.160, 0.162, 0.114])
+mse_rnn = np.array([0.639, 0.093, 0.051, 0.499, 0.433, 0.188, 0.359])
+
+plt.figure()
+plt.bar(['2D','vanila RNN'], [np.mean(mse_2d), np.mean(mse_rnn)], yerr =  [np.std(mse_2d), np.std(mse_rnn)])
+plt.ylabel('MSE', fontsize=20)

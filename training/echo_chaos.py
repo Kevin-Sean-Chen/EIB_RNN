@@ -25,13 +25,23 @@ matplotlib.rc('ytick', labelsize=20)
 ###############################################################################
 # %% time varying ratio
 dt = 0.001   # 1ms time step
-T = 0.5   # in seconds
+T = 0.5 + 0.05   # in seconds
 time = np.arange(0, T, dt)  # time vector
 lt = len(time)
 
 tau_t = (np.sin(time*20)+1) + 1.5  # ranging across the ratio
+
+# Convert sine wave to sawtooth wave
+sine_wave = np.sin(time*25)
+sawtooth_wave = (2 * np.arcsin(sine_wave) / np.pi)  # Normalize to sawtooth wave
+
+# Normalize the sawtooth to the same max/min as sine wave
+sawtooth_wave = (sawtooth_wave - np.min(sawtooth_wave)) / (np.max(sawtooth_wave) - np.min(sawtooth_wave))  # Normalize to 0-1 range
+sawtooth_wave = (sawtooth_wave * 2 - 1) * (np.max(sine_wave) - np.min(sine_wave)) / 2  # Scale to match sine wave
+
+tau_t = (sawtooth_wave+1) + 1.5
 plt.figure()
-plt.plot( tau_t)
+plt.plot(tau_t)
 plt.xlabel('time steps', fontsize=20)
 plt.ylabel('tau_i/tau_e', fontsize=20)
 
@@ -88,16 +98,17 @@ def wrap_to_pi(angle):
 # %% chaotic dynamics with varying ratio
 ### neural dynamics
 def make_chaotic():
+    lt_sim = lt+50
     ### random initial conditions
     re_init = np.random.rand(N,N)*.1
     ri_init = np.random.rand(N,N)*.1
-    re_xy = np.zeros((N,N, lt))
+    re_xy = np.zeros((N,N, lt_sim))
     ri_xy = re_xy*1
     re_xy[:,:,0] = re_init
     ri_xy[:,:,0] = ri_init
     he_xy = re_xy*1
     hi_xy = ri_xy*1
-    for tt in range(lt-1):
+    for tt in range(lt_sim-1):
         ### varying parameters
         tau_i, sig_i = tau_t[tt]*tau_e, sig_e*2   #### time varying tau ratio
         rescale = 2. ##(N*sig_e*np.pi*1)**0.5 #1
@@ -115,6 +126,7 @@ def make_chaotic():
         hi_xy[:,:,tt+1] = hi_xy[:,:,tt] + dt/tau_i*( -hi_xy[:,:,tt] + (Wie*(ge_conv_re) + Wii*(gi_conv_ri) + mu_i) )
         re_xy[:,:,tt+1] = phi(he_xy[:,:,tt+1])
         ri_xy[:,:,tt+1] = phi(hi_xy[:,:,tt+1])
+    re_xy = re_xy[:,:,50:]  # remove weird initial conditions
     return re_xy
 
 re_xy = make_chaotic()
@@ -159,11 +171,11 @@ hi_xy = ri_xy*1
 # %%
 beta = 1
 NN = N*N  # real number of neurons
-w_dim = 1000
+w_dim = 1500
 subsamp = random.sample(range(NN), w_dim)
 P = np.eye(w_dim)
 w = np.random.randn(w_dim)*0.1
-reps = 13
+reps = 15
 
 ### I-O setup
 I_xy = sp_temp_chaos/np.max(sp_temp_chaos)  # 2D input video
@@ -235,7 +247,7 @@ for tt in range(lt-1):
     ge_conv_re = spatial_convolution(re_xy[:,:,tt], g_kernel(sig_e))
     gi_conv_ri = spatial_convolution(ri_xy[:,:,tt], g_kernel(sig_i))
     he_xy[:,:,tt+1] = he_xy[:,:,tt] + dt/tau_e*( -he_xy[:,:,tt] + (Wee*(ge_conv_re) + Wei*(gi_conv_ri) + mu_e \
-                                                                   + I_xy2[:,:,tt]*Iamp) )
+                                                                   + I_xy[:,:,tt]*Iamp) )
     hi_xy[:,:,tt+1] = hi_xy[:,:,tt] + dt/tau_i*( -hi_xy[:,:,tt] + (Wie*(ge_conv_re) + Wii*(gi_conv_ri) + mu_i) )
     re_xy[:,:,tt+1] = phi(he_xy[:,:,tt+1])
     ri_xy[:,:,tt+1] = phi(hi_xy[:,:,tt+1])

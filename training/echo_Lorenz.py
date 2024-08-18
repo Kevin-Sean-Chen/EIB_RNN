@@ -220,7 +220,7 @@ lt = num_steps*1 - offset
 dt = 0.001
 tau_e = 0.005  # time constant ( 5ms in seconds )
 sig_e = 0.1  # spatial kernel
-tau_i, sig_i = 15*0.001, 0.2   ### important parameters!!
+tau_i, sig_i = 5*0.001, 0.11   ### important parameters!!
 #### 5, 0.14  ### grid parameter
 #### 15, 0.2  ### chaos parameter
 #### 10, 0.11 ### waves/strips!!!
