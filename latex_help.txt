@@ -19,6 +19,6 @@
 \\
 \tau_i \dot{h}_i = -h_i + J^{ie}\phi(h_i) + J^{ii}\phi(h_i) + h^0_i
 
-\langle h_e \rangle = \sqrt{K}(J^{ee}m_e + J^{ei}m_i + m^0_e)
+\langle h_e \rangle = \sqrt{K}(J_{ee}m_e - J_{ei}m_i + m^0_e)
 \\
-\langle h_i \rangle = \sqrt{K}(J^{ie}m_e + J^{ii}m_i + m^0_i)
+\langle h_i \rangle = \sqrt{K}(J_{ie}m_e - J_{ii}m_i + m^0_i)

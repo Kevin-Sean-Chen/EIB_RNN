@@ -56,7 +56,7 @@ matplotlib.rc('ytick', labelsize=20)
 # ### D, chaotic solution (τi = 12.8, σi = 0.096).
 
 # %% test to simplify
-N = 70  # neurons
+N = 50  # neurons
 tau_e = 0.005  # time constant ( 5ms in seconds )
 sig_e = 0.1  # spatial kernel
 tau_i, sig_i = 15*0.001, 0.20    ### important parameters!!
@@ -70,7 +70,7 @@ tau_i, sig_i = 15*0.001, 0.20    ### important parameters!!
 ### chaotic waves 10ms, 0.1
 ### drifting changing blobs 10ms, 0.2
 
-rescale = 1. ##(N*sig_e*np.pi*1)**0.5 #1
+rescale = 2. ##(N*sig_e*np.pi*1)**0.5 #1
 # Wee = 1.*(N**2*sig_e**2*np.pi*1)**0.5 *rescale  # recurrent weights
 # Wei = -2.*(N**2*sig_i**2*np.pi*1)**0.5 *rescale
 # Wie = 1.*(N**2*sig_e**2*np.pi*1)**0.5 *rescale
@@ -84,6 +84,18 @@ Wie = .99*(N**2*sig_e**2*np.pi*1)**0.5 *rescale
 Wii = -1.8*(N**2*sig_i**2*np.pi*1)**0.5 *rescale
 mu_e = 1.*rescale
 mu_i = .8*rescale
+
+# %%
+# ### Haim's parameters
+# sig_e = 0.1 #% Define as per your setup
+# sigm_i = 0.15
+# tau_e, tau_i = 0.005, 0.005 
+# Wee = 1.*(N**2*sig_e**2*np.pi*1)**0.5 *rescale  # recurrent weights
+# Wei = -4.*(N**2*sig_i**2*np.pi*1)**0.5 *rescale
+# Wie = 2.*(N**2*sig_e**2*np.pi*1)**0.5 *rescale
+# Wii = -2*(N**2*sig_i**2*np.pi*1)**0.5 *rescale
+# mu_e = 10.*rescale
+# mu_i = 1*rescale
 
 # %% network setup
 ### setting up space and time
@@ -174,6 +186,7 @@ for tt in range(lt-1):
     
     ### mean measurements
     measure_mu[:,:,tt+1] = np.abs(  (Wee*(ge_conv_re) + Wei*(gi_conv_ri) + mu_e) )
+    # measure_mu[:,:,tt+1] = (  (Wee*(ge_conv_re) + Wei*(gi_conv_ri) + mu_e) )
     measure_mu_ex[:,:,tt+1] = (Wee*ge_conv_re + mu_e)
     
 # %%
@@ -207,6 +220,7 @@ plt.figure()
 plt.plot(time, beta_i)
 plt.xlabel('time', fontsize=20)
 plt.ylabel('beta', fontsize=20)
+print(np.abs(np.mean(measure_e + measure_i)) / np.mean(measure_e))
 
 # %%
 # plt.figure()
@@ -263,6 +277,31 @@ def update(frame):
 ani = FuncAnimation(fig, update, frames=data_r.shape[-1], blit=False)
 
 plt.show()
+
+# %% compute beta assuming stationary
+mu_total = np.mean(measure_mu, 2)
+mu_ex = np.mean(measure_mu_ex, 2)
+beta_ns = np.abs(mu_total)/mu_ex
+
+plt.figure()
+plt.hist(beta_ns.reshape(-1),20)
+plt.title(f'N= {N}', fontsize=20)
+plt.xlabel('beta per neuron', fontsize=20)
+
+
+# %% study beta in detail
+plt.figure()
+plt.hist(np.nanmean(beta_t,2).reshape(-1),100)
+plt.xlabel(r'$<\beta>_t$', fontsize=20)
+plt.ylabel('counts', fontsize=20)
+plt.title(f'N= {N}', fontsize=20)
+
+plt.figure()
+plt.hist(beta_t.reshape(-1),100)
+plt.xlabel(r'$\beta_t$', fontsize=20)
+plt.ylabel('counts', fontsize=20)
+plt.title(f'N= {N}', fontsize=20)
+plt.xlim([0,6])
 
 # %% make video
 ##Generate example data (random 10x10x100 tensor)
