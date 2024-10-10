@@ -232,6 +232,15 @@ Wii = -1.8*(N**2*sig_i**2*np.pi*1)**0.5 *rescale
 mu_e = 1.*rescale
 mu_i = .8*rescale
 
+# unbalanced (mean-field)
+rescale = 3 #N/2  #8 20 30... linear with N
+Wee = 1. *rescale  # recurrent weights
+Wei = -1. *rescale
+Wie = 1. *rescale
+Wii = -1. *rescale
+mu_e = .01 *1
+mu_i = .01 *1
+
 ### setting up space and time
 kernel_size = 23 #37  # pick this for numerical convolution
 

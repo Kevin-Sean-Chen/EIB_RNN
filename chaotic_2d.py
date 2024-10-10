@@ -45,18 +45,18 @@ matplotlib.rc('ytick', labelsize=20)
 # Wei = -160*1
 # Wie = 80*1
 # Wii = -150*1
-# tau_e = 0.005  # time constant ( 5ms in seconds )
-# sig_e = 0.1  # spatial kernel
 # mu_e = 0.48*1  # offset
 # mu_i = 0.32*1
-# tau_i, sig_i = 8*0.001, 0.1
+# tau_e = 0.005  # time constant ( 5ms in seconds )
+# sig_e = 0.1  # spatial kernel
+# tau_i, sig_i = 10*0.001, 0.07
 # ### A, traveling waves solution (τi = 8, σi = 0.1). 
 # ### B, alternating bumps solution (τi = 9, σi = 0.06). 
 # ### C, alternating stripes solution (τi = 9, σi = 0.1). 
 # ### D, chaotic solution (τi = 12.8, σi = 0.096).
 
 # %% test to simplify
-N = 50  # neurons
+N = 100  # neurons
 tau_e = 0.005  # time constant ( 5ms in seconds )
 sig_e = 0.1  # spatial kernel
 tau_i, sig_i = 15*0.001, 0.20    ### important parameters!!
