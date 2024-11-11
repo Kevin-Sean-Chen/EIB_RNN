@@ -14,7 +14,11 @@ from lyapynov import ContinuousDS, DiscreteDS
 from lyapynov import mLCE, LCE, CLV, ADJ
 import math
 
+import jax
+key = jax.random.PRNGKey(42)
+
 # %% RNN example
+### edit from https://github.com/RainerEngelken/RNN-LyapunovSpectra
 ### model
 N = 100  # number of neurons
 g = 4  # strength
@@ -31,9 +35,9 @@ tONS = 1  # time between orthonormalizations
 nStepTransient = math.ceil(init_t/dt)  # Steps during initial transient
 nStep = math.ceil(T/dt)  # Total number of steps
 nstepONS = math.ceil(tONS/dt)  # Steps between orthonormalizations
-nStepTransientONS = math.ceil(nStep/(dt/tONS))  # Steps during transient of ONS
+nStepTransientONS = math.ceil(nStep/(10))  # Steps during transient of ONS
 nONS = math.ceil((nStepTransientONS+nStep)/nstepONS) - 1  # Number of ONS steps
-stepDisplay = 1000
+stepDisplay = 100
 
 ### initialization
 h = np.zeros((N, (nStep + nStepTransient + nStepTransientONS)))  # Preallocate local fields
@@ -80,6 +84,52 @@ for n in range(nStep + nStepTransient + nStepTransientONS-1):
 
 Lspectrum = LS/t  # Normalize sum of log of diagonal elements of R by total simulation time
 
+# %% metrics
+def entropy_rate(Lspec):
+    pos = np.where(Lspec>0)[0]
+    return np.sum(Lspec[pos])
+
+def attractor_dim(Lspec):
+    """
+    D = d + S_d / |lamb_{d+1}| (with d the largest integer such that S+d = Sim^d_i lamb_i >= 0)
+    """
+    lamb_sum = np.cumsum(Lspec)
+    d = np.where(lamb_sum>=0)[0][-1]
+    D = d + np.sum(Lspec[:d])/np.abs(Lspec[d+1])
+    return D
+
+# %% example plotting
+# from pylab import *
+# import random
+# import math
+# subplot(221)  # Plot example trajectories
+# plot(dt*arange(h.shape[1]), transpose(h[0:3, :]))
+# title('example activity')
+# ylabel('$x_i$')
+# xlabel(r'Time ($\tau$)')
+# xlim(0, dt*h.shape[1])
+
+# subplot(223)  # Plot Lyapunov spectrum
+# plot(1.0*arange(nLE)/nLE, Lspectrum, '.k')
+# plot(1.0*arange(nLE)/N, zeros(nLE), ':', color=[0.5, 0.5, 0.5])
+# ylabel(r'$\lambda_i (1/\tau)$')
+# xlabel(r'$i/N$')
+# title("Lyapunov exponents")
+
+# subplot(222)  # Plot time-resolved first local Lyapunov exponent
+# # (Jacobian-based and direct simulations)
+# plot(arange(nONS)*nstepONS*dt, LSall[:, 0], 'k')
+# xlabel(r'Time ($\tau$)')
+# ylabel('$\lambda_i^{local}$')
+# title('first local Lyapunov exponent')
+# xlim(0, nONS*nstepONS*dt)
+
+# subplot(224)  # Plot participation ratio
+# plot(arange(nONS)*nstepONS*dt, pAll[:], 'k')
+# xlabel(r'Time ($\tau$)')
+# ylabel('P')
+# title('participation ratio')
+# xlim(0, nONS*nstepONS*dt)
 
 # %% TO-DO
 ###############################################################################
@@ -89,16 +139,15 @@ Lspectrum = LS/t  # Normalize sum of log of diagonal elements of R by total simu
 ### later explore vectors...
 
 # %%
-import jax
 import jax.numpy as np
 
 # %% setup function version of EI-2D network
 ### params
-N = 50  # neurons
+N = 30  # neurons
 tau_e = 0.005  # time constant ( 5ms in seconds )
-sig_e = 0.1  # spatial kernel
-tau_i, sig_i = 15*0.001, 0.2 
-kernel_size = 17
+sig_e = 0.1  #.1 spatial kernel
+tau_i, sig_i = 0.015, 0.2#0.015, 0.14 #15*0.001, 0.2 
+kernel_size = 7
 
 ### EI-balanced
 rescale = 1. ##(N*sig_e*np.pi*1)**0.5 #1
@@ -108,6 +157,15 @@ Wie = 1*(N**2*sig_e**2*np.pi*1)**0.5 *rescale
 Wii = 1* -1.8 * (N**2*sig_i**2*np.pi*1)**0.5 *rescale  #1.8
 mu_e = 1.*rescale
 mu_i = .8*rescale
+
+### try mean field
+# rescale = 4.9 #N/2  #8 20 30... linear with N
+# Wee = 1. *rescale  # recurrent weights
+# Wei = -2. *rescale
+# Wie = 1. *rescale
+# Wii = -2. *rescale
+# mu_e = .1 *1
+# mu_i = .1 *1
 
 # %% functions for 2D EI network
 def phi(x):
@@ -156,7 +214,7 @@ def spatial_convolution(r, k):
     result = result[N:2*N,N:2*N] #[:r.shape[0], :r.shape[1]] ################################### fix this!!!
     return result
 
-def EI_network(vec_h_ei):
+def EI_network(vec_h_ei, dt=0.001):
     ### unpack
     midpoint = len(vec_h_ei) // 2
     he_xy = vec_h_ei[:midpoint].reshape(N,N)
@@ -165,15 +223,27 @@ def EI_network(vec_h_ei):
     re_xy, ri_xy = phi(he_xy), phi(hi_xy)
     ge_conv_re = spatial_convolution(re_xy, g_kernel(sig_e))
     gi_conv_ri = spatial_convolution(ri_xy, g_kernel(sig_i))
-    dhe_dt = 1/tau_e*( -he_xy + (Wee*(ge_conv_re) + Wei*(gi_conv_ri) + mu_e) )
-    dhi_dt = 1/tau_i*( -hi_xy + (Wie*(ge_conv_re) + Wii*(gi_conv_ri) + mu_i) )
+    dhe_dt = he_xy + dt/tau_e*( -he_xy + (Wee*(ge_conv_re) + Wei*(gi_conv_ri) + mu_e) )
+    dhi_dt = hi_xy + dt/tau_i*( -hi_xy + (Wie*(ge_conv_re) + Wii*(gi_conv_ri) + mu_i) )
     ### put back
     dhei_dt = np.hstack([dhe_dt.reshape(-1), dhi_dt.reshape(-1)])
     return dhei_dt
 
-# %% numerical tests
-key = jax.random.PRNGKey(42)
+# %% test Jacobian with analytic
+# N = 50
+# J = jax.random.uniform(key,shape=(N,N))
+# def RNN_test(v):
+#     dhdt = v*(1-dt)+np.dot(J, np.tanh(v))*dt
+#     return dhdt
 
+# hv = jax.random.uniform(key,shape=(N,))
+# hsechdt = dt/np.cosh(hv)**2  # derivative of tanh(h)*dt
+# D = np.eye(N)*(1-dt) + J*hsechdt
+
+# jacobian_rnn = jax.jacobian(RNN_test)
+# D_jax = jacobian_rnn(hv)
+
+# %% numerical tests
 dt = 0.001  # 1ms time steps
 T = 1.0  # a few seconds of simulation
 time = np.arange(0, T, dt)
@@ -190,7 +260,7 @@ temp_hei = np.hstack([he_xy_t.reshape(-1), hi_xy_t.reshape(-1)])
 for tt in range(lt):
     ### ODE form
     vec_h_ei = np.hstack([he_xy_t.reshape(-1), hi_xy_t.reshape(-1)])
-    temp_hei = temp_hei + EI_network(vec_h_ei)*dt
+    temp_hei = 0 + EI_network(temp_hei)*1
     ### unpack
     midpoint = len(temp_hei) // 2
     he_xy_t = temp_hei[:midpoint].reshape(N,N)
@@ -201,7 +271,13 @@ for tt in range(lt):
     # hi_xy[:,:,tt] = jax.device_get(hi_xy_t) #hi_xy_t
     re_xy = re_xy.at[:,:,tt].set(phi(he_xy_t)) 
     ri_xy = ri_xy.at[:,:,tt].set(phi(hi_xy_t)) 
-    
+
+# %%
+plt.figure()
+plt.plot(re_xy[0,0,:])
+plt.figure()
+plt.imshow(re_xy[:,:,lt//2])
+
 # %% testing jax Jacobian
 import jax.numpy as np
 jacobian_f = jax.jacobian(EI_network)
@@ -234,20 +310,21 @@ print(jacobian_matrix)
 #     return jacobian
 
 # print(compute_jacobian(x))
+
 # %% do this for 2D-EI!
-T = 3  # full time in seconds
-nLE = 100  # number of LEs
-tau = .2  # characteristic time
+T = .3  # full time in seconds
+nLE = N**2*2 #300  # number of LEs
+tau = .02 #.2 # characteristic time
 
 ### time steps
-init_t = .4  # inital time to run
-tONS = .005  # time between orthonormalizations
+init_t = .1  # inital time to run
+tONS = .01 #0.01 #.005  # time between orthonormalizations ##################################################
 nStepTransient = math.ceil(init_t/dt)  # Steps during initial transient
 nStep = math.ceil(T/dt)  # Total number of steps
-nstepONS = math.ceil(tONS/dt)  # Steps between orthonormalizations
-nStepTransientONS = math.ceil(1) #(nStep/(dt/tONS))  # Steps during transient of ONS
+nstepONS = math.ceil(tONS/dt)  # Steps between orthonormalizations ####################################
+nStepTransientONS = math.ceil(10) #(nStep/(dt/tONS))  # Steps during transient of ONS
 nONS = math.ceil((nStepTransientONS+nStep)/nstepONS) - 1  # Number of ONS steps
-stepDisplay = 1000
+stepDisplay = 100
 
 ### initialization
 vec_h_ei = np.zeros((N**2*2, (nStep + nStepTransient + nStepTransientONS)))  # Preallocate local fields
@@ -270,14 +347,14 @@ Ddiag = np.eye(N)*(1-dt)  # Diagonal elements of Jacobian
 ### dynamics
 for n in range(nStep + nStepTransient + nStepTransientONS-1):
     ### network dynamics
-    temp_hei = temp_hei + EI_network(temp_hei)*dt
+    temp_hei = 0 + EI_network(temp_hei)*1
     # h[:, n+1] = h[:, n]*(1-dt)+np.dot(J, np.tanh(h[:, n]))*dt  # network dynamics
     print(n)
     if (n+1 > nStepTransient):
         ######### Jacobian #########
         # hsechdt = dt/np.cosh(h[:, n])**2  # derivative of tanh(h)*dt
         # D = Ddiag + J*hsechdt  # Jacobian
-        D = jacobian_f(x)
+        D = jacobian_f(temp_hei)
         ############################
         q = np.dot(D, q)  # evolve orthonormal system using Jacobian
         if np.mod(n+1, nstepONS) == 0:
@@ -297,11 +374,27 @@ for n in range(nStep + nStepTransient + nStepTransientONS-1):
         if np.mod(n + 1, stepDisplay) == 0:  # plot progress
             if n + 1 > nStepTransient + nStepTransientONS:
                 PercentageFinished = (n + 1 - nStepTransient - nStepTransientONS)*100/nStep
-                print(round(PercentageFinished), ' % done after ', round(3.3), 's SimTime: ', round(dt*(n+1)), ' tau, std(h) =', round(np.std(h[:, n+1]), 2))
+                print(round(PercentageFinished), ' % done after ', round(3.3), 's SimTime: ', round(dt*(n+1)), ' tau, std(h) =', round(np.std(temp_hei), 2))
 
 Lspectrum = LS/t  # Normalize sum of log of diagonal elements of R by total simulation time
 
 # %%
+plt.figure()
+plt.plot(1.0*np.arange(nLE)/(nLE)*(1), Lspectrum*tau, '.k', label='N=1800')
+# plt.plot(1.0*np.arange(nLE)/(nLE)*(nLE/50**2*2), N50_LS, '.b', label='N=5000')
+plt.ylabel(r'$\lambda (1/\tau)$', fontsize=20)
+plt.xlabel('top sorted values (i/N)', fontsize=20)
+plt.axhline(y=0, color='r', linestyle='--')
+plt.legend()
+plt.ylim([-12,1.9])
+# N50_LS
+
+print('entropy rate: ', entropy_rate(Lspectrum)*tau)
+print('attractor dimension: ', attractor_dim(Lspectrum))
+
+# %%
+### https://github.com/ThomasSavary08/Lyapynov/tree/main
+
 # Definition of a continuous dynamical system, here Lorenz63.
 # sigma = 10.
 # rho = 28.
