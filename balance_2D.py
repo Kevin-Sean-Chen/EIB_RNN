@@ -23,7 +23,7 @@ matplotlib.rc('ytick', labelsize=20)
 ### strong connection on 1/sqrt(N) order, with balanced conditions
 
 # %% parameter settings
-N = 100  # neurons
+N = 30  # neurons
 tau_e = 0.005  # time constant ( 5ms in seconds )
 sig_e = 0.1  # spatial kernel
 tau_i = 0.015
@@ -32,11 +32,11 @@ sig_i = 0.2    ### important parameters!!
 amp = 0
 
 # %% balanced condition
-rescale = .5
+rescale = 2.
 
-Wee = 1.*(N**2*sig_e**2*np.pi*1)**0.5 *rescale  # recurrent weights
+Wee = 1* 1.*(N**2*sig_e**2*np.pi*1)**0.5 *rescale  # recurrent weights
 Wei = -2.*(N**2*sig_i**2*np.pi*1)**0.5 *rescale
-Wie = .99*(N**2*sig_e**2*np.pi*1)**0.5 *rescale
+Wie = 1*  .99*(N**2*sig_e**2*np.pi*1)**0.5 *rescale
 Wii = -1.8*(N**2*sig_i**2*np.pi*1)**0.5 *rescale
 mu_e = 1.*rescale*1
 mu_i = .8*rescale*1
@@ -55,14 +55,14 @@ stim_scal = amp #/ N**0.5
 ### find a way to confirm 1/N connection!!
 ### find MF chaos that is NOT balanced...
 ###########################
-# rescale = 3 #N/2  #8 20 30... linear with N
+rescale = 4.9 #7 #N/2  #8 20 30... linear with N
 
-# Wee = 1. *rescale  # recurrent weights
-# Wei = -1. *rescale
-# Wie = 1. *rescale
-# Wii = -1. *rescale
-# mu_e = .01 *1
-# mu_i = .01 *1
+Wee = 1. *rescale  # recurrent weights
+Wei = -1. *rescale
+Wie = 1. *rescale
+Wii = -1. *rescale
+mu_e = .01 *1
+mu_i = .01 *1
 
 # Wee = 1. *rescale  # recurrent weights
 # Wei = -2. *rescale
@@ -274,7 +274,7 @@ plt.xlabel(r'$<r>_t$', fontsize=20)
 plt.ylabel('counts', fontsize=20)
 plt.title(f'N= {N}', fontsize=20)
 
-beta_t = measure_mu / measure_mu_ex  # beta dynamics
+beta_t = measure_mu[:,:,:] / measure_mu_ex[:,:,:]  # beta dynamics
 plt.figure()
 plt.hist(beta_t.reshape(-1),100)
 plt.xlabel(r'$\beta_t$', fontsize=20)
@@ -283,12 +283,105 @@ plt.title(f'N= {N}', fontsize=20)
 plt.xlim([0,6])
 print('median of beta: ', np.nanmedian(beta_t))  #nanmedian?
 
+# %% spectral tests
+cmap = plt.get_cmap('viridis')
+def cut_beta(thre_beta):
+    temp_beta = beta_t*0+.0
+    temp_beta[beta_t<thre_beta] = re_xy[beta_t<thre_beta]
+    test_beta,ff_beta = group_spectrum(temp_beta[:,:,offset:])
+    plt.loglog(ff_beta,test_beta, '--', label=r'$\beta_{below}=$'+str(thre_beta))
+    return 
+thre_beta = .9
+plt.figure()
+test,ff = group_spectrum(re_xy[:,:,offset:])
+plt.loglog(ff,test, label='full sepctrum')
+cut_beta(.5)
+cut_beta(.7)
+cut_beta(.9)
+# plt.loglog(ff_beta,test_beta)
+plt.xlabel('Frequency (Hz)', fontsize=20)
+plt.ylabel('Power', fontsize=20)
+plt.legend(fontsize=13)
+
+# %%
+plt.figure()
+plt.hist(beta_t.reshape(-1),100)
+plt.xlabel(r'$\beta_t$', fontsize=20)
+plt.ylabel('counts', fontsize=20)
+plt.title(r'$\beta$ distribution and cutoff', fontsize=20)
+plt.xlim([0,5])
+x_locations = [-1, .5, .7, .9]
+cols = ['blue','orange', 'green','red']
+# Plot vertical lines at the specified x locations
+for ii,x in enumerate(x_locations):
+    plt.axvline(x=x, color=cols[ii], linestyle='--', linewidth=2)
+
+# %% check space
+thre_beta = 1.05 # 1.04
+temp_beta = beta_t*0+.0
+temp_beta[beta_t>thre_beta] = re_xy[beta_t>thre_beta]
+plt.figure()
+data4fft = temp_beta[:,:,50:]*1
+_,_,lt = data4fft.shape
+data_fft = np.fft.fftn(data4fft)
+data_fft_shifted = np.fft.fftshift(data_fft)
+magnitude_spectrum = np.abs(data_fft_shifted)
+plt.imshow(np.log(magnitude_spectrum[:, :, int(lt/2)]), cmap='gray')
+plt.title(r'spatial spectrum for $\beta_{above}=$'+f'{thre_beta}')
+
+# %% activity
+plt.figure()
+thre_beta = .0
+temp_beta = beta_t*0+np.nan
+temp_beta[beta_t>thre_beta] = re_xy[beta_t>thre_beta]
+plt.hist(np.nanmean(temp_beta,2).reshape(-1),50, label=r'$\beta_{above}=$'+f'{thre_beta}')
+thre_beta = .9
+temp_beta = beta_t*0+np.nan
+temp_beta[beta_t>thre_beta] = re_xy[beta_t>thre_beta]
+plt.hist(np.nanmean(temp_beta,2).reshape(-1),50, label=r'$\beta_{above}=$'+f'{thre_beta}')
+thre_beta = .99
+temp_beta = beta_t*0+np.nan
+temp_beta[beta_t>thre_beta] = re_xy[beta_t>thre_beta]
+plt.hist(np.nanmean(temp_beta,2).reshape(-1),50, label=r'$\beta_{above}=$'+f'{thre_beta}')
+plt.yscale('log')
+plt.legend(fontsize=11)
+plt.xlabel(r'$<r_t>$', fontsize=20)
+plt.ylabel('count', fontsize=20)
+
+# %%
+data_r = re_xy*1  # excitatroy network
+beta_t = measure_mu / measure_mu_ex  # beta dynamics
+
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 5))
+
+# Initial plots for the first frame
+cax1 = ax1.matshow(data_r[:, :, 0], cmap='gray')
+cax2 = ax2.matshow(beta_t[:, :, 0], cmap='gray')
+
+# Add colorbars
+fig.colorbar(cax1, ax=ax1)
+fig.colorbar(cax2, ax=ax2)
+
+def update(frame):
+    ax1.clear()
+    ax2.clear()
+    cax1 = ax1.matshow(data_r[:, :, frame], cmap='gray')
+    cax2 = ax2.matshow(temp_beta[:, :, frame], cmap='gray')
+    ax1.set_title(f"Iteration {frame+1} - Subplot 1")
+    ax2.set_title(f"Iteration {frame+1} - Subplot 2")
+    return cax1, cax2
+
+# Create the animation
+ani = FuncAnimation(fig, update, frames=data_r.shape[-1], blit=False)
+
+plt.show()
+
 # %% do RLS
 ###############################################################################
-plt.figure()
-plt.hist(beta_mf2.reshape(-1), bins=100, alpha=0.5, label='mean-field 1')
-plt.hist(beta_mf.reshape(-1), bins=500, alpha=0.5, label='mean-field 2')
-plt.hist(beta_ei.reshape(-1), bins=100, alpha=0.5, label='EI')
-plt.xlim([0,5])
-plt.legend(fontsize=20)
-plt.xlabel('beta', fontsize=20); plt.ylabel('counts', fontsize=20)
+# plt.figure()
+# plt.hist(beta_mf2.reshape(-1), bins=100, alpha=0.5, label='mean-field 1')
+# plt.hist(beta_mf.reshape(-1), bins=500, alpha=0.5, label='mean-field 2')
+# plt.hist(beta_ei.reshape(-1), bins=100, alpha=0.5, label='EI')
+# plt.xlim([0,5])
+# plt.legend(fontsize=20)
+# plt.xlabel('beta', fontsize=20); plt.ylabel('counts', fontsize=20)

@@ -14,12 +14,18 @@ import matplotlib
 matplotlib.rc('xtick', labelsize=20) 
 matplotlib.rc('ytick', labelsize=20)
 
+np.random.seed(42)
+
 # %% scanning settings
 reps = 3
-tau_scan = np.arange(1.5,4,0.5)
+# tau_scan = np.arange(1.5,4,0.5)
 # sig_scan = np.arange(0.5,3.5,0.5)
-nscan = len(tau_scan)
+mf_scan = np.array([0.01, 0.05, 0.1, 0.2, 0.5])
+mf_scan = np.array([1, 1.25, 1.5, 1.75, 2, 2.25])
+mf_scan = np.array([.6, .8, 1., 1.2, 1.4])  # for EI network
+# nscan = len(tau_scan)
 # nscan = len(sig_scan)
+nscan = len(mf_scan)
 
 # %% network setting
 N = 50  # neurons
@@ -132,8 +138,8 @@ def make_stim():
 
     ### abrupt change
     angt = np.zeros(lt)
-    angt[lt//2 : lt//2 + 20] = 2
-    angt[lt//2 +20 : lt//2 + 80] = -2
+    angt[lt//2 : lt//2 + 20] = -2
+    angt[lt//2 +20 : lt//2 + 80] = 2
 
     # Step 3: Initialize the 3D matrix to store the shifted images
     shifted_images = np.zeros((N, N, lt))
@@ -250,7 +256,7 @@ def EI_2D(stim):
         
         y_test[tt] = np.dot(w,x)
 
-    MSE = np.mean((y_test[50:]-f_t[50:])**2)
+    MSE = np.mean((y_test[50:] - f_t[50:])**2)
     print(MSE)
     
     ### make measurements
@@ -258,7 +264,6 @@ def EI_2D(stim):
     beta = np.nanmedian(measure_mu / measure_mu_ex)  #nanmedian
     print(beta)
     return mse, beta
-    
 
 # %%
 ###############################################################################
@@ -270,62 +275,67 @@ I_xy, f_t = make_stim()
 # %%
 # balanced_index = np.zeros((reps,nscan))
 # perform_index = np.zeros((reps,nscan))
-# balanced_index_ei = np.zeros((reps,nscan))
-# perform_index_ei = np.zeros((reps,nscan))
+balanced_index_ei = np.zeros((reps,nscan))
+perform_index_ei = np.zeros((reps,nscan))
 balanced_index_mf = np.zeros((reps,nscan))
 perform_index_mf = np.zeros((reps,nscan))
 balanced_index_mf2 = np.zeros((reps,nscan))
 perform_index_mf2 = np.zeros((reps,nscan))
+
+# balanced_index_mf_ = np.zeros((reps,nscan))
+# perform_index_mf_ = np.zeros((reps,nscan))
 
 for rr in range(reps):
     for ss in range(nscan):
         
         #######################################################
         ### set params
-        tau_i = tau_e * tau_scan[ss]
+        # tau_i = tau_e * tau_scan[ss]
         # sig_i = sig_e * sig_scan[ss]
+        mf_base = mf_scan[ss]
         #######################################################
     
         # EI-balanced
-        # rescale = 1. ##(N*sig_e*np.pi*1)**0.5 #1
-        # Wee = 1.*(N**2*sig_e**2*np.pi*1)**0.5 *rescale  # recurrent weights
-        # Wei = -2.*(N**2*sig_i**2*np.pi*1)**0.5 *rescale
-        # Wie = .99*(N**2*sig_e**2*np.pi*1)**0.5 *rescale
-        # Wii = -1.8*(N**2*sig_i**2*np.pi*1)**0.5 *rescale
-        # mu_e = 1.*rescale
-        # mu_i = .8*rescale
+        rescale = 1. ##(N*sig_e*np.pi*1)**0.5 #1
+        Wee = 1*(N**2*sig_e**2*np.pi*1)**0.5 *rescale  # recurrent weights
+        Wei = 1* -2.*(N**2*sig_i**2*np.pi*1)**0.5 *rescale
+        Wie = 1*(N**2*sig_e**2*np.pi*1)**0.5 *rescale
+        Wii = 1* -1.8 * (N**2*sig_i**2*np.pi*1)**0.5 *rescale  #1.8
+        mu_e = mf_base* 1.*rescale
+        mu_i = mf_base* .8*rescale
         
-        # Iamp = 0.3 *2.*(N**2*sig_e**2*np.pi*1)**0.5 *rescale / 1.  # same scale as the spontaneous input?
-        # _, beta_i = EI_2D(0)
-        # balanced_index_ei[rr,ss] = beta_i
-        # mse_i, _ = EI_2D(1)
-        # perform_index_ei[rr,ss] = mse_i
+        Iamp = 0.3 *2.*(N**2*sig_e**2*np.pi*1)**0.5 *rescale / 1.  # same scale as the spontaneous input?
+        _, beta_i = EI_2D(0)
+        balanced_index_ei[rr,ss] = beta_i
+        mse_i, _ = EI_2D(1)
+        perform_index_ei[rr,ss] = mse_i
     
         # # # unbalanced (mean-field)
-        rescale = 3 #N/2  #8 20 30... linear with N
-        Wee = 1. *rescale  # recurrent weights
-        Wei = -1. *rescale
-        Wie = 1. *rescale
-        Wii = -1. *rescale
-        mu_e = .1 *1  #0.01
-        mu_i = .1 *1
+        # rescale = 3 #N/2  #8 20 30... linear with N
+        # Wee = 1. *rescale  # recurrent weights
+        # Wei = -mf_base *rescale
+        # Wie = 1. *rescale
+        # Wii = -mf_base *rescale
+        # mu_e = 0.01 *1  #mf_base
+        # mu_i = 0.01 *1
         
-        Iamp = .5  # he~0.5 10*median?
-        _, beta_i = EI_2D(0)
-        balanced_index_mf2[rr,ss] = beta_i
-        mse_i, _ = EI_2D(1)
-        perform_index_mf2[rr,ss] = mse_i
-    
+        # Iamp = .5  # he~0.5 10*median?
+        # _, beta_i = EI_2D(0)
+        # balanced_index_mf2[rr,ss] = beta_i
+        # mse_i, _ = EI_2D(1)
+        # perform_index_mf2[rr,ss] = mse_i
+        
         #######################################################
         ### neural dynamics with training !!!
         # _, beta_i = EI_2D(0)
         # balanced_index[rr,ss] = beta_i
         # mse_i, _ = EI_2D(1)
         # perform_index[rr,ss] = mse_i
-    
+        
 # %%
 plt.figure()
 # plt.plot(balanced_index[:], perform_index[:], 'o')
+# plt.plot(balanced_index_mf_.reshape(-1), perform_index_mf_.reshape(-1), '*', label='mean-field 1', markersize=10)
 plt.plot(balanced_index_mf2.reshape(-1), perform_index_mf2.reshape(-1), '*', label='mean-field 1', markersize=10)
 # plt.plot(balanced_index_mf.reshape(-1), perform_index_mf.reshape(-1), '^', label='mean-field 2', markersize=10)
 # plt.plot(balanced_index_ei.reshape(-1), perform_index_ei.reshape(-1), 'o', label='EI', markersize=10)
@@ -336,20 +346,25 @@ plt.legend(fontsize=20)
 plt.legend(loc='upper left', bbox_to_anchor=(1, 1))
 
 # %% show params
-# import matplotlib.cm as cm
-# color_vector = tau_scan / 1#tau_e
-# norm = mcolors.Normalize(vmin=min(color_vector), vmax=max(color_vector))
-# plt.figure()
-# cmap = cm.get_cmap('viridis')
-# for nn in range(5):
-#     plt.plot(balanced_index_mf2[:,nn].reshape(-1), perform_index_mf2[:,nn].reshape(-1), '*', color=cmap(norm(color_vector[nn])), markersize=10)
-#     plt.plot(balanced_index_mf[:,nn].reshape(-1), perform_index_mf[:,nn].reshape(-1), '^', color=cmap(norm(color_vector[nn])), markersize=10)
-#     plt.plot(balanced_index_ei[:,nn].reshape(-1), perform_index_ei[:,nn].reshape(-1), 'o', color=cmap(norm(color_vector[nn])), markersize=10)
+import matplotlib.colors as mcolors
+import matplotlib.cm as cm
+color_vector = 1/mf_scan #2 #tau_scan / 1#tau_e
+norm = mcolors.Normalize(vmin=min(color_vector), vmax=max(color_vector))
+plt.figure()
+cmap = cm.get_cmap('viridis')
+for nn in range(len(color_vector)):
+    # plt.plot(balanced_index_mf2[:,nn].reshape(-1), perform_index_mf2[:,nn].reshape(-1), '*', color=cmap(norm(color_vector[nn])), markersize=10)
+    # plt.plot(balanced_index_mf[:,nn].reshape(-1), perform_index_mf[:,nn].reshape(-1), '^', color=cmap(norm(color_vector[nn])), markersize=10)
+    plt.plot(balanced_index_ei[:,nn].reshape(-1), perform_index_ei[:,nn].reshape(-1), 'o', color=cmap(norm(color_vector[nn])), markersize=10)
 
-# plt.xlabel('imbalance-index (median(beta))', fontsize=20)
-# plt.ylabel('performance (MSE)', fontsize=20)
-# cbar = plt.colorbar(cm.ScalarMappable(norm=norm, cmap=cmap))
-# cbar.set_label(r'$\tau_i/\tau_e$', fontsize=20)
+plt.xlabel('imbalance-index (median(beta))', fontsize=20)
+plt.ylabel('performance (MSE)', fontsize=20)
+cbar = plt.colorbar(cm.ScalarMappable(norm=norm, cmap=cmap))
+cbar.set_label(r'$\tau_i/\tau_e$', fontsize=20)
+cbar.set_label('baseline input', fontsize=20)
+# cbar.set_label(r'$W_{ee}/W_{ei}$', fontsize=20)
+cbar.set_label(r'$W_{ee}/j_{e}$', fontsize=20)
+# plt.yscale('log')
 
 # %%
 # import pickle
