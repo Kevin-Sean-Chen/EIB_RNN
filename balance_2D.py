@@ -32,7 +32,7 @@ sig_i = 0.2    ### important parameters!!
 amp = 0
 
 # %% balanced condition
-rescale = 2.
+rescale = 3.
 
 Wee = 1* 1.*(N**2*sig_e**2*np.pi*1)**0.5 *rescale  # recurrent weights
 Wei = -2.*(N**2*sig_i**2*np.pi*1)**0.5 *rescale
@@ -276,12 +276,13 @@ plt.title(f'N= {N}', fontsize=20)
 
 beta_t = measure_mu[:,:,:] / measure_mu_ex[:,:,:]  # beta dynamics
 plt.figure()
-plt.hist(beta_t.reshape(-1),100)
+plt.hist(beta_t.reshape(-1),1000)
 plt.xlabel(r'$\beta_t$', fontsize=20)
 plt.ylabel('counts', fontsize=20)
 plt.title(f'N= {N}', fontsize=20)
 plt.xlim([0,6])
 print('median of beta: ', np.nanmedian(beta_t))  #nanmedian?
+plt.axvline(x=np.nanmedian(beta_t), color='r', linestyle='--')
 
 # %% spectral tests
 cmap = plt.get_cmap('viridis')

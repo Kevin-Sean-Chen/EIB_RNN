@@ -15,7 +15,7 @@ from lyapynov import mLCE, LCE, CLV, ADJ
 import math
 
 import jax
-key = jax.random.PRNGKey(42)
+key = jax.random.PRNGKey(13)
 
 # %% RNN example
 ### edit from https://github.com/RainerEngelken/RNN-LyapunovSpectra
@@ -138,6 +138,9 @@ def attractor_dim(Lspec):
 ### mumerical Jacobian
 ### later explore vectors...
 
+### driven signal!!
+### later scan through sigma/tau phase space
+
 # %%
 import jax.numpy as np
 
@@ -147,7 +150,7 @@ N = 30  # neurons
 tau_e = 0.005  # time constant ( 5ms in seconds )
 sig_e = 0.1  #.1 spatial kernel
 tau_i, sig_i = 0.015, 0.2#0.015, 0.14 #15*0.001, 0.2 
-kernel_size = 7
+kernel_size = 23
 
 ### EI-balanced
 rescale = 1. ##(N*sig_e*np.pi*1)**0.5 #1
@@ -161,11 +164,11 @@ mu_i = .8*rescale
 ### try mean field
 # rescale = 4.9 #N/2  #8 20 30... linear with N
 # Wee = 1. *rescale  # recurrent weights
-# Wei = -2. *rescale
+# Wei = -1. *rescale
 # Wie = 1. *rescale
-# Wii = -2. *rescale
-# mu_e = .1 *1
-# mu_i = .1 *1
+# Wii = -1. *rescale
+# mu_e = .01 *1
+# mu_i = .01 *1
 
 # %% functions for 2D EI network
 def phi(x):
@@ -214,7 +217,7 @@ def spatial_convolution(r, k):
     result = result[N:2*N,N:2*N] #[:r.shape[0], :r.shape[1]] ################################### fix this!!!
     return result
 
-def EI_network(vec_h_ei, dt=0.001):
+def EI_network(vec_h_ei, dt=0.001, inpt=0):
     ### unpack
     midpoint = len(vec_h_ei) // 2
     he_xy = vec_h_ei[:midpoint].reshape(N,N)
@@ -223,7 +226,7 @@ def EI_network(vec_h_ei, dt=0.001):
     re_xy, ri_xy = phi(he_xy), phi(hi_xy)
     ge_conv_re = spatial_convolution(re_xy, g_kernel(sig_e))
     gi_conv_ri = spatial_convolution(ri_xy, g_kernel(sig_i))
-    dhe_dt = he_xy + dt/tau_e*( -he_xy + (Wee*(ge_conv_re) + Wei*(gi_conv_ri) + mu_e) )
+    dhe_dt = he_xy + dt/tau_e*( -he_xy + (Wee*(ge_conv_re) + Wei*(gi_conv_ri) + mu_e) ) + inpt*dt
     dhi_dt = hi_xy + dt/tau_i*( -hi_xy + (Wie*(ge_conv_re) + Wii*(gi_conv_ri) + mu_i) )
     ### put back
     dhei_dt = np.hstack([dhe_dt.reshape(-1), dhi_dt.reshape(-1)])
@@ -248,6 +251,7 @@ dt = 0.001  # 1ms time steps
 T = 1.0  # a few seconds of simulation
 time = np.arange(0, T, dt)
 lt = len(time)
+inpt = jax.random.normal(key, shape=(lt,))*1.5 #np.sin(time* 20)*1  ### test input drive
 re_xy = np.zeros((N,N, lt))
 ri_xy = re_xy*1
 re_xy = jax.random.uniform(key,shape=(N,N, lt))*.1
@@ -260,23 +264,23 @@ temp_hei = np.hstack([he_xy_t.reshape(-1), hi_xy_t.reshape(-1)])
 for tt in range(lt):
     ### ODE form
     vec_h_ei = np.hstack([he_xy_t.reshape(-1), hi_xy_t.reshape(-1)])
-    temp_hei = 0 + EI_network(temp_hei)*1
+    temp_hei = 0 + EI_network(temp_hei, inpt=inpt[tt])*1
     ### unpack
     midpoint = len(temp_hei) // 2
-    he_xy_t = temp_hei[:midpoint].reshape(N,N)
+    he_xy_t = temp_hei[:midpoint].reshape(N,N) #+ inpt[tt]
     hi_xy_t = temp_hei[midpoint:].reshape(N,N)
-    he_xy = he_xy.at[:,:,tt].set(he_xy_t) 
-    hi_xy = hi_xy.at[:,:,tt].set(hi_xy_t) 
+    he_xy = he_xy.at[:,:,tt].set(he_xy_t)
+    hi_xy = hi_xy.at[:,:,tt].set(hi_xy_t)
     # he_xy[:,:,tt] = jax.device_get(he_xy_t) #he_xy_t
     # hi_xy[:,:,tt] = jax.device_get(hi_xy_t) #hi_xy_t
-    re_xy = re_xy.at[:,:,tt].set(phi(he_xy_t)) 
-    ri_xy = ri_xy.at[:,:,tt].set(phi(hi_xy_t)) 
+    re_xy = re_xy.at[:,:,tt].set(phi(he_xy_t))
+    ri_xy = ri_xy.at[:,:,tt].set(phi(hi_xy_t))
 
 # %%
 plt.figure()
-plt.plot(re_xy[0,0,:])
+plt.plot(re_xy[0,0,:])  # rate
 plt.figure()
-plt.imshow(re_xy[:,:,lt//2])
+plt.imshow(re_xy[:,:,lt//2])  # spatial pattern
 
 # %% testing jax Jacobian
 import jax.numpy as np
@@ -343,11 +347,14 @@ LS = np.zeros(nLE)  # Lyapunov spectrum
 q, r = np.linalg.qr(jax.random.normal(key, shape=(N**2*2, nLE)))  # Initialize orthonormal system
 Ddiag = np.eye(N)*(1-dt)  # Diagonal elements of Jacobian
 
+lt_jac = nStep + nStepTransient + nStepTransientONS-1
+inpt = jax.random.normal(key, shape=(lt_jac,))*1.5  # random input
+
 # %%
 ### dynamics
 for n in range(nStep + nStepTransient + nStepTransientONS-1):
     ### network dynamics
-    temp_hei = 0 + EI_network(temp_hei)*1
+    temp_hei = 0 + EI_network(temp_hei, inpt=inpt[n])*1
     # h[:, n+1] = h[:, n]*(1-dt)+np.dot(J, np.tanh(h[:, n]))*dt  # network dynamics
     print(n)
     if (n+1 > nStepTransient):
@@ -380,7 +387,7 @@ Lspectrum = LS/t  # Normalize sum of log of diagonal elements of R by total simu
 
 # %%
 plt.figure()
-plt.plot(1.0*np.arange(nLE)/(nLE)*(1), Lspectrum*tau, '.k', label='N=1800')
+plt.plot(1.0*np.arange(nLE)/(nLE)*(1), Lspectrum*tau_i, '.k', label='N=1800')
 # plt.plot(1.0*np.arange(nLE)/(nLE)*(nLE/50**2*2), N50_LS, '.b', label='N=5000')
 plt.ylabel(r'$\lambda (1/\tau)$', fontsize=20)
 plt.xlabel('top sorted values (i/N)', fontsize=20)
@@ -389,7 +396,7 @@ plt.legend()
 plt.ylim([-12,1.9])
 # N50_LS
 
-print('entropy rate: ', entropy_rate(Lspectrum)*tau)
+print('entropy rate: ', entropy_rate(Lspectrum))
 print('attractor dimension: ', attractor_dim(Lspectrum))
 
 # %%
