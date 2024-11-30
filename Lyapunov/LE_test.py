@@ -48,6 +48,7 @@ LSall = np.zeros((nONS, nLE))  # Initialize array to store convergence of Lyapun
 normdhAll = np.zeros(nONS)  # Initialize
 pAll = np.zeros(nONS)  # participant ratio
 LS = np.zeros(nLE)  # Lyapunov spectrum
+clv = np.zeros((N, nONS)) # tracking full CLV
 
 ### for dynamical systems
 q, r = np.linalg.qr(np.random.randn(N, nLE))  # Initialize orthonormal system
@@ -71,6 +72,7 @@ for n in range(nStep + nStepTransient + nStepTransientONS-1):
                 q1 = q[:, 0]
                 q4 = q1*q1*q1*q1
             lsidx += 1
+            clv[:, lsidx] = q1
             pAll[lsidx] = 1.0/np.sum(q4)
             LSall[lsidx, :] = np.log(np.abs(np.diag(r)))/nstepONS/dt  # store convergence of Lyapunov spectrum
             if n + 1 > nStepTransientONS + nStepTransient:
@@ -153,7 +155,7 @@ tau_i, sig_i = 0.015, 0.2#0.015, 0.14 #15*0.001, 0.2
 kernel_size = 23
 
 ### EI-balanced
-rescale = 1. ##(N*sig_e*np.pi*1)**0.5 #1
+rescale = 3. ##(N*sig_e*np.pi*1)**0.5 #1
 Wee = 1*(N**2*sig_e**2*np.pi*1)**0.5 *rescale  # recurrent weights
 Wei = 1* -2.*(N**2*sig_i**2*np.pi*1)**0.5 *rescale
 Wie = 1*(N**2*sig_e**2*np.pi*1)**0.5 *rescale
@@ -232,6 +234,19 @@ def EI_network(vec_h_ei, dt=0.001, inpt=0):
     dhei_dt = np.hstack([dhe_dt.reshape(-1), dhi_dt.reshape(-1)])
     return dhei_dt
 
+def compute_beta_t(vec_h_ei):
+    midpoint = len(vec_h_ei) // 2
+    he_xy = vec_h_ei[:midpoint].reshape(N,N)
+    hi_xy = vec_h_ei[midpoint:].reshape(N,N)
+    ### neural dynamics
+    re_xy, ri_xy = phi(he_xy), phi(hi_xy)
+    ge_conv_re = spatial_convolution(re_xy, g_kernel(sig_e))
+    gi_conv_ri = spatial_convolution(ri_xy, g_kernel(sig_i))
+    measure_mu = np.abs(  (Wee*(ge_conv_re) + Wei*(gi_conv_ri) + mu_e) )
+    measure_mu_ex = (Wee*ge_conv_re + mu_e)
+    beta_t = measure_mu / measure_mu_ex
+    return beta_t
+
 # %% test Jacobian with analytic
 # N = 50
 # J = jax.random.uniform(key,shape=(N,N))
@@ -280,7 +295,7 @@ for tt in range(lt):
 plt.figure()
 plt.plot(re_xy[0,0,:])  # rate
 plt.figure()
-plt.imshow(re_xy[:,:,lt//2])  # spatial pattern
+plt.imshow(re_xy[:,:,lt//2+1])  # spatial pattern
 
 # %% testing jax Jacobian
 import jax.numpy as np
@@ -342,19 +357,23 @@ LSall = np.zeros((nONS, nLE))  # Initialize array to store convergence of Lyapun
 normdhAll = np.zeros(nONS)  # Initialize
 pAll = np.zeros(nONS)  # participant ratio
 LS = np.zeros(nLE)  # Lyapunov spectrum
+clv = np.zeros((nONS, nLE)) # tracking full CLV
+snap_h = np.zeros((nONS, nLE))  # track activity at the right timing
+betas = np.zeros((nONS, nLE//2))  # store beta measurement whenever there is clv calculation (can also do per step...)
 
 ### for dynamical systems
 q, r = np.linalg.qr(jax.random.normal(key, shape=(N**2*2, nLE)))  # Initialize orthonormal system
 Ddiag = np.eye(N)*(1-dt)  # Diagonal elements of Jacobian
 
 lt_jac = nStep + nStepTransient + nStepTransientONS-1
-inpt = jax.random.normal(key, shape=(lt_jac,))*1.5  # random input
+inpt = jax.random.normal(key, shape=(lt_jac,))*0 #1.5  # random input ################ play with correlation !!!!!!!!!!!!!!!!!!!
 
 # %%
 ### dynamics
 for n in range(nStep + nStepTransient + nStepTransientONS-1):
     ### network dynamics
     temp_hei = 0 + EI_network(temp_hei, inpt=inpt[n])*1
+    vec_h_ei = vec_h_ei.at[:, n].set(temp_hei)
     # h[:, n+1] = h[:, n]*(1-dt)+np.dot(J, np.tanh(h[:, n]))*dt  # network dynamics
     print(n)
     if (n+1 > nStepTransient):
@@ -372,8 +391,12 @@ for n in range(nStep + nStepTransient + nStepTransientONS-1):
                 q1 = q[:, 0]
                 q4 = q1*q1*q1*q1
             lsidx += 1
+            clv = clv.at[lsidx,:].set(q1)
             pAll = pAll.at[lsidx].set(1.0/np.sum(q4))
             LSall = LSall.at[lsidx,:].set(np.log(np.abs(np.diag(r)))/nstepONS/dt) # store convergence of Lyapunov spectrum
+            snap_h = snap_h.at[lsidx,:].set(temp_hei)
+            beta_t = compute_beta_t(temp_hei).reshape(-1)
+            betas = betas.at[lsidx,:].set(beta_t)
             if n + 1 > nStepTransientONS + nStepTransient:
                 LS += np.log(np.abs(np.diag(r)))  # collect log of diagonal elements or  R for Lyapunov spectrum
                 t += nstepONS*dt  # increment time
@@ -398,6 +421,29 @@ plt.ylim([-12,1.9])
 
 print('entropy rate: ', entropy_rate(Lspectrum))
 print('attractor dimension: ', attractor_dim(Lspectrum))
+
+# %% show Layapunov vectors
+tt = 30
+plt.figure(figsize=(10, 6))
+plt.subplot(131)
+plt.imshow(clv[tt,:N**2].reshape(N,N)); plt.colorbar(); plt.title('Lyapunov vector')
+plt.subplot(132)
+plt.imshow(phi(snap_h[tt,N**2:].reshape(N,N))); plt.colorbar(); plt.title('activty')
+plt.subplot(133)
+plt.imshow(betas[tt,:].reshape(N,N)); plt.colorbar(); plt.title('beta_t')
+
+# %% spatial spectrum
+plt.figure()
+data4fft = clv[tt,:N**2].reshape(N,N)*1
+# data4fft = phi(snap_h[tt,N**2:].reshape(N,N)*1)
+data_fft = np.fft.fft2(data4fft)
+data_fft_shifted = np.fft.fftshift(data_fft)
+magnitude_spectrum = np.abs(data_fft_shifted)
+plt.imshow(np.log1p(magnitude_spectrum), cmap='gray')
+
+# %%
+plt.figure()
+plt.imshow(phi(vec_h_ei[:N**2, 100+(tt+1)*10+2].reshape(N,N))); plt.colorbar(); plt.title('activty')
 
 # %%
 ### https://github.com/ThomasSavary08/Lyapynov/tree/main
