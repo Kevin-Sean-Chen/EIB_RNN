@@ -129,7 +129,7 @@ sig_noise = 2
 temp_space1 = np.random.randn(N,N)
 temp_space2 = np.random.randn(N,N)
 temp_k = g_kernel(sigma_xy, N)
-pattern1 = spatial_convolution(temp_space1, temp_k)
+pattern1 = spatial_convolution(temp_space1, temp_k) ########### TEST THE SPTAIAL FEATURE!!! ##############
 pattern2 = spatial_convolution(temp_space2, temp_k)
 
 lorenz_xy = np.zeros((N,N, lt))
