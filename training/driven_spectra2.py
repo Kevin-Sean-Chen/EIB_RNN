@@ -33,8 +33,8 @@ time = np.arange(0, T, dt)
 lt = len(time)
 #################################
 tau_e = 0.005  # time constant ( 5ms in seconds )
-sig_e = 0.1  # spatial kernel
-tau_i, sig_i = 15*0.001, 0.2   ### important parameters!!
+sig_e = 0.1*1.  # spatial kernel
+tau_i, sig_i = 15*0.001, 0.2*1.   ### important parameters!!
 #### 5, 0.14  ### grid parameter
 #### 15, 0.2  ### chaos parameter
 #### 10, 0.11 ### waves/strips!!!
@@ -103,7 +103,8 @@ def group_spectrum(data, dt=dt):
 
 # %% setup spatiotemporal drive
 ### temporal signal
-I_xy = np.sin(time*20*1) + np.cos(time*30*1)
+I_xy = np.sin(time*20*1) + 0*np.cos(time*30*1)
+# I_xy = np.sin(time*20*7) + np.cos(time*30*8) ### out of 2-5 does not work!? ###... prob not!
 plt.figure()
 plt.plot(I_xy[:])
 I_xy = I_xy/np.max(I_xy)  # 2D input video
@@ -174,7 +175,7 @@ def make_chaotic(I_xy):
 
 # %% run all sims
 ### chaotic
-tau_i, sig_i = 15*0.001, 0.2
+tau_i, sig_i = 15*0.001, 0.2*1.
 spontaneous_r_chaos = make_chaotic(I_xyt*0)
 driven_r_chaos = make_chaotic(I_xyt)
 
@@ -232,15 +233,15 @@ plot_spatial_spec(driven)
 
 # %% compare spatial input
 sigs = np.array([0.05, 0.09, 0.1, 0.11, 0.2, 0.4, 0.8])
-reps = 1
+reps = 3
 snrs = np.zeros((reps, len(sigs)))
 tau_i, sig_i = 15*0.001, 0.2
 plt.figure()
 spon_data = make_chaotic(I_xyt*0)
 test_spon,ff_spon = group_spectrum(spon_data[:,:,50:])
-plt.loglog(ff_spon[2:],test_spon[2:], label='spontaneous') ### use loglog or plot
+plt.loglog(ff_spon[1:],test_spon[1:], label='spontaneous') ### use loglog or plot
 test_sig,ff_sig = group_spectrum(I_xyt[:,:,50:])
-plt.plot(ff_sig[2:], test_sig[2:], label='stim')
+plt.plot(ff_sig[1:], test_sig[1:], label='stim')
 
 for rr in range(reps):
     print('repeat: ', rr)
@@ -248,30 +249,40 @@ for rr in range(reps):
         print(ii)
         ### compute driven spectrum
         temp_stim = make_2D_stim(sigs[ii])
-        # temp_stim = temp_stim.reshape(N**2, lt) ##### for shuffle control!!!
-        # temp_stim = temp_stim[np.random.permutation(N**2), :].reshape(N,N,lt) #### for shuffle control!!!
+        temp_stim = temp_stim.reshape(N**2, lt) ##### for shuffle control!!!
+        temp_stim = temp_stim[np.random.permutation(N**2), :].reshape(N,N,lt) #### for shuffle control!!!
         driven_data = make_chaotic(temp_stim)
         test,ff = group_spectrum(driven_data[:,:,50:]) #temp_stim
-        plt.plot(ff[2:],test[2:], label=rf"$\sigma = {sigs[ii]}$")
+        plt.plot(ff[1:],test[1:], label=rf"$\sigma = {sigs[ii]}$")
+        
         
         ### measure SNR
-        signal_power, noise_power = test[2:], test_sig[2:]
-        noise_power = signal_power - noise_power  ##### probably wrong !!!!!!!!!!!!!!!!!!!!!!!!!!!
-        snrs[rr, ii] = 10 * np.log10(signal_power.sum() / noise_power.sum())
-        ##hacky
-        pos = np.where(test_sig>1)[0]
-        snrs[rr, ii] = 10 * np.log10(signal_power[pos].sum())# / signal_power[5:].sum()) # given that we know the signal
+        # signal_power, noise_power = test[1:], test_sig[1:]
+        # noise_power = signal_power - noise_power  ##### probably wrong !!!!!!!!!!!!!!!!!!!!!!!!!!! visit RAJAN!!!
+        # snrs[rr, ii] = 10 * np.log10(signal_power.sum() / noise_power.sum())
+        
+        ##hacky test
+        signal_power, noise_power = test[1:], test_sig[1:]
+        signal_band = np.where(test_sig[1:]>1)[0]
+        noise_band = np.where(test_sig[1:]<1)[0]
+        P_signal = np.sum(signal_power[signal_band])
+        P_noise = np.sum(signal_power[noise_band])
+        # Compute SNR in dB
+        snrs[rr, ii] = 10 * np.log10(P_signal / P_noise)
+        # pos = np.where(test_sig[1:]>1)[0]
+        # snrs[rr, ii] = 10 * np.log10(signal_power[pos].sum())# / signal_power[5:].sum()) # given that we know the signal
     plt.legend(fontsize=10)
     plt.ylim(1e-2, 1e5)
 # plt.xlim([0, 20])
 
 # %%
+from scipy.stats import ttest_ind
 plt.figure()
-plt.plot(sigs,  snrs.T, 'k-o')
+# plt.plot(sigs,  snrs.T, 'k-o')
 # plt.plot(sigs,  snrs_2d.T, 'k-o')
 # plt.plot(sigs,  snrs_shuffle.T, '-o')
-# plt.errorbar(sigs, np.mean(snrs_2d,0), yerr=np.std(snrs_2d,0), fmt='-o', capsize=5, label='2D')
-# plt.errorbar(sigs, np.mean(snrs_shuffle,0), yerr=np.std(snrs_shuffle,0), fmt='-o', capsize=5, label='shuffled')
+plt.errorbar(sigs, np.mean(snrs_2d,0), yerr=np.std(snrs_2d,0), fmt='-o', capsize=5, label='2D')
+plt.errorbar(sigs, np.mean(snrs_shuffle,0), yerr=np.std(snrs_shuffle,0), fmt='-o', capsize=5, label='shuffled')
 plt.xlabel(r'$\sigma_{sim}$', fontsize=20); plt.ylabel('signal (dB)', fontsize=20)
 plt.xscale('log')
 plt.legend()
