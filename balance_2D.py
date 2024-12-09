@@ -23,16 +23,16 @@ matplotlib.rc('ytick', labelsize=20)
 ### strong connection on 1/sqrt(N) order, with balanced conditions
 
 # %% parameter settings
-N = 30  # neurons
+N = 50  # neurons
 tau_e = 0.005  # time constant ( 5ms in seconds )
-sig_e = 0.1  # spatial kernel
+sig_e = 0.1*1.  # spatial kernel
 tau_i = 0.015
-sig_i = 0.2    ### important parameters!!
+sig_i = 0.2*1.    ### important parameters!!
 
 amp = 0
 
 # %% balanced condition
-rescale = 3.
+rescale = 1.
 
 Wee = 1* 1.*(N**2*sig_e**2*np.pi*1)**0.5 *rescale  # recurrent weights
 Wei = -2.*(N**2*sig_i**2*np.pi*1)**0.5 *rescale
@@ -55,14 +55,14 @@ stim_scal = amp #/ N**0.5
 ### find a way to confirm 1/N connection!!
 ### find MF chaos that is NOT balanced...
 ###########################
-rescale = 4.9 #7 #N/2  #8 20 30... linear with N
+# rescale = 4.9 #7 #N/2  #8 20 30... linear with N
 
-Wee = 1. *rescale  # recurrent weights
-Wei = -1. *rescale
-Wie = 1. *rescale
-Wii = -1. *rescale
-mu_e = .01 *1
-mu_i = .01 *1
+# Wee = 1. *rescale  # recurrent weights
+# Wei = -1. *rescale
+# Wie = 1. *rescale
+# Wii = -1. *rescale
+# mu_e = .01 *1
+# mu_i = .01 *1
 
 # Wee = 1. *rescale  # recurrent weights
 # Wei = -2. *rescale

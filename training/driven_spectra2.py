@@ -103,7 +103,8 @@ def group_spectrum(data, dt=dt):
 
 # %% setup spatiotemporal drive
 ### temporal signal
-I_xy = np.sin(time*20*1) + 0*np.cos(time*30*1)
+I_xy = np.sin(time*20*2) + 1*np.cos(time*30*2) ### 10-*100
+# I_xy = np.sin(time*60)
 # I_xy = np.sin(time*20*7) + np.cos(time*30*8) ### out of 2-5 does not work!? ###... prob not!
 plt.figure()
 plt.plot(I_xy[:])
@@ -233,7 +234,7 @@ plot_spatial_spec(driven)
 
 # %% compare spatial input
 sigs = np.array([0.05, 0.09, 0.1, 0.11, 0.2, 0.4, 0.8])
-reps = 3
+reps = 5
 snrs = np.zeros((reps, len(sigs)))
 tau_i, sig_i = 15*0.001, 0.2
 plt.figure()
@@ -249,8 +250,8 @@ for rr in range(reps):
         print(ii)
         ### compute driven spectrum
         temp_stim = make_2D_stim(sigs[ii])
-        temp_stim = temp_stim.reshape(N**2, lt) ##### for shuffle control!!!
-        temp_stim = temp_stim[np.random.permutation(N**2), :].reshape(N,N,lt) #### for shuffle control!!!
+        # temp_stim = temp_stim.reshape(N**2, lt) ##### for shuffle control!!!
+        # temp_stim = temp_stim[np.random.permutation(N**2), :].reshape(N,N,lt) #### for shuffle control!!!
         driven_data = make_chaotic(temp_stim)
         test,ff = group_spectrum(driven_data[:,:,50:]) #temp_stim
         plt.plot(ff[1:],test[1:], label=rf"$\sigma = {sigs[ii]}$")
@@ -278,11 +279,11 @@ for rr in range(reps):
 # %%
 from scipy.stats import ttest_ind
 plt.figure()
-# plt.plot(sigs,  snrs.T, 'k-o')
+plt.plot(sigs,  snrs.T, 'k-o')
 # plt.plot(sigs,  snrs_2d.T, 'k-o')
 # plt.plot(sigs,  snrs_shuffle.T, '-o')
-plt.errorbar(sigs, np.mean(snrs_2d,0), yerr=np.std(snrs_2d,0), fmt='-o', capsize=5, label='2D')
-plt.errorbar(sigs, np.mean(snrs_shuffle,0), yerr=np.std(snrs_shuffle,0), fmt='-o', capsize=5, label='shuffled')
+# plt.errorbar(sigs, np.mean(snrs_2d,0), yerr=np.std(snrs_2d,0), fmt='-o', capsize=5, label='2D')
+# plt.errorbar(sigs, np.mean(snrs_shuffle,0), yerr=np.std(snrs_shuffle,0), fmt='-o', capsize=5, label='shuffled')
 plt.xlabel(r'$\sigma_{sim}$', fontsize=20); plt.ylabel('signal (dB)', fontsize=20)
 plt.xscale('log')
 plt.legend()
