@@ -70,7 +70,7 @@ tau_i, sig_i = 15*0.001, 0.20    ### important parameters!!
 ### chaotic waves 10ms, 0.1
 ### drifting changing blobs 10ms, 0.2
 
-rescale = 2. ##(N*sig_e*np.pi*1)**0.5 #1
+rescale = 3. ##(N*sig_e*np.pi*1)**0.5 #1
 # Wee = 1.*(N**2*sig_e**2*np.pi*1)**0.5 *rescale  # recurrent weights
 # Wei = -2.*(N**2*sig_i**2*np.pi*1)**0.5 *rescale
 # Wie = 1.*(N**2*sig_e**2*np.pi*1)**0.5 *rescale
