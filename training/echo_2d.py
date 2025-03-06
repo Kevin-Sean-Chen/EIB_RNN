@@ -22,7 +22,7 @@ matplotlib.rc('xtick', labelsize=20)
 matplotlib.rc('ytick', labelsize=20)
 
 # %% init 2D chaotic network
-N = 50  # neurons
+N = 30  # neurons
 tau_e = 0.005  # time constant ( 5ms in seconds )
 sig_e = 0.1  # spatial kernel
 tau_i, sig_i = 15*0.001, 0.2   ### important parameters!!
@@ -32,7 +32,7 @@ tau_i, sig_i = 15*0.001, 0.2   ### important parameters!!
 #### 8,  0.2  ### blinking
 ##################################
 # EI-balanced
-rescale = 1. ##(N*sig_e*np.pi*1)**0.5 #1
+rescale = 3. ##(N*sig_e*np.pi*1)**0.5 #1
 Wee = 1.*(N**2*sig_e**2*np.pi*1)**0.5 *rescale  # recurrent weights
 Wei = -2.*(N**2*sig_i**2*np.pi*1)**0.5 *rescale
 Wie = .99*(N**2*sig_e**2*np.pi*1)**0.5 *rescale
@@ -40,18 +40,18 @@ Wii = -1.8*(N**2*sig_i**2*np.pi*1)**0.5 *rescale
 mu_e = 1.*rescale
 mu_i = .8*rescale
 
-Iamp = 0.3 *2.*(N**2*sig_e**2*np.pi*1)**0.5 *rescale / 1.  # same scale as the spontaneous input?
+Iamp = 1.5 *2.*(N**2*sig_e**2*np.pi*1)**0.5 *rescale / 1.  # same scale as the spontaneous input?
 
 # # # unbalanced (mean-field)
-rescale = 3 #N/2  #8 20 30... linear with N
-Wee = 1. *rescale  # recurrent weights
-Wei = -1. *rescale
-Wie = 1. *rescale
-Wii = -1. *rescale
-mu_e = .01 *1
-mu_i = .01 *1
+# rescale = 3 #N/2  #8 20 30... linear with N
+# Wee = 1. *rescale  # recurrent weights
+# Wei = -1. *rescale
+# Wie = 1. *rescale
+# Wii = -1. *rescale
+# mu_e = .01 *1
+# mu_i = .01 *1
 
-Iamp = .5  # he~0.5 10*median?
+# Iamp = .5  # he~0.5 10*median?
 
 ##################################
 ### setting up space and time
@@ -60,7 +60,7 @@ T = .5  # a few seconds of simulation
 time = np.arange(0, T, dt)
 lt = len(time)
 space_vec = np.linspace(0,1,N)
-kernel_size = 23 #37  # pick this for numerical convolution
+kernel_size = N*1 #23 #37  # pick this for numerical convolution
 
 ### random initial conditions
 re_init = np.random.rand(N,N)*.0
@@ -147,7 +147,7 @@ N = N*1  # Size of the image
 T = lt   # Number of time steps
 
 ### spatial pattern
-sigma_xy = 5/N #0.1
+sigma_xy = 2/N #0.1
 tau = .5
 mu = 0
 sig_noise = 2
@@ -162,6 +162,7 @@ for tt in range(lt-1):
     ang = angt[tt] + dt/tau*(mu - angt[tt]) + sig_noise*np.sqrt(dt)*np.random.randn()
     angt[tt+1] = wrap_to_pi(ang)
 
+### oscillating signal
 # angt = np.sin(time/dt/np.pi/20)*np.pi
 angt = np.sin(time/dt/np.pi/10)
 angt = angt + np.sin(time/dt/np.pi/30)
@@ -169,10 +170,9 @@ angt = angt/np.max(angt)*np.pi
 distance = 100  # Fixed distance to shift
 
 ### abrupt change
-angt = np.zeros(lt)
-angt[lt//2 : lt//2 + 20] = 2
-angt[lt//2 +20 : lt//2 + 80] = -2
-
+# angt = np.zeros(lt)
+# angt[lt//2 : lt//2 + 20] = 2
+# angt[lt//2 +20 : lt//2 + 80] = -2
 
 plt.figure()
 plt.plot(angt)
@@ -211,7 +211,7 @@ plt.show()
 # %% neural dynamics with training !!!
 beta = 1
 NN = N*N  # real number of neurons
-w_dim = 1000#N*1  # number of readouts
+w_dim = NN//2 #1000#N*1  # number of readouts
 ###############################################################################
 ### test with introducing local or random averages before linear readout~!!!!!!!!
 n_group = 500  # number for averaging
@@ -225,6 +225,10 @@ reps = 1
 
 ### I-O setup
 I_xy = shifted_images*1  # 2D input video
+###########################################################
+# I_xy = I_xy.reshape(N**2, lt) ##### for shuffle control!!!
+# I_xy = I_xy[np.random.permutation(N**2), :].reshape(N,N,lt)
+########################################################### 
 f_t = angt*1  # target
 y_t = np.zeros(lt)  # readout
 
@@ -317,13 +321,25 @@ plt.plot(f_t, label='target')
 plt.legend(fontsize=20)
 plt.ylabel('drift angle', fontsize=20)
 plt.xlabel('time steps', fontsize=20)
-plt.title('testing', fontsize=20)
+plt.title('k=0.06', fontsize=20); #plt.title('testing', fontsize=20)
 
 # %%
 MSE = np.mean((y_test[50:]-f_t[50:])**2)
 print(MSE)
 
-# %%
+# %% space vs. shuffle
+mse_shuff = np.array([0.3429, 0.3766, 0.826])#np.array([0.2939, 0.6613, 0.8606 ])
+mse_k1 = np.array([0.0921, 0.0687, 0.0566])
+mse_k2 = np.array([0.1722, 0.1166, 0.1583])
+mse_k3 = np.array([0.2619, 0.2265, 0.2723])
+mse_k4 = np.array([0.3646, 0.4808, 0.3387])
+
+plt.figure()
+plt.bar(['shuffled','k=0.06', '0.1', '0.2','0.3'], [np.mean(mse_shuff), np.mean(mse_k1), np.mean(mse_k2),np.mean(mse_k3),np.mean(mse_k4)], \
+            yerr =  [np.std(mse_shuff), np.std(mse_k1), np.std(mse_k2),np.std(mse_k3), np.std(mse_k3)])
+plt.ylabel('MSE', fontsize=20); plt.xticks(rotation=45)
+
+# %% 2D vs. RNN
 mse_2d = np.array([0.041, 0.074, 0.093, 0.096, 0.160, 0.162, 0.114])
 mse_rnn = np.array([0.639, 0.093, 0.051, 0.499, 0.433, 0.188, 0.359])
 

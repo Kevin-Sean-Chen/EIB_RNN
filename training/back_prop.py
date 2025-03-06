@@ -54,29 +54,34 @@ class twoD_RNN(nn.Module):
         self.output_dim = output_dim
         
         ### 2D EI parameters
-        self.k_size = N-1 #23
+        if np.mod(N,2)==0:
+            self.k_size = N-1 #23
+        else:
+            self.k_size = N-0
         self.dt = 0.001
         self.sig_e = 0.1
         self.tau_e = 0.005
         self.sig_i = 0.2 ### balance is needed!?!?!? #############
         self.tau_i = 0.015
-        rescale = 1.
-        self.Wee = 1* 1.*(N**2*self.sig_e**2*torch.pi*1)**0.5 *rescale  # recurrent weights
-        self.Wei = -2.*(N**2*self.sig_i**2*torch.pi*1)**0.5 *rescale
-        self.Wie = 1*  .99*(N**2*self.sig_e**2*torch.pi*1)**0.5 *rescale
-        self.Wii = -1.8*(N**2*self.sig_i**2*torch.pi*1)**0.5 *rescale
-        self.mu_e = 1.*rescale*1
-        self.mu_i = .8*rescale*1
+        self.rescale = 1.5
+        self.Wee = 1* 1.*(N**2*self.sig_e**2*torch.pi*1)**0.5 *self.rescale  # recurrent weights
+        self.Wei = -2.*(N**2*self.sig_i**2*torch.pi*1)**0.5 *self.rescale
+        self.Wie = 1*  .99*(N**2*self.sig_e**2*torch.pi*1)**0.5 *self.rescale
+        self.Wii = -1.8*(N**2*self.sig_i**2*torch.pi*1)**0.5 *self.rescale
+        self.mu_e = 1.*self.rescale*1
+        self.mu_i = .8*self.rescale*1
 
         # self.log_ee = nn.Parameter(torch.randn(1, device=device)*0.)#0
         # self.log_ei = nn.Parameter(torch.randn(1, device=device)*0.+0.7) #0.7
         # Recurrent weights (J_ij)
         # self.Ji = nn.Parameter(torch.randn(N-1, N-1, device=device) * 0.1)
-        self.log_sig_e = nn.Parameter(torch.randn(1, device=device)*0. + torch.log(torch.zeros(1)+0.1)) #torch.log(torch.zeros(1)+0.1) #
-        self.log_sig_i = nn.Parameter(torch.randn(1, device=device)*0. + torch.log(torch.zeros(1)+0.2)) #torch.log(torch.zeros(1)+0.2) #
+        # self.log_sig_e = nn.Parameter(torch.randn(1, device=device)*0. + torch.log(torch.zeros(1)+0.1)) #
+        self.log_sig_e = torch.log(torch.zeros(1)+0.1) #
+        # self.log_sig_i = nn.Parameter(torch.randn(1, device=device)*0. + torch.log(torch.zeros(1)+0.2)) #
+        self.log_sig_i = torch.log(torch.zeros(1)+0.2) #
 
         # Input weights
-        self.W_in = torch.ones(N, N)
+        self.W_in = torch.ones(N, N)*0 + 2.*(self.N**2*self.sig_e**2*torch.pi*1)**0.5 *self.rescale * 1  ###
         #nn.Parameter(torch.randn(Ns, Ns, device=device) * 0.1)
 
         # Readout weights (W_i)
@@ -150,14 +155,13 @@ class twoD_RNN(nn.Module):
         self.sig_i = torch.exp(self.log_sig_i)
         g_kernel_i = g_kernel(self.sig_i, self.k_size).to(self.device)
         
-        rescale = 1.
         # self.ee = torch.exp(self.log_ee)
         # self.ei = torch.exp(self.log_ei) ### test with learning mean weight!
-        # self.Wee = self.ee* 1.*(N**2*self.sig_e**2*torch.pi*1)**0.5 *rescale  # recurrent weights
-        # self.Wei = -self.ei*(N**2*self.sig_i**2*torch.pi*1)**0.5 *rescale
+        # self.Wee = self.ee* 1.*(N**2*self.sig_e**2*torch.pi*1)**0.5 *self.rescale  # recurrent weights
+        # self.Wei = -self.ei*(N**2*self.sig_i**2*torch.pi*1)**0.5 *self.rescale
         
-        # self.Wie = 1*  .99*(N**2*self.sig_e**2*torch.pi*1)**0.5 *rescale
-        # self.Wii = -1.8*(N**2*self.sig_i**2*torch.pi*1)**0.5 *rescale
+        # self.Wie = 1*  .99*(N**2*self.sig_e**2*torch.pi*1)**0.5 *self.rescale
+        # self.Wii = -1.8*(N**2*self.sig_i**2*torch.pi*1)**0.5 *self.rescale
         
         # Loop through time steps
         for tt in range(self.T):
@@ -293,6 +297,7 @@ def make_2D_stim_with_rigid_shift(N, lt, dt, tau, sigma_xy, device='cpu'):
     # Generate drift angles over time
     for tt in range(lt - 1):
         ang = angt[tt] + dt / tau * (mu - angt[tt]) + sig_noise * np.sqrt(dt) * np.random.randn()
+        ang = torch.cos(torch.tensor(tau * tt, device=device))    ### test ########################
         angt[tt + 1] = wrap_to_pi(ang)
 
     # Add additional sine-based modulations
@@ -345,11 +350,13 @@ rnn = twoD_RNN(N, T, output_dim, device=device)
 ipt_img, drift = make_2D_stim_with_drift(N, T, 0.1, 2, .05*2)
 #### for stim that shifts #####
 sigma_xy = 2/N #0.1 #2/N
-tau = .5
+tau = .05 #.5
 mu = 0
-sig_noise = 2
+sig_noise = 2*2
 dt = 0.001
 ipt_img, drift = make_2D_stim_with_rigid_shift(N, T, dt, tau, sigma_xy)
+ipt_img = ipt_img.reshape(N**2, T) ##### for shuffle control!!!
+ipt_img = ipt_img[np.random.permutation(N**2), :].reshape(N,N,T) 
 
 # Run the forward pass
 re_xy, ri_xy, readout, meas_mu, meas_mu_ex = rnn(ipt_img*1, return_current=True)
@@ -388,8 +395,10 @@ optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 criterion = nn.MSELoss()
 
 # %% make target
-stim, target = make_2D_stim_with_drift(N, T, 0.1, 2, .05)
+# stim, target = make_2D_stim_with_drift(N, T, 0.1, 2, .05)
 stim, target = make_2D_stim_with_rigid_shift(N, T, dt, tau, sigma_xy)
+# stim = stim.reshape(N**2, T) ##### for shuffle control!!!
+# stim = stim[np.random.permutation(N**2), :].reshape(N,N,T) 
 
 # %% training loop
 # Track loss over epochs
@@ -418,9 +427,12 @@ for epoch in range(epochs):
 # re_xy, ri_xy, readout = rnn(ipt_img)
 re_xy, ri_xy, readout, meas_mu, meas_mu_ex = model(stim, return_current=True)
 plt.figure()
-plt.plot(readout.detach().numpy().T)
-plt.plot(target)
+plt.plot(readout.detach().numpy().T, label='trained readout')
+plt.plot(target, label='target')
+plt.legend()
+print('MSE: ', torch.norm(readout.squeeze()-target)/len(target))
 
+# %%
 beta_t = (meas_mu[:,:,:] / meas_mu_ex[:,:,:]).detach().numpy()
 plt.figure()
 plt.hist(beta_t.reshape(-1), 1000)
@@ -438,3 +450,9 @@ print('median of beta: ', np.nanmedian(beta_t))
 # model.log_ei = nn.Parameter(torch.randn(1,)*0+0.7)
 # model.log_sig_e = nn.Parameter(torch.randn(1, device=device)*0. + torch.log(torch.zeros(1)+0.1))
 # model.log_sig_i = nn.Parameter(torch.randn(1, device=device)*0. + torch.log(torch.zeros(1)+0.2))
+
+# %% comparison
+performance = np.array([0.018, 0.009,0.0125, 0.016])
+text = ['shuffled','k=0.07','0.15','0.3']
+plt.figure()
+plt.bar(text, performance); plt.ylabel('MSE')

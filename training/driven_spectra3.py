@@ -21,6 +21,10 @@ import matplotlib
 matplotlib.rc('xtick', labelsize=20) 
 matplotlib.rc('ytick', labelsize=20)
 
+import seaborn as sns
+sns.set_style("white")
+sns.set_context("talk")
+
 # %% investigate driven spatiotemporal dynamics
 ### test different temporal drive and spatiotemporal patterns
 ### here we are using a sine-wave patter drifting in time
@@ -149,6 +153,14 @@ def autocorr1(x):
     corr=[np.dot(x, x)/len(x) if l==0 else np.dot(x[l:],x[:-l])/len(x[l:]) for l in lags]
     return np.array(corr)
 
+def crosscorr1(x,y):
+    '''numpy.corrcoef, partial'''
+    x = x - np.mean(x)
+    y = y - np.mean(y)
+    lags = np.arange(0, len(x)-int(0.1*len(x)))
+    corr=[np.dot(x, y)/len(x) if l==0 else np.dot(x[l:],y[:-l])/len(x[l:]) for l in lags]
+    return np.array(corr)
+
 def measure_SNR_new(r_xyt, lags=int(lt//2), post=int(tau_i/dt*5)):
     autocorrs_sigs = np.zeros(N**2)
     autocorrs_nois = np.zeros(N**2)
@@ -172,15 +184,37 @@ def measure_SNR_group(r_xyt, lags=int(lt//2), post=int(tau_i/dt*5)):
     autocorrs_sigs = np.mean((acf_pop[post:])**2)**0.5
     return autocorrs_sigs, autocorrs_nois
 
+def unique_pairs(N, k):
+    all_pairs = [(i, j) for i in range(N) for j in range(i+1, N)]  # Generate all unique pairs (i, j) with i < j
+    selected_pairs = random.sample(all_pairs, min(k, len(all_pairs)))  # Randomly pick k pairs
+    return selected_pairs
+
+def measure_SNR_cross(r_xyt, lags=int(lt//2), post=int(tau_i/dt*5), k_pairs=100):
+    pairs = unique_pairs(N**2, k_pairs)
+    acf_pop = np.zeros(lags)
+    look_up = np.arange(N**2, ).reshape(N,N)
+    autocorrs_nois, autocorrs_sigs = np.zeros(k_pairs), np.zeros(k_pairs)
+    for kk in range(k_pairs):
+        pair_k = pairs[kk]
+        a_neuron = np.concatenate(np.where(look_up==pair_k[0]))
+        b_neuron = np.concatenate(np.where(look_up==pair_k[1]))
+        temp_corr = crosscorr1(r_xyt[a_neuron[0],a_neuron[1],:], r_xyt[b_neuron[0],b_neuron[1],:])[:lags] #- np.mean(r_xyt[ii,jj,:])**2
+        autocorrs_nois[kk] = temp_corr[0] - np.mean((temp_corr[post:])**2)**0.5
+        autocorrs_sigs[kk] = np.mean((temp_corr[post:])**2)**0.5
+        # acf_pop = acf_pop + temp_corr/k_pairs
+    # autocorrs_nois = acf_pop[0] - np.mean((acf_pop[post:])**2)**0.5
+    # autocorrs_sigs = np.mean((acf_pop[post:])**2)**0.5
+    return autocorrs_sigs, autocorrs_nois
+
 # %% setup spatiotemporal drive
-space_f = 6
+space_f = 4
 time_f = .2
 x = np.linspace(0, space_f*2 * np.pi, N)  # Create a range for sine wave input
 Iamp = 2.*(N**2*sig_e**2*np.pi*1)**0.5 *rescale *1
 I_xyt = np.zeros((N, N, lt)) # Initialize the tensor
 # Populate the tensor
 for t in range(lt):
-    temp = np.array([np.sin(x + phase + t *time_f* (2 * np.pi / N)) 
+    temp = np.array([np.sin(x + phase*0 + t *time_f* (2 * np.pi / N)) 
                                 for phase in np.linspace(0, 2 * np.pi, N)]).T
     I_xyt[:, :, t] = temp/np.linalg.norm(temp)
     
@@ -382,7 +416,7 @@ plt.legend(fontsize=15)
 ###############################################################################
 # %% setup
 space_f = 3
-time_f = 0.4 #.1 #0.05-.5
+time_f = 0.15 #.1 #0.05-.5
 sigs = np.array([0.1, 0.25, 0.5, 1, 1.5, 2])
 I_xyt = make_2D_stim(time_f, space_f)
 reps = 1
@@ -435,20 +469,21 @@ for rr in range(reps):
 
 # %% plotting for all
 plt.figure()
-plt.errorbar(sigs, np.mean(snrs_2d,2).squeeze(), yerr=np.std(snrs_2d,2).squeeze(), fmt='-o', capsize=5, label='2D')
-plt.errorbar(sigs, np.mean(snrs_shuffle,2).squeeze(), yerr=np.std(snrs_shuffle,2).squeeze(), fmt='-o', capsize=5, label='shuffled')
-plt.xlabel(r'intensity', fontsize=20); plt.ylabel('signal (dB)', fontsize=20)
+plt.errorbar(sigs, np.mean(snrs_2d,2).squeeze(), yerr=np.std(snrs_2d,2).squeeze(), fmt='-o', capsize=5, label='grating pattern')
+plt.errorbar(sigs, np.mean(snrs_shuffle,2).squeeze(), yerr=np.std(snrs_shuffle,2).squeeze(), fmt='-o', capsize=5, label='shuffled space')
+plt.xlabel(r'intensity I', fontsize=20); plt.ylabel('response amplitude', fontsize=20)
 plt.legend(); # plt.xscale('log')
 
 # %%
 #### HOW ABOUT INFO in SPACE!!!
+################################# might need spatial corrs-corr here !!??
 ###############################################################################
 # %%
-space_f = 2
+space_f = 3
 time_f = .2 #0.05-.5
 I_xyt = make_2D_stim(time_f, space_f)
 # sigs = np.array([3,6,9,12])  ### spatial
-sigs = np.array([0.05,0.1,0.15,0.2])   # temporal
+sigs = np.array([0.05,0.1,0.15,0.2,0.3])   # temporal
 reps = 1
 sig_threshold = 0.0002#100
 snrs = np.zeros((reps, len(sigs)))
@@ -461,7 +496,8 @@ plt.plot(ff_spon[1:],test_spon[1:], label='spontaneous') ### use loglog or plot
 test_sig,ff_sig = group_spectrum_space(I_xyt[:,:,50:])
 plt.plot(ff_sig[1:], test_sig[1:], label='stim')
 
-snrs = np.zeros((reps, len(sigs), N*N))
+k_pairs = 100
+snrs = np.zeros((reps, len(sigs),  k_pairs))
 snrs_2d, snrs_shuffle = snrs*1, snrs*1
 
 # %%
@@ -480,7 +516,7 @@ for rr in range(reps):
         # temp_stim = temp_stim[:, np.random.permutation(lt)].reshape(N,N,lt)
         #######################
         driven_data = make_chaotic(temp_stim)
-        aa,bb = measure_SNR_new(driven_data)
+        aa,bb = measure_SNR_cross(driven_data)
         snrs_2d[rr,ii] = aa
         # test,ff = group_spectrum_space(driven_data[:,:,50:]) #temp_stim
         # plt.plot(ff[1:],test[1:], label=rf"$\sigma = {sigs[ii]}$")
@@ -488,9 +524,9 @@ for rr in range(reps):
         
         ### compute controled spectrum
         temp_stim = temp_stim.reshape(N**2, lt) ##### for shuffle control!!!
-        temp_stim = temp_stim[np.random.permutation(N**2), :].reshape(N,N,lt) #### for shuffle control!!!
+        temp_stim = temp_stim[:, np.random.permutation(lt)].reshape(N,N,lt) ### shuffle in time!
         driven_data_ctrl = make_chaotic(temp_stim,N)
-        aa,bb = measure_SNR_new(driven_data_ctrl)
+        aa,bb = measure_SNR_cross(driven_data_ctrl)
         snrs_shuffle[rr,ii] = aa
         
         ##hacky test
@@ -512,52 +548,58 @@ plt.figure()
 # plt.plot(sigs,  snrs.T, 'k-o')
 # plt.plot(sigs,  snrs_2d.T, 'k-o')
 # plt.plot(sigs,  snrs_shuffle.T, '-o')
-plt.errorbar(sigs, np.mean(snrs_2d,0), yerr=np.std(snrs_2d,0), fmt='-o', capsize=5, label='2D')
-plt.errorbar(sigs, np.mean(snrs_shuffle,0), yerr=np.std(snrs_shuffle,0), fmt='-o', capsize=5, label='shuffled')
-plt.xlabel(r'temporal frequency', fontsize=20); plt.ylabel('signal (dB)', fontsize=20)
+# plt.errorbar(sigs, np.mean(snrs_2d,0), yerr=np.std(snrs_2d,0), fmt='-o', capsize=5, label='coherent drift')
+# plt.errorbar(sigs, np.mean(snrs_shuffle,0), yerr=np.std(snrs_shuffle,0), fmt='-o', capsize=5, label='shuffled time')
+plt.errorbar(sigs, np.mean(snrs_2d,2).squeeze(), yerr=np.std(snrs_2d,2).squeeze(), fmt='-o', capsize=5, label='coherent drift')
+plt.errorbar(sigs, np.mean(snrs_shuffle,2).squeeze(), yerr=np.std(snrs_shuffle,2).squeeze(), fmt='-o', capsize=5, label='shuffled in time')
+plt.xlabel(r'temporal frequency f', fontsize=20); plt.ylabel('amplitude (cross-corr)', fontsize=20)
 # plt.xscale('log')
 plt.legend()
 
+# %% double scans
+###############################################################################
 # %%
-# space_f = 7
-# time_f = .06 #0.05-.5
-# I_xyt = make_2D_stim(time_f, space_f)
-# # Step 1: Define a 2D array
-# N = 30
-# data = I_xyt[:,:,0]
-# # x = np.linspace(0, 2 * np.pi, N)
-# # y = np.linspace(0, 2 * np.pi, N)
-# # X, Y = np.meshgrid(x, y)
+space_f = 4
+time_f = 0.2 #.1 #0.05-.5
+I_xyt = make_2D_stim(time_f, space_f)
+sigs_k = np.arange(2,8,1)
+sigs_f = np.array([0.05,0.1,0.15,0.2])
+reps = 1
+sig_threshold = 10 #0.001#10
+snrs = np.zeros((reps, len(sigs_k), len(sigs_f)))
+snrs_2d, snrs_shuffle = snrs*1, snrs*1
+tau_i, sig_i = 15*0.001, 0.2
 
-# # Example: 2D sine wave with specific frequencies
-# # data = np.sin(10 * X) + np.cos(15 * Y)
+# snrs = np.zeros((reps, len(sigs), N*N))
+# snrs_2d, snrs_shuffle = snrs*1, snrs*1
 
-# # Step 2: Compute the 2D FFT
-# fft_result = np.fft.fft2(data)
-# fft_shifted = np.fft.fftshift(fft_result)
-# magnitude_spectrum = np.abs(fft_shifted)
+# %%
+for rr in range(reps):
+    print('repeat: ', rr)
+    for ii in range(len(sigs_k)):
+        print(ii)
+        for jj in range(len(sigs_f)):
+            ### compute driven spectrum
+            temp_stim = make_2D_stim(sigs_f[jj], sigs_k[ii],N)
+            driven_data = make_chaotic(temp_stim,N)
+            aa,bb = measure_SNR_group(driven_data)
+            snrs_2d[rr,ii,jj] = aa
+            
+            ### compute control, shuffle in space
+            temp_stim = temp_stim.reshape(N**2, lt) ##### for shuffle control!!!
+            temp_stim = temp_stim[np.random.permutation(N**2), :].reshape(N,N,lt) 
+            driven_data_ctrl = make_chaotic(temp_stim,N)
+            aa,bb = measure_SNR_group(driven_data_ctrl)
+            snrs_shuffle[rr,ii,jj] = aa
 
-# # Step 3: Find the peak frequency
-# # Exclude the DC component at the center
-# center = (N // 2, N // 2)
-# magnitude_spectrum[center] = 0  # Set the center value to 0 to ignore DC
+# %% plotting
+colors = plt.cm.viridis(np.linspace(0, 1, len(sigs_f)))  
+plt.figure()
+for jj in range(len(sigs_f)):
+    plt.plot(sigs_k/N, snrs_2d[0,:,jj], '-o',color=colors[jj], label='2D')
+    plt.plot(sigs_k/N, snrs_shuffle[0,:,jj], '--o',color=colors[jj],label='shuffled')
 
-# # Find the indices of the peak
-# peak_indices = np.unravel_index(np.argmax(magnitude_spectrum), magnitude_spectrum.shape)
-# peak_freq_x, peak_freq_y = peak_indices
-
-# # Convert to spatial frequencies
-# freq_x = abs(peak_freq_x - N // 2)  # Offset from the center
-# freq_y = abs(peak_freq_y - N // 2)
-
-# # Step 4: Print results
-# print(f"Dominating spatial frequency: freq_x = {freq_x}, freq_y = {freq_y}")
-
-# # Optional: Visualize the magnitude spectrum
-# plt.imshow(np.log1p(magnitude_spectrum), cmap='hot')
-# plt.title("Magnitude Spectrum (Log-Scaled)")
-# plt.colorbar()
-# plt.scatter(peak_freq_y, peak_freq_x, color='blue', label='Dominating Frequency')
-# plt.legend()
-# plt.show()
-
+solid_line, = plt.plot([], [], color='black', linestyle='-', label='grating pattern')
+dashed_line, = plt.plot([], [], color='black', linestyle='--', label='shuffled in space')
+plt.legend(handles=[solid_line, dashed_line])
+plt.ylabel('response amplitude'); plt.xlabel('spatial scale (k)'); plt.title('k tuning (across f)')
