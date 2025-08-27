@@ -40,6 +40,7 @@ tau_i, sig_i = 15*0.001, 0.2*1.   ### important parameters!!
 #### 8,  0.2  ### blinking
 ##################################
 
+### balanced parameters
 rescale = 3. ##(N*sig_e*np.pi*1)**0.5 #1
 Wee = 1.*(N**2*sig_e**2*np.pi*1)**0.5 *rescale  # recurrent weights
 Wei = -2.*(N**2*sig_i**2*np.pi*1)**0.5 *rescale
@@ -47,9 +48,6 @@ Wie = .99*(N**2*sig_e**2*np.pi*1)**0.5 *rescale
 Wii = -1.8*(N**2*sig_i**2*np.pi*1)**0.5 *rescale
 mu_e = 1.*rescale
 mu_i = .8*rescale
-
-### setting up space and time
-kernel_size = 23 #37  # pick this for numerical convolution
 
 # %% functions
 def phi(x):
@@ -137,8 +135,27 @@ def group_spectrum_space(data, dxy=1/N):
             # spec_all[ii,:,jj],_ = spectrum_space(temp, dxy)
     return np.mean(np.mean(spec_all,2),0), ff
 
+def autocorr1(x):
+    '''numpy.corrcoef, partial'''
+    x = x - np.mean(x)
+    lags = np.arange(0, len(x)-int(0.1*len(x)))
+    corr=[np.dot(x, x)/len(x) if l==0 else np.dot(x[l:],x[:-l])/len(x[l:]) for l in lags]
+    return np.array(corr)
+
+def measure_SNR_new(r_xyt, lags=int(lt//2), post=int(tau_i/dt*5)):
+    autocorrs_sigs = np.zeros(N**2)
+    autocorrs_nois = np.zeros(N**2)
+    kk = 0
+    for ii in range(N):
+        for jj in range(N):
+            temp_corr = autocorr1(r_xyt[ii,jj,:])[:lags] #- np.mean(r_xyt[ii,jj,:])**2
+            autocorrs_nois[kk] = temp_corr[0] - np.mean((temp_corr[post:])**2)**0.5
+            autocorrs_sigs[kk] = np.mean((temp_corr[post:])**2)**0.5
+            kk += 1
+    return autocorrs_sigs, autocorrs_nois
+
 # %% setup spatiotemporal drive
-space_f = 3
+space_f = 3 #3
 time_f = .2
 direction = +1 ### +/- for direction!
 x = np.linspace(0, space_f*2 * np.pi, N)  # Create a range for sine wave input
@@ -194,6 +211,16 @@ def make_chaotic(I_xy, N=N, lt=lt):
         mu_e = 1.*rescale
         mu_i = .8*rescale
         Iamp = 2.*(N**2*sig_e**2*np.pi*1)**0.5 *rescale *1
+
+        ### MF parameters ###
+        # rescale = 3 #N/2  #8 20 30... linear with N
+        # Wee = 1. *rescale  # recurrent weights
+        # Wei = -1. *rescale
+        # Wie = 1. *rescale
+        # Wii = -1. *rescale
+        # mu_e = .01 *1
+        # mu_i = .01 *1
+        # Iamp = 1* rescale  # he~0.5 10*median?
         
         ### modifying for 2D rate EI-RNN
         ge_conv_re = spatial_convolution(re_xy[:,:,tt], g_kernel(sig_e))
@@ -237,9 +264,32 @@ ani = FuncAnimation(fig, update, frames=data.shape[-1], blit=False)
 
 plt.show()
 
-# %% ANALYSIS !!!
-### test skewness of kernels, how does it affect balance and spontaneious pattern
-### randomize initial phase, test E and I difference...
-### can we get direction selection
-### measure the input tuning
-### can we move on with higher-order correlations?
+# %% analyze signal
+signal, noise = measure_SNR_new(driven_r_chaos)
+
+lags = lt//2
+acf_pop = np.zeros(lags)
+for ii in range(N):
+    for jj in range(N):
+        temp_corr = autocorr1(driven_r_chaos[ii,jj,:])[:lags] #- np.mean(r_xyt[ii,jj,:])**2
+        acf_pop = acf_pop + temp_corr/N**2
+        
+plt.figure()
+plt.plot(acf_pop)
+plt.xlabel('lags', fontsize=20); plt.ylabel(r'C($\tau$)', fontsize=20)
+
+# %% compare traces
+# plt.figure()
+# plt.subplot(211); plt.plot(I_xyt[5,5,:600], 'k',label='stime'); plt.xticks([]); plt.yticks([]); plt.ylabel('stimuli', fontsize=20)
+# plt.subplot(212)
+# plt.plot(re_sym[:600], label='symm')
+# plt.plot(re_pd[:600], label='PD')
+# plt.plot(re_nd[:600], label='ND')
+# plt.legend()
+
+# %% compare signal
+# plt.figure()
+# plt.bar(['symmetric','PD', 'ND'], \
+#         [np.mean(signal_sym), np.mean(signal_pd), np.mean(signal_nd)], \
+#         yerr =  [np.std(signal_sym), np.std(signal_pd), np.std(signal_nd)])
+# plt.ylabel('response', fontsize=20); plt.xticks(rotation=45)

@@ -15,7 +15,7 @@ from lyapynov import mLCE, LCE, CLV, ADJ
 import math
 
 import jax
-key = jax.random.PRNGKey(13)
+key = jax.random.PRNGKey(1)
 
 # %% RNN example
 ### edit from https://github.com/RainerEngelken/RNN-LyapunovSpectra
@@ -26,7 +26,7 @@ J = g*np.random.randn(N, N)/np.sqrt(N)  # Initialize random network realization
 J = J-np.diag(np.diag(J))  # remove autapse 
 dt = 0.1  # time step
 T = 1000  # full time in seconds
-nLE = 100  # number of LEs
+nLE = N*1  # number of LEs
 tau = 1  # characteristic time
 
 ### time steps
@@ -149,28 +149,37 @@ import jax.numpy as np
 # %% setup function version of EI-2D network
 ### params
 N = 30  # neurons
-tau_e = 0.005  # time constant ( 5ms in seconds )
-sig_e = 0.1  #.1 spatial kernel
-tau_i, sig_i = 0.015, 0.2#0.015, 0.14 #15*0.001, 0.2 
-kernel_size = 23
+rescale_ = 1
+tau_e = 0.005*1.  # time constant ( 5ms in seconds )
+sig_e = 0.1* rescale_  #.1 spatial kernel
+tau_i, sig_i = 0.015*1., 0.2* rescale_ #0.015, 0.14 #15*0.001, 0.2 
+kernel_size = 23 #N-1
 
 ### EI-balanced
-rescale = 3. ##(N*sig_e*np.pi*1)**0.5 #1
+rescale = 2. ##(N*sig_e*np.pi*1)**0.5 #1
 Wee = 1*(N**2*sig_e**2*np.pi*1)**0.5 *rescale  # recurrent weights
 Wei = 1* -2.*(N**2*sig_i**2*np.pi*1)**0.5 *rescale
 Wie = 1*(N**2*sig_e**2*np.pi*1)**0.5 *rescale
 Wii = 1* -1.8 * (N**2*sig_i**2*np.pi*1)**0.5 *rescale  #1.8
-mu_e = 1.*rescale
-mu_i = .8*rescale
+mu_e = 1.*rescale* N/15
+mu_i = .8*rescale* N/15
 
 ### try mean field
-# rescale = 4.9 #N/2  #8 20 30... linear with N
-# Wee = 1. *rescale  # recurrent weights
-# Wei = -1. *rescale
-# Wie = 1. *rescale
-# Wii = -1. *rescale
-# mu_e = .01 *1
-# mu_i = .01 *1
+rescale = N/2 #4.9 #N/2  #8 20 30... linear with N
+Wee = 1. *rescale  # recurrent weights
+Wei = -2. *rescale
+Wie = 1. *rescale
+Wii = -2. *rescale
+mu_e = .1 *1
+mu_i = .1 *1
+
+### Chengcheng's
+# Wee = 43.82  # recurrent weights
+# Wei = -87.63
+# Wie = 43.82
+# Wii = -82.15
+# mu_e = .144
+# mu_i = .096
 
 # %% functions for 2D EI network
 def phi(x):
@@ -178,6 +187,7 @@ def phi(x):
     rectified quardratic nonlinearity
     """
     nl = np.where(x > 0, np.tanh(x)*1, 0)
+    # nl = np.where(x > 0, x**2, 0)
     return nl
 
 def g_kernel(sigma, size=kernel_size):
@@ -266,7 +276,7 @@ dt = 0.001  # 1ms time steps
 T = 1.0  # a few seconds of simulation
 time = np.arange(0, T, dt)
 lt = len(time)
-inpt = jax.random.normal(key, shape=(lt,))*1.5 #np.sin(time* 20)*1  ### test input drive
+inpt = jax.random.normal(key, shape=(lt,))* 0/dt #1.5 #np.sin(time* 20)*1  ### test input drive
 re_xy = np.zeros((N,N, lt))
 ri_xy = re_xy*1
 re_xy = jax.random.uniform(key,shape=(N,N, lt))*.1
@@ -366,7 +376,7 @@ q, r = np.linalg.qr(jax.random.normal(key, shape=(N**2*2, nLE)))  # Initialize o
 Ddiag = np.eye(N)*(1-dt)  # Diagonal elements of Jacobian
 
 lt_jac = nStep + nStepTransient + nStepTransientONS-1
-inpt = jax.random.normal(key, shape=(lt_jac,))*0 #1.5  # random input ################ play with correlation !!!!!!!!!!!!!!!!!!!
+inpt = jax.random.normal(key, shape=(lt_jac,))*.0/dt #1.5  # random input ################ play with correlation !!!!!!!!!!!!!!!!!!!
 
 # %%
 ### dynamics
@@ -431,6 +441,22 @@ plt.subplot(132)
 plt.imshow(phi(snap_h[tt,N**2:].reshape(N,N))); plt.colorbar(); plt.title('activty')
 plt.subplot(133)
 plt.imshow(betas[tt,:].reshape(N,N)); plt.colorbar(); plt.title('beta_t')
+
+# %% pariticpation ratio
+plt.figure()
+plt.subplot(1,2,1)
+plt.plot(np.arange(nONS)*nstepONS*dt, LSall[:, 0], 'k')
+plt.xlabel(r'Time ($\tau$)')
+plt.ylabel('$\lambda_i^{local}$')
+plt.title('first local Lyapunov exponent')
+plt.xlim(0, nONS*nstepONS*dt)
+
+plt.subplot(122)  # Plot participation ratio
+plt.plot(np.arange(nONS)*nstepONS*dt, pAll[:], 'k')
+plt.xlabel(r'Time ($\tau$)')
+plt.ylabel('P')
+plt.title('participation ratio')
+plt.xlim(0, nONS*nstepONS*dt)
 
 # %% spatial spectrum
 plt.figure()

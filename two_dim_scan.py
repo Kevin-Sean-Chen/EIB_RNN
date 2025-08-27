@@ -23,8 +23,8 @@ import os
 import pickle
 
 # %% fixing initial condition to study chaos
-np.random.seed(13)
-N = 70 #200
+np.random.seed(42)
+N = 51 #200
 init_2d_e = np.random.randn(N,N)
 init_2d_i = np.random.randn(N,N)
 
@@ -51,8 +51,8 @@ kernel_size = 23  # pick this for numerical convolution
 offset = 50  ### remove initial part to get rid of transient effects
 
 # %% scanning choices
-sig_ie = np.array([0.5, 1.0, 1.5, 2.0])  # ratio between i and e length scales
-tau_ie = np.array([1, 2, 3, 4])  # ratio between i and e time scale
+sig_ie = np.array([1.0, 1.5, 2.0, 2.5])  # ratio between i and e length scales
+tau_ie = np.array([1.0, 2, 3, 4])  # ratio between i and e time scale
 
 # %% functions
 def phi(x):
@@ -128,13 +128,32 @@ def chaotic_2d_net(sig_i, tau_i):
     # mu_i = .7*rescale #*(N*sig_i*np.pi*1)**0.5 *rescale  #1e-8#.001*1
     
     ### rescaling parameters for balance condition
+    # Wee = 1.*(N**2*sig_e**2*np.pi*1)**0.5 *rescale  # recurrent weights
+    # Wei = -2.*(N**2*sig_i**2*np.pi*1)**0.5 *rescale
+    # Wie = .99*(N**2*sig_e**2*np.pi*1)**0.5 *rescale
+    # Wii = -1.8*(N**2*sig_i**2*np.pi*1)**0.5 *rescale
+    # mu_e = 1.*rescale
+    # mu_i = .8*rescale
+    #################################################
+    # ### Balanced condition
+    rescale = 1. ##(N*sig_e*np.pi*1)**0.5 #1
     Wee = 1.*(N**2*sig_e**2*np.pi*1)**0.5 *rescale  # recurrent weights
     Wei = -2.*(N**2*sig_i**2*np.pi*1)**0.5 *rescale
     Wie = .99*(N**2*sig_e**2*np.pi*1)**0.5 *rescale
     Wii = -1.8*(N**2*sig_i**2*np.pi*1)**0.5 *rescale
-    mu_e = 1.*rescale
-    mu_i = .8*rescale
-    #################################################
+    mu_e = 1.*rescale * N/10 #1.5
+    mu_i = .8*rescale * N/10 #1.5
+
+    # ### MF
+    # rescale = 10. #7 #N/2  #8 20 30... linear with N
+    # Wee = 1. *rescale  # recurrent weights
+    # Wei = -2. *rescale
+    # Wie = 1. *rescale
+    # Wii = -2. *rescale
+    # mu_e = .1 *1
+    # mu_i = .1 *1
+    
+    ################################################
     
     ### initialization
     ### random initial conditions
@@ -171,11 +190,14 @@ def chaotic_2d_net(sig_i, tau_i):
         # measure_i[tt+1] = (Wei*gi_conv_ri)[20,20]
         
     return re_xy, ri_xy, measure_mu, measure_mu_ex, measure_mu_ix
-    
+
+# %% testing
+re_xy, ri_xy, measure_mu, measure_mu_ex, measure_mu_ix = chaotic_2d_net(2.0*sig_e, 4.0*tau_e)
+
 # %% scanning
 
 # Create a directory to save the files if it doesn't exist
-output_dir = 'sims_balanced2'  ## the sims data folder
+output_dir = 'sims_balance2'  ## the sims data folder
 os.makedirs(output_dir, exist_ok=True)
 
 for ii in range(len(sig_ie)):

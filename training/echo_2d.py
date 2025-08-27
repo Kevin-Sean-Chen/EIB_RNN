@@ -37,8 +37,8 @@ Wee = 1.*(N**2*sig_e**2*np.pi*1)**0.5 *rescale  # recurrent weights
 Wei = -2.*(N**2*sig_i**2*np.pi*1)**0.5 *rescale
 Wie = .99*(N**2*sig_e**2*np.pi*1)**0.5 *rescale
 Wii = -1.8*(N**2*sig_i**2*np.pi*1)**0.5 *rescale
-mu_e = 1.*rescale
-mu_i = .8*rescale
+mu_e = 1.*rescale* N/15
+mu_i = .8*rescale* N/15
 
 Iamp = 1.5 *2.*(N**2*sig_e**2*np.pi*1)**0.5 *rescale / 1.  # same scale as the spontaneous input?
 

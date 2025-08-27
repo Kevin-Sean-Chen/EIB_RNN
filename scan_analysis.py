@@ -17,7 +17,7 @@ import pickle
 
 # %% get all simulated pkl files
 # Directory where the pickle files are saved
-input_dir = 'sims_balanced'
+input_dir = 'sims_unbalance'
 # Get a list of all files in the directory
 files = sorted([f for f in os.listdir(input_dir) if f.endswith('.pkl')])
 
@@ -117,7 +117,8 @@ plt.subplots_adjust(hspace=0.4, wspace=0.4)
             
 # %%
 fig, ax = plt.subplots()
-cax = ax.imshow(beta_scan)
+# cax = ax.imshow(beta_scan)
+cax = ax.imshow(beta_scan, vmin=0, vmax=.5)  # Set color range here
 
 # Set the ticks to correspond to the vectors
 ax.invert_yaxis()
@@ -125,7 +126,7 @@ ax.set_xticks(np.arange(beta_scan.shape[0]))
 ax.set_xticklabels(tau_ratio)
 ax.set_yticks(np.arange(beta_scan.shape[1]))
 ax.set_yticklabels(sig_ratio)
-ax.set_xlabel('tau ratio', fontsize=20)
-ax.set_ylabel('sigma ratio', fontsize=20)
-ax.set_title('beta (balanced)', fontsize=20)
+ax.set_xlabel(r'$\tau_i / \tau_e$', fontsize=20)
+ax.set_ylabel(r'$\sigma_i / \sigma_e$', fontsize=20)
+ax.set_title(r'<$\beta$> (balanced)', fontsize=20)
 fig.colorbar(cax)

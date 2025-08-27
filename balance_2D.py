@@ -23,11 +23,21 @@ matplotlib.rc('ytick', labelsize=20)
 ### strong connection on 1/sqrt(N) order, with balanced conditions
 
 # %% parameter settings
-N = 50  # neurons
-tau_e = 0.005  # time constant ( 5ms in seconds )
-sig_e = 0.1*1.  # spatial kernel
+N = 41  # neurons
+tau_e = 0.005*1.  # time constant ( 5ms in seconds )
+sig_e = 0.1    # spatial kernel
 tau_i = 0.015
 sig_i = 0.2*1.    ### important parameters!!
+
+tau_i, sig_i = 15*0.001*1., 0.14    ### important parameters!!
+#### 5, 0.14  ### grid parameter
+#### 15, 0.2  ### chaos parameter
+#### 10, 0.11 ### waves/strips!!!
+#### 8,  0.2  ### blinking
+#### 15, 0.14 ### switching waves!!
+
+sig_ei = 0.2
+sig_ie = 0.1
 
 amp = 0
 
@@ -38,8 +48,10 @@ Wee = 1* 1.*(N**2*sig_e**2*np.pi*1)**0.5 *rescale  # recurrent weights
 Wei = -2.*(N**2*sig_i**2*np.pi*1)**0.5 *rescale
 Wie = 1*  .99*(N**2*sig_e**2*np.pi*1)**0.5 *rescale
 Wii = -1.8*(N**2*sig_i**2*np.pi*1)**0.5 *rescale
-mu_e = 1.*rescale*1
-mu_i = .8*rescale*1
+mu_e = 1.*rescale* N/15
+mu_i = .8*rescale* N/15
+# mu_e = .2*rescale*1 *(N**2*sig_e**2*np.pi*1)**0.5 #*N/15 ### ...think about scaling of this!!! ### 
+# mu_i = .05*rescale*1 *(N**2*sig_i**2*np.pi*1)**0.5 #*N/15
 
 # Wee = 1.*(N**2*sig_e**2*np.pi*1)**0.5 *rescale  # recurrent weights
 # Wei = -1.5*(N**2*sig_i**2*np.pi*1)**0.5 *rescale
@@ -55,14 +67,14 @@ stim_scal = amp #/ N**0.5
 ### find a way to confirm 1/N connection!!
 ### find MF chaos that is NOT balanced...
 ###########################
-# rescale = 4.9 #7 #N/2  #8 20 30... linear with N
+# rescale = N/2. #7 #N/2  #8 20 30... linear with N
 
-# Wee = 1. *rescale  # recurrent weights
-# Wei = -1. *rescale
-# Wie = 1. *rescale
-# Wii = -1. *rescale
-# mu_e = .01 *1
-# mu_i = .01 *1
+# # Wee = 1. *rescale  # recurrent weights
+# # Wei = -1. *rescale
+# # Wie = 1. *rescale
+# # Wii = -1. *rescale
+# # mu_e = .01 *1
+# # mu_i = .01 *1
 
 # Wee = 1. *rescale  # recurrent weights
 # Wei = -2. *rescale
@@ -318,7 +330,7 @@ for ii,x in enumerate(x_locations):
     plt.axvline(x=x, color=cols[ii], linestyle='--', linewidth=2)
 
 # %% check space
-thre_beta = 1.05 # 1.04
+thre_beta = 0#1.05 # 1.04
 temp_beta = beta_t*0+.0
 temp_beta[beta_t>thre_beta] = re_xy[beta_t>thre_beta]
 plt.figure()
@@ -329,6 +341,99 @@ data_fft_shifted = np.fft.fftshift(data_fft)
 magnitude_spectrum = np.abs(data_fft_shifted)
 plt.imshow(np.log(magnitude_spectrum[:, :, int(lt/2)]), cmap='gray')
 plt.title(r'spatial spectrum for $\beta_{above}=$'+f'{thre_beta}')
+
+# %%
+# spectral analysis
+from scipy.fft import fftn, fftshift, fftfreq
+
+# Compute 3D FFT
+u = re_xy*1
+u_demeaned = u*1 - np.mean(u, axis=(0, 1), keepdims=True)
+U_hat = fftn(u_demeaned[:,:,100:], axes=(0, 1, 2))
+U_hat_shifted = fftshift(U_hat)
+power_spectrum = np.abs(U_hat_shifted)**2
+
+# Parameters
+nx, ny, nt = N*1, N*1, U_hat.shape[-1] #len(time)
+# Lx, Ly, T = 1.0, 1.0, 1.0
+Lx, Ly, T = 1.0, 1.0, 10.0
+x = np.linspace(0, Lx, nx)
+y = np.linspace(0, Ly, ny)
+t = np.linspace(0, T, nt)
+
+# Get frequency axes
+kx = fftshift(fftfreq(nx, d=Lx/nx)) * 2 * np.pi
+ky = fftshift(fftfreq(ny, d=Ly/ny)) * 2 * np.pi
+omega = fftshift(fftfreq(nt, d=T/nt)) * 2 * np.pi
+
+# Extract central slice through ky=0 to show omega vs kx
+mid_ky = ny // 2
+spectrum_slice = power_spectrum[mid_ky, :, :]
+
+# Plot dispersion relation
+# KX, OMEGA = np.meshgrid(kx, omega, indexing='ij')
+plt.figure(figsize=(8, 5))
+plt.pcolormesh(kx, omega, np.log(spectrum_slice.T), cmap='viridis')
+plt.xlabel('Wave number $k_x$')
+plt.ylabel('Frequency $\\omega$')
+plt.title('Dispersion Relation from 2D Wave Field')
+plt.colorbar(label='Power')
+plt.tight_layout()
+plt.show()
+
+# Find peak in power spectrum
+# power_spectrum[N//2,N//2,:] = 0
+max_idx = np.unravel_index(np.argmax(power_spectrum), power_spectrum.shape)
+k_peak = np.sqrt(kx[max_idx[0]]**2 + ky[max_idx[1]]**2)
+omega_peak = omega[max_idx[2]]
+
+# Compute wave speed
+c_estimated = omega_peak / k_peak if k_peak != 0 else 0
+c_estimated
+
+# %%
+# import numpy as np
+# import matplotlib.pyplot as plt
+# from scipy.fft import fftn, fftshift, fftfreq
+
+# # Parameters for spatiotemporal data
+# X, Y, T_grid = np.meshgrid(x, y, t, indexing='ij')
+
+# # Create a traveling wave: u(x, y, t) = sin(kx*x + ky*y - omega*t)
+# kx_true, ky_true, omega_true = 2*np.pi/5, 2*np.pi/5, 2*np.pi/4
+# u = np.sin(kx_true * X + ky_true * Y - omega_true * T_grid)
+
+# U_hat = fftn(u, axes=(0, 1, 2))
+# # U_hat = fftn(re_xy, axes=(0, 1, 2))
+# U_hat_shifted = fftshift(U_hat)
+# power_spectrum = np.abs(U_hat_shifted)**2
+
+# # Frequency axes
+# kx = fftshift(fftfreq(nx, d=Lx/nx)) * 2 * np.pi
+# ky = fftshift(fftfreq(ny, d=Ly/ny)) * 2 * np.pi
+# omega = fftshift(fftfreq(nt, d=T/nt)) * 2 * np.pi
+
+# # Find peak in power spectrum
+# max_idx = np.unravel_index(np.argmax(power_spectrum), power_spectrum.shape)
+# k_peak = np.sqrt(kx[max_idx[0]]**2 + ky[max_idx[1]]**2)
+# omega_peak = omega[max_idx[2]]
+
+# # Compute wave speed
+# c_estimated = omega_peak / k_peak if k_peak != 0 else 0
+
+# # Plot a slice of power spectrum at fixed ky
+# plt.figure(figsize=(8, 5))
+# plt.imshow(np.log(power_spectrum[:, ny//2, :].T), extent=[kx[0], kx[-1], omega[0], omega[-1]],
+#             aspect='auto', origin='lower', cmap='magma')
+# plt.colorbar(label='Power')
+# plt.xlabel('Wave number $k_x$')
+# plt.ylabel('Frequency $\\omega$')
+# plt.title('Spectral Slice at $k_y=0$')
+# plt.tight_layout()
+# plt.show()
+
+# c_estimated
+
 
 # %% activity
 plt.figure()

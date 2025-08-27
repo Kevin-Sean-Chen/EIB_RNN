@@ -56,7 +56,7 @@ matplotlib.rc('ytick', labelsize=20)
 # ### D, chaotic solution (τi = 12.8, σi = 0.096).
 
 # %% test to simplify
-N = 100  # neurons
+N = 31  # neurons
 tau_e = 0.005  # time constant ( 5ms in seconds )
 sig_e = 0.1  # spatial kernel
 tau_i, sig_i = 15*0.001, 0.20    ### important parameters!!
@@ -64,13 +64,14 @@ tau_i, sig_i = 15*0.001, 0.20    ### important parameters!!
 #### 15, 0.2  ### chaos parameter
 #### 10, 0.11 ### waves/strips!!!
 #### 8,  0.2  ### blinking
+#### 15, 0.14 ### switching waves!!
 ##################################
 ### moving dots 5ms, 0.2
 ### little coherence 5ms, 0.1
 ### chaotic waves 10ms, 0.1
 ### drifting changing blobs 10ms, 0.2
 
-rescale = 3. ##(N*sig_e*np.pi*1)**0.5 #1
+rescale = 2 ##(N*sig_e*np.pi*1)**0.5 #1
 # Wee = 1.*(N**2*sig_e**2*np.pi*1)**0.5 *rescale  # recurrent weights
 # Wei = -2.*(N**2*sig_i**2*np.pi*1)**0.5 *rescale
 # Wie = 1.*(N**2*sig_e**2*np.pi*1)**0.5 *rescale
@@ -82,11 +83,21 @@ Wee = 1.*(N**2*sig_e**2*np.pi*1)**0.5 *rescale  # recurrent weights
 Wei = -2.*(N**2*sig_i**2*np.pi*1)**0.5 *rescale
 Wie = .99*(N**2*sig_e**2*np.pi*1)**0.5 *rescale
 Wii = -1.8*(N**2*sig_i**2*np.pi*1)**0.5 *rescale
-mu_e = 1.*rescale
-mu_i = .8*rescale
+mu_e = 1.*rescale *N/15
+mu_i = .8*rescale *N/15
+
+### MF
+rescale = 15. #7 #N/2  #8 20 30... linear with N
+Wee = 1. *rescale  # recurrent weights
+Wei = -2. *rescale
+Wie = 1. *rescale
+Wii = -2. *rescale
+mu_e = .1 *1
+mu_i = .1 *1
 
 # %%
 # ### Haim's parameters
+# rescale = 3
 # sig_e = 0.1 #% Define as per your setup
 # sigm_i = 0.15
 # tau_e, tau_i = 0.005, 0.005 
@@ -100,7 +111,7 @@ mu_i = .8*rescale
 # %% network setup
 ### setting up space and time
 dt = 0.001  # 1ms time steps
-T = .5  # a few seconds of simulation
+T = .9  # a few seconds of simulation
 time = np.arange(0, T, dt)
 lt = len(time)
 re_xy = np.zeros((N,N, lt))
@@ -421,7 +432,7 @@ plt.imshow(np.log(magnitude_spectrum[:, :, lt//2]), cmap='gray')
 #     return cross_corr_matrix
 
 # %% show time series
-time_points = np.array([90, 105, 160, 210, 260, 310])
+time_points = np.array([90, 105, 160, 210, 260, 310])+400
 titls = ['pre-stim', 'stim', 'post-stim 50steps', 'post-stim 100steps', 'post-stim 150 steps', 'post-stim 200steps']
 
 fig, axs = plt.subplots(1, len(time_points), figsize=(20, 10))

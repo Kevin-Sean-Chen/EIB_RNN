@@ -22,7 +22,7 @@ matplotlib.rc('xtick', labelsize=20)
 matplotlib.rc('ytick', labelsize=20)
 
 # %% init random chaotic network that roughly matches the 2D case!
-N = 50  # neurons
+N = 30  # neurons
 NN = N**2
 
 # %% functions
@@ -107,7 +107,7 @@ N = N*1  # Size of the image
 T = lt   # Number of time steps
 
 ### spatial pattern
-sigma_xy = 0.1
+sigma_xy = 2/N #0.1
 tau_stim = .5
 mu = 0
 sig_noise = 2
@@ -165,7 +165,7 @@ plt.show()
 # %% neural dynamics with training !!!
 beta = 1
 NN = N*N  # real number of neurons
-w_dim = 1000
+w_dim = NN//2 #1000
 subsamp = random.sample(range(NN), w_dim)
 P = np.eye(w_dim)
 w = np.random.randn(w_dim)*0.1
