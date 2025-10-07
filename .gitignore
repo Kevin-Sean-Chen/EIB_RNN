@@ -4,3 +4,9 @@ simulations/
 notes.txt
 
 latex_help.txt
+
+# Ignore GIF images
+*.gif
+
+# Ignore pickle files
+*.pkl
