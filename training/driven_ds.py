@@ -210,7 +210,7 @@ def make_chaotic(I_xy, N=N, lt=lt):
         Wii = -1.8*(N**2*sig_i**2*np.pi*1)**0.5 *rescale
         mu_e = 1.*rescale
         mu_i = .8*rescale
-        Iamp = 2.*(N**2*sig_e**2*np.pi*1)**0.5 *rescale *1
+        Iamp = 2.*(N**2*sig_e**2*np.pi*1)**0.5 *rescale *0
 
         ### MF parameters ###
         # rescale = 3 #N/2  #8 20 30... linear with N
@@ -224,7 +224,7 @@ def make_chaotic(I_xy, N=N, lt=lt):
         
         ### modifying for 2D rate EI-RNN
         ge_conv_re = spatial_convolution(re_xy[:,:,tt], g_kernel(sig_e))
-        gi_conv_ri = spatial_convolution(ri_xy[:,:,tt], g_kernel(sig_i, skew_y=.0, offset=-2))
+        gi_conv_ri = spatial_convolution(ri_xy[:,:,tt], g_kernel(sig_i, skew_y=.0, offset=+2))
         he_xy[:,:,tt+1] = he_xy[:,:,tt] + dt/tau_e*( -he_xy[:,:,tt] + (Wee*(ge_conv_re) + Wei*(gi_conv_ri) + mu_e \
                                                                        + I_xy[:,:,tt]*Iamp*1) )
         hi_xy[:,:,tt+1] = hi_xy[:,:,tt] + dt/tau_i*( -hi_xy[:,:,tt] + (Wie*(ge_conv_re) + Wii*(gi_conv_ri) + mu_i \
@@ -293,3 +293,36 @@ plt.xlabel('lags', fontsize=20); plt.ylabel(r'C($\tau$)', fontsize=20)
 #         [np.mean(signal_sym), np.mean(signal_pd), np.mean(signal_nd)], \
 #         yerr =  [np.std(signal_sym), np.std(signal_pd), np.std(signal_nd)])
 # plt.ylabel('response', fontsize=20); plt.xticks(rotation=45)
+
+# %% make videos
+gif_name = 'biased_plus'
+# data = re_xy[:,:,100:]*1
+data = spontaneous_r_chaos[:,:,100:]*1
+
+# Function to create a frame with the iteration number in the title
+def create_frame(data, frame):
+    fig, ax = plt.subplots()
+    ax.imshow(data[:, :, frame], cmap='viridis')
+    ax.set_title(f'Iteration: {frame}')
+    plt.colorbar(ax.images[0], ax=ax)
+    plt.close(fig)  # Close the figure to avoid displaying it
+    return fig
+
+frames = []
+for frame in range(data.shape[2]):
+    fig = create_frame(data, frame)   # must return a Figure
+    fig.canvas.draw()
+
+    # Get RGBA buffer, convert to RGB
+    rgba = np.asarray(fig.canvas.renderer.buffer_rgba())  # shape (H, W, 4)
+    image = rgba[:, :, :3]  # drop alpha channel
+
+    frames.append(Image.fromarray(image))
+    plt.close(fig)  # important to free memory
+
+# Save frames as a GIF
+frames[0].save(gif_name+'.gif', save_all=True, append_images=frames[1:], duration=100, loop=0)
+
+# Check if the GIF plays correctly
+from IPython.display import display, Image as IPImage
+display(IPImage(filename=gif_name+'.gif'))
