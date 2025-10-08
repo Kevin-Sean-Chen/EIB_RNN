@@ -10,3 +10,14 @@ latex_help.txt
 
 # Ignore pickle files
 *.pkl
+
+# Conda & venvs
+.conda/
+.venv/
+
+# Python caches
+__pycache__/
+*.pyc
+
+# Notebook checkpoints
+.ipynb_checkpoints/

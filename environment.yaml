@@ -1,0 +1,13 @@
+name: EI2D
+channels:
+  - pytorch
+  - conda-forge
+dependencies:
+  - python=3.11.4
+  - numpy
+  - scipy
+  - matplotlib
+  - pytorch=2.1.2
+  - pip
+  - pip:
+      # add any pip-only deps here later
