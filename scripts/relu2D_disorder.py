@@ -137,6 +137,15 @@ def coherence_chi(H, mv, eps=1e-12):
     den = np.mean(np.mean(H**2, axis=1))  # (1/N) * sum_i <h_i^2>_t
     return float(np.sqrt(num / (den + eps)))
 
+def linear_dimention(img, variance_threshold=0.9):
+    from sklearn.decomposition import PCA
+    img_flat = img.reshape(img.shape[0]*img.shape[1], -1)  # flatten spatial dimensions
+    pca = PCA()
+    pca.fit(img_flat)
+    explained_variance = pca.explained_variance_ratio_
+    cumulative_variance = np.cumsum(explained_variance)
+    dim = np.searchsorted(cumulative_variance, variance_threshold) + 1  # number of components to explain 90% variance
+    return dim
 
 # %% Main function to run the simulation and visualize results
 if __name__ == "__main__":
@@ -237,6 +246,8 @@ if __name__ == "__main__":
 
     space_coh = coherence_metric(re_all[:,:, Nstep//2])
     time_coh = coherence_chi(re_all.reshape(N*N, -1), mv.numpy())
+    lin_dim = linear_dimention(re_all)
+    print(f"Linear dimension of re_all: {lin_dim}")
     print(f"Space coherence at mid time point: {space_coh}")
     print(f"Time coherence: {time_coh}")
 
