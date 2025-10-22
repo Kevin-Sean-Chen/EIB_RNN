@@ -270,11 +270,14 @@ def smooth_random_matrix(N, sigma, device='cpu', scale=0.5):
     pad = ksize // 2
     noise_p = F.pad(noise, (pad, pad, pad, pad), mode='circular')
     smooth = F.conv2d(noise_p, kernel).squeeze(0).squeeze(0)  # shape (N,N)
-    return smooth * scale
+    
+    # Z-score the output (mean=0, std=1) then apply scale
+    smooth_zscore = (smooth - smooth.mean()) / smooth.std()
+    return smooth_zscore * scale
 
 # Example: create an NxN smooth random matrix with smoothness controlled by sigma
 sigma_smooth = 0.05  # try values like 0.01 (very rough) up to ~0.2 (very smooth)
-m_feedback_smooth = smooth_random_matrix(N, sigma_smooth, device=device, scale=0.1)
+m_feedback_smooth = smooth_random_matrix(N, sigma_smooth, device=device, scale=0.1) * 0.5
 m_feedback_noise = torch.randn(N, N, output_dim, device=device) * 0.5
 m_half = m_feedback_noise*1  # make sure it's (N,N,output_dim)
 m_half[:,int(N//2):,:] = 0  # zero out half the matrix for testing
@@ -283,18 +286,18 @@ m_half[:,int(N//2):,:] = 0  # zero out half the matrix for testing
 relu2D_params = {
     'dt': 0.001,
     'ntype': 'relu_gaussian',
-    'K': 10**1,
+    'K': 10**2,
     'tau': np.array([.01, .01]),
     'u': [10, 0],  # Changed to a list
     # 'J0': np.array([[1, -1], [1, -1]]), #
     'J0': np.array([[1, -4], [2, -2]]),
     'sigma': 0.05 * np.array([1, np.sqrt(2)]),
-    'm': m_feedback_noise*0  # feedback weights
+    'm': m_half  # feedback weights
 }
 
 # Make drifting pattern as input and target
 # ipt_img, drift = make_2D_stim_with_drift(N, T, 0.1, 2, .05*2)
-ipt_img, drift = make_2D_stim_with_rigid_shift(N, T, 0.1, 2/N*.5*4)
+ipt_img, drift = make_2D_stim_with_rigid_shift(N, T, 0.1, 2/N*.5)
 ipt_img = ipt_img.to(device)
 target = drift.unsqueeze(0)  # [1, T]
 
@@ -331,6 +334,7 @@ for epoch in range(epochs):
         print(f"Epoch {epoch+1}/{epochs}, Loss: {loss.item():.6f}")
 
 # Evaluation
+# ipt_img, drift = make_2D_stim_with_rigid_shift(N, T, 0.1, 2/N*.5) #### new test for generalization!
 output, re_all = model(ipt_img)
 import matplotlib.pyplot as plt
 plt.figure()
