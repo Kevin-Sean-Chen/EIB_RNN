@@ -16,7 +16,7 @@ from scipy.ndimage import sobel, gaussian_filter
 # relu2D_step function to perform one step of the ReLU 2D simulation
 # This function uses PyTorch for efficient computation, especially on GPU.
 # %% functional
-def relu2D_step(re, ri, N, dt, npf, ntype, K, tau, u, J0, sigma, J2, J3, chi):
+def relu2D_step(re, ri, N, dt, npf, ntype, K, tau, u, J0, sigma, J2, J3, chi, r_and_mu=False):
     if ntype != 'relu_gaussian':
         raise ValueError("Only 'relu_gaussian' ntype is supported in this version.")
 
@@ -59,9 +59,12 @@ def relu2D_step(re, ri, N, dt, npf, ntype, K, tau, u, J0, sigma, J2, J3, chi):
 
     re = re.squeeze().cpu().numpy()
     ri = ri.squeeze().cpu().numpy()
-    return re, ri
+    if r_and_mu is True:
+        return re, ri, mue.squeeze().cpu().numpy(), mui.squeeze().cpu().numpy()
+    else:
+        return re, ri
 
-def relu2D(N, dt, Nstep_init, Nstep, npf, ntype, K, tau, u, J0, sigma, J2, J3, re0, ri0, g):
+def relu2D(N, dt, Nstep_init, Nstep, npf, ntype, K, tau, u, J0, sigma, J2, J3, re0, ri0, g, r_and_mu=False):
     if N % 2 != 1:
         raise ValueError('N must be an odd integer')
 
@@ -89,7 +92,10 @@ def relu2D(N, dt, Nstep_init, Nstep, npf, ntype, K, tau, u, J0, sigma, J2, J3, r
         str_temp = str(round(n1 * npf / Nstep_init, 5))
         print(str_temp, end='', flush=True)
 
-        re, ri = relu2D_step(re, ri, N, dt, npf, ntype, K, tau, u, J0, sigma, J2, J3, chi)
+        if r_and_mu is True:
+            re, ri, mue, mui = relu2D_step(re, ri, N, dt, npf, ntype, K, tau, u, J0, sigma, J2, J3, chi, r_and_mu=True)
+        else:
+            re, ri = relu2D_step(re, ri, N, dt, npf, ntype, K, tau, u, J0, sigma, J2, J3, chi)
 
     print('\nrunning simulation... ', end='', flush=True)
     str_temp = ''
@@ -97,19 +103,30 @@ def relu2D(N, dt, Nstep_init, Nstep, npf, ntype, K, tau, u, J0, sigma, J2, J3, r
     n_record = int(np.floor(Nstep / npf))
     re_all = np.full((N, N, n_record), np.nan)
     ri_all = np.full((N, N, n_record), np.nan)
+    mue_all = np.full((N, N, n_record), np.nan)
+    mui_all = np.full((N, N, n_record), np.nan)
 
     for n1 in range(1, n_record + 1):
         print('\b' * len(str_temp), end='', flush=True)
         str_temp = str(round(n1 / n_record, 5))
         print(str_temp, end='', flush=True)
 
-        re, ri = relu2D_step(re, ri, N, dt, npf, ntype, K, tau, u, J0, sigma, J2, J3, chi)
+        if r_and_mu is True:
+            re, ri, mue, mui = relu2D_step(re, ri, N, dt, npf, ntype, K, tau, u, J0, sigma, J2, J3, chi, r_and_mu=r_and_mu)
+        else:
+            re, ri = relu2D_step(re, ri, N, dt, npf, ntype, K, tau, u, J0, sigma, J2, J3, chi)
 
         re_all[:, :, n1 - 1] = re
         ri_all[:, :, n1 - 1] = ri
+        if r_and_mu is True:
+            mue_all[:, :, n1 - 1] = mue
+            mui_all[:, :, n1 - 1] = mui
 
     print('\n')
-    return re_all, ri_all
+    if r_and_mu is True:
+        return re_all, ri_all, mue_all, mui_all
+    else:
+        return re_all, ri_all
 
 def coherence_metric(img, sigma=1.0):
     # gradients

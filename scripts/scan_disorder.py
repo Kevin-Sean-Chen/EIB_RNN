@@ -96,18 +96,19 @@ yy = np.arange(1, L + 1) / L
 
 for kk in range(len(Ks)):
     for gg in range(len(gs)):
-        K = 10 #Ks[kk]
+        K = Ks[kk] ##10
         fi = fs[kk]*freq
-        mv_continuous = make_fourier_m(L, fi)
-        mv = torch.sign(mv_continuous)
-        g = (mv, nv*gs[gg]) #, mv2, nv2*gs[gg])  ### pass in as a tuple
+        # mv_continuous = makes_fourier_m(L, fi)
+        # mv = torch.sign(mv_continuous)
+        g = (mv, nv*gs[gg]) #
+        g = (mv, nv*gs[gg], mv2, nv2*gs[gg])  ### pass in as a tuple
         print(f"Running simulation for K={Ks[kk]}, g={gs[gg]}")
         # Run simulation
-        re_all, ri_all = relu2D(L, dt, Nstep_init, Nstep, npf, ntype, K, tau, u, J0, sigma, J2, J3, re0, ri0, g)
+        re_all, ri_all, mue_all, mui_all = relu2D(L, dt, Nstep_init, Nstep, npf, ntype, K, tau, u, J0, sigma, J2, J3, re0, ri0, g, r_and_mu=True)
         # Compute coherence metric at the midpoint of the simulation
         # coherence = coherence_metric(re_all[:, :, Nstep // 2])
         # coherence = coherence_chi(re_all.reshape(N*N, -1), mv.numpy())
-        coherence = linear_dimention(re_all)
+        coherence = linear_dimention(mue_all)#(re_all)
         scans[kk, gg] = coherence
         print(f"Coherence metric: {coherence}")
 
@@ -116,5 +117,6 @@ plt.figure()
 plt.imshow(scans, origin='lower', extent=(gs[0], gs[-1], fs[0], fs[-1]), aspect='auto')
 plt.colorbar(label='linear dimension') #('Coherence Metric')
 plt.xlabel('Disorder Strength g')
-plt.ylabel('Frequency of Disorder Pattern f') #('Random Strength K')
+# plt.ylabel('Frequency of Disorder Pattern f') #
+plt.ylabel('Random Strength K')
 plt.show()
