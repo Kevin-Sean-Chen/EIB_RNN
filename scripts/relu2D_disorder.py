@@ -164,6 +164,62 @@ def linear_dimention(img, variance_threshold=0.9):
     dim = np.searchsorted(cumulative_variance, variance_threshold) + 1  # number of components to explain 90% variance
     return dim
 
+def gabor2d(N, f=0.1, theta=0.0, sigma_x=None, sigma_y=None, gamma=1.0, phi=0.0,
+            center=None, normalize=False):
+    """
+    Make an N x N real Gabor patch.
+
+    Args
+    ----
+    N : int
+        Output size (N x N).
+    f : float
+        Spatial frequency in cycles per pixel (e.g., 0.1 → 10 px per cycle).
+    theta : float
+        Orientation (radians). 0 = along +x (vertical bars).
+    sigma_x : float or None
+        Gaussian std along the x'-axis (pixels). If None, defaults to N/6.
+    sigma_y : float or None
+        Gaussian std along the y'-axis (pixels). If None, set to sigma_x/gamma.
+    gamma : float
+        Aspect ratio (sigma_x / sigma_y). gamma>1 elongates along x'.
+    phi : float
+        Phase (radians), 0 = cosine, np.pi/2 = sine.
+    center : (float, float) or None
+        Center (x0, y0) in pixel coords; None → image center ((N-1)/2, (N-1)/2).
+    normalize : bool
+        If True, scale to have max abs value 1.
+
+    Returns
+    -------
+    G : (N, N) ndarray
+        Real-valued Gabor patch.
+    """
+    if center is None:
+        x0 = y0 = (N - 1) / 2.0
+    else:
+        x0, y0 = center
+
+    if sigma_x is None:
+        sigma_x = N / 6.0
+    if sigma_y is None:
+        sigma_y = sigma_x / gamma
+
+    # coordinate grid (x = columns, y = rows)
+    y, x = np.meshgrid(np.arange(N), np.arange(N), indexing="ij")
+    xr = (x - x0) * np.cos(theta) + (y - y0) * np.sin(theta)
+    yr = -(x - x0) * np.sin(theta) + (y - y0) * np.cos(theta)
+
+    gauss = np.exp(-0.5 * ((xr / sigma_x)**2 + (yr / sigma_y)**2))
+    carrier = np.cos(2 * np.pi * f * xr + phi)
+    G = gauss * carrier
+
+    if normalize:
+        m = np.max(np.abs(G))
+        if m > 0:
+            G = G / m
+    return G
+
 # %% Main function to run the simulation and visualize results
 if __name__ == "__main__":
     # Simulation parameters
@@ -218,7 +274,15 @@ if __name__ == "__main__":
     nv2 = torch.cos(freq * Y.flatten()).unsqueeze(1)
 
     print((mv @ nv.T).shape)
-    g = (mv, nv*5., mv2, nv2*5.)  ### pass in as a tuple
+
+    ### test spatial patterns
+    G = gabor2d(N, f=0.15, theta=np.deg2rad(30), gamma=0.5, phi=0.0, normalize=True)
+    G = torch.tensor(G, dtype=mv.dtype, device=mv.device).reshape(-1, 1)
+    mv = G*1  ### use gabor as mv
+    G = gabor2d(N, f=0.15, theta=np.deg2rad(30), gamma=.5, phi=2., normalize=True) ### 0.5,1,1.5
+    G = torch.tensor(G, dtype=mv.dtype, device=mv.device).reshape(-1, 1)
+    nv = G*1  ### use gabor as nv
+    g = (mv, nv*2.)#, mv2, nv2*5., G)  ### pass in as a tuple
 
     # Network type
     ntype = 'relu_gaussian'
@@ -284,7 +348,7 @@ if __name__ == "__main__":
     hist_re = re_all.reshape(L*L, -1)
     plt.plot(tt, hist_re[neuron_indices, :].T)
     plt.plot(tt, (mv.T @ hist_re / N).T, 'k--', label='mv@r/N', linewidth=2.5)
-    plt.plot(tt, (mv2.T @ hist_re / N).T, 'k-*', label='mv2@r/N', linewidth=2.5)
+    # plt.plot(tt, (mv2.T @ hist_re / N).T, 'k-*', label='mv2@r/N', linewidth=2.5)
     plt.xlabel('Time')
     plt.ylabel('Firing rate of selected neurons')
     plt.title('Firing Rates of Selected Neurons')
