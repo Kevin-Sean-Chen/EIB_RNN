@@ -18,11 +18,11 @@ L = 31
 N = L
 dt = 0.0001
 Nstep_init = 1 * 10 ** 3
-Nstep = 1 * 10 ** 3
+Nstep = 1 * 10 ** 3 *2
 npf = 1
 g0 = 5.  ### disorder strength, if not scanned
 freq = 0.15  ### frequency for gabor
-phi = 0. ### phase for gabor, if not scanned
+phi = 0.1 ### phase for gabor, if not scanned
 K = 1e2  ### random strength, if not scanned
 mv, nv = torch.randint(0, 2, (N**2, 1), dtype=torch.float32)*2-1, torch.randn(N**2, 1, dtype=torch.float32)  ### if not defined
 # Network type
@@ -54,11 +54,13 @@ for kk in range(len(Ks)):
         ### scan K strength
         K = Ks[kk] ##10
         ### scan phi phase difference
-        fi = phis[gg]
+        # phi = phis[gg]
+        ### scan g disorder strength
+        g0 = gs[gg]
         G = gabor2d(N, f=freq, theta=np.deg2rad(30), gamma=0.5, phi=0.0, normalize=True)
         G = torch.tensor(G, dtype=mv.dtype, device=mv.device).reshape(-1, 1)
         mv = G*1  ### use gabor as mv
-        G = gabor2d(N, f=freq, theta=np.deg2rad(30), gamma=0.5, phi=fi, normalize=True) ### 0.5,1,1.5
+        G = gabor2d(N, f=freq, theta=np.deg2rad(30), gamma=0.5, phi=phi, normalize=True) ### 0.5,1,1.5
         G = torch.tensor(G, dtype=mv.dtype, device=mv.device).reshape(-1, 1)
         nv = G*1  ### use gabor as nv
         g = (mv, nv*g0)#, mv2, nv2*5., G)  ### pass in as a tuple
@@ -79,9 +81,14 @@ for kk in range(len(Ks)):
         ### balance: |mue-mui|/mue
         balance = np.abs(mue_all - mui_all) / np.abs(mue_all)
         balance_avg = balance[~np.isnan(balance)].mean()
+        ### 2nd peak of acf
+        hist_re = re_all.reshape(L*L, -1)
+        mv_t = (mv.T @ hist_re / N).squeeze()  # shape
+        peak_val, acf = second_acf_peak_latent(mv_t)
         # scans[kk, gg] = coherence
         # scans[kk, gg] = fraction_large #coherence
-        scans[kk, gg] = balance_avg
+        # scans[kk, gg] = balance_avg
+        scans[kk, gg] = peak_val
         print(f"Coherence metric: {coherence}")
 
         ### record kappas
@@ -92,8 +99,8 @@ for kk in range(len(Ks)):
 # %% plotting
 plt.figure()
 plt.imshow(scans, origin='lower', extent=(phis[0]/np.pi, phis[-1]/np.pi, Ks[0], Ks[-1]), aspect='auto')
-plt.colorbar(label='Balance Metric')
-plt.xlabel('Phase (phi)')
+plt.colorbar(label='2nd acf peak')
+plt.xlabel('structure strength') #('Phase (phi)')
 plt.ylabel('Random Strength K')
 # plt.yscale('log')  # Since K values span multiple orders of magnitude
 plt.show()

@@ -164,6 +164,96 @@ def linear_dimention(img, variance_threshold=0.9):
     dim = np.searchsorted(cumulative_variance, variance_threshold) + 1  # number of components to explain 90% variance
     return dim
 
+### decond peak of acf function
+def avg_second_acf_peak(data, p, rng=None):
+    """
+    data: 3D array (N, N, T)
+    p   : number of (i,j) locations to sample (without replacement)
+    rng : np.random.Generator or int seed (optional)
+
+    Returns
+    -------
+    avg_peak : float
+        Average height of the first positive-lag local maximum in the
+        normalized ACF (the “second peak” after lag 0).
+    peaks : 1D array of individual peak heights for each sampled pixel
+    """
+    data = np.asarray(data)
+    N1, N2, T = data.shape
+
+    # sample p distinct spatial locations
+    total = N1 * N2
+    p = min(p, total)
+    flat_idx = np.random.choice(total, size=p, replace=False)
+    ij = [divmod(k, N2) for k in flat_idx]
+
+    peaks = []
+
+    for i, j in ij:
+        ts = data[i, j, :].astype(float)
+        if np.allclose(ts, ts[0]):
+            continue  # constant -> no ACF structure
+
+        x = ts - ts.mean()
+        acf_full = np.correlate(x, x, mode='full')
+        acf = acf_full[acf_full.size // 2:]      # lags 0..T-1
+        if acf[0] == 0:
+            continue
+        acf /= acf[0]                           # normalize: ACF(0)=1
+
+        # find first local maximum at positive lag (“second peak”)
+        peak_val = np.nan
+        for k in range(1, len(acf) - 1):
+            if acf[k] >= acf[k-1] and acf[k] >= acf[k+1]:
+                peak_val = acf[k]
+                break
+
+        if not np.isnan(peak_val):
+            peaks.append(peak_val)
+
+    peaks = np.array(peaks, float)
+    avg_peak = np.nan if peaks.size == 0 else peaks.mean()
+    return avg_peak, peaks
+
+def second_acf_peak_latent(ts):
+    """
+    ts : 1D array-like, shape (T,)
+        Time series.
+
+    Returns
+    -------
+    peak_val : float or np.nan
+        Height of the first positive-lag local maximum in the
+        normalized ACF (the “second peak” after lag 0).
+    acf : 1D numpy array
+        Normalized autocorrelation function for lags 0..T-1.
+    """
+    ts = np.asarray(ts, dtype=float)
+    if ts.ndim != 1:
+        raise ValueError("ts must be 1D")
+
+    # subtract mean
+    x = ts - ts.mean()
+    # full autocorrelation, then take non-negative lags
+    acf_full = np.correlate(x, x, mode='full')
+    acf = acf_full[acf_full.size // 2:]
+
+    if acf[0] == 0:
+        return np.nan, acf
+
+    # normalize so ACF(0) = 1
+    acf = acf / acf[0]
+
+    # find first local max at positive lag
+    peak_val = np.nan
+    for k in range(1, len(acf) - 1):
+        if acf[k] >= acf[k-1] and acf[k] >= acf[k+1]:
+            peak_val = acf[k]
+            break
+
+    return peak_val, acf
+
+
 def gabor2d(N, f=0.1, theta=0.0, sigma_x=None, sigma_y=None, gamma=1.0, phi=0.0,
             center=None, normalize=False):
     """
@@ -352,6 +442,32 @@ if __name__ == "__main__":
     plt.xlabel('Time')
     plt.ylabel('Firing rate of selected neurons')
     plt.title('Firing Rates of Selected Neurons')
+    plt.legend()
+    plt.show()
+
+    ### show 2nd acf peak
+    avg_peak, peaks = avg_second_acf_peak(re_all, p=100)
+    plt.figure()
+    plt.hist(peaks, bins=20, edgecolor='black')
+    plt.axvline(avg_peak, color='r', linestyle='dashed', linewidth=1, label=f'Avg 2nd peak: {avg_peak:.3f}')
+    plt.xlabel('2nd ACF Peak Value')
+    plt.ylabel('Count')
+    plt.title('Histogram of 2nd ACF Peak Values')
+    plt.legend()
+    plt.show()
+
+    ### show the latent acf for mv projection
+    hist_re = re_all.reshape(L*L, -1)
+    mv_t = (mv.T @ hist_re / N).squeeze()  # shape
+    peak_val, acf = second_acf_peak_latent(mv_t)
+    plt.figure()
+    plt.plot(acf, label='ACF of mv projection')
+    plt.axhline(0, color='k', linestyle='dashed', linewidth=1)
+    if not np.isnan(peak_val):
+        plt.axhline(peak_val, color='r', linestyle='dashed', linewidth=1, label=f'2nd peak: {peak_val:.3f}')
+    plt.xlabel('Lag')
+    plt.ylabel('Autocorrelation')
+    plt.title('ACF of Latent Projection onto mv')
     plt.legend()
     plt.show()
 
