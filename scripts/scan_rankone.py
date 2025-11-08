@@ -81,14 +81,19 @@ for kk in range(len(Ks)):
         ### balance: |mue-mui|/mue
         balance = np.abs(mue_all - mui_all) / np.abs(mue_all)
         balance_avg = balance[~np.isnan(balance)].mean()
-        ### 2nd peak of acf
+        ### 2nd peak of acf of kappa
         hist_re = re_all.reshape(L*L, -1)
         mv_t = (mv.T @ hist_re / N).squeeze()  # shape
         peak_val, acf = second_acf_peak_latent(mv_t)
+        ### 2nd peak of acf of activity patterns
+        avg_peak, peaks = avg_second_acf_peak(mue_all, p=100)
+        
+        ### store measurements
         # scans[kk, gg] = coherence
         # scans[kk, gg] = fraction_large #coherence
         # scans[kk, gg] = balance_avg
-        scans[kk, gg] = peak_val
+        # scans[kk, gg] = peak_val
+        scans[kk, gg] = avg_peak
         print(f"Coherence metric: {coherence}")
 
         ### record kappas
