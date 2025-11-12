@@ -8,10 +8,21 @@ import matplotlib.pyplot as plt
 
 from relu2D_disorder import *
 
+# %% debug gabor to check it is scale invariant
+Ns = [21,31,41,51,61]
+plt.figure()
+for N in Ns:
+    G = gabor2d(N, f=8., theta=np.deg2rad(30), gamma=0.5, phi=0.1, normalize=True)
+    plt.subplot(2,3,Ns.index(N)+1)
+    plt.imshow(G, cmap='gray')
+    plt.title(f'N={N}')
+plt.show()
+
 # %% parameter setup
 Ks = np.array([10, 10**2, 10**3, 10**4, 10**5])  ### random strength
-gs = np.array([0, 0.5, 1.0, 1.5, 2.0])  ### disorder strength
+gs = np.array([0, 0.5, 1.0, 1.5, 2.0])*1  ### disorder strength
 phis = np.array([0., .2, .4, .6, .8])*np.pi ### frequency of disorder pattern
+Ns = np.array([21, 31, 41, 51, 61])  ### scan size of the network
 scans = np.zeros((len(Ks), len(gs)))  # store (mean, std) of coherence metric
 
 L = 31
@@ -20,8 +31,8 @@ dt = 0.0001
 Nstep_init = 1 * 10 ** 3
 Nstep = 1 * 10 ** 3 *2
 npf = 1
-g0 = 5.  ### disorder strength, if not scanned
-freq = 0.15  ### frequency for gabor
+g0 = .5  ### disorder strength, if not scanned
+freq = 5. #0.15  ### frequency for gabor
 phi = 0.1 ### phase for gabor, if not scanned
 K = 1e2  ### random strength, if not scanned
 mv, nv = torch.randint(0, 2, (N**2, 1), dtype=torch.float32)*2-1, torch.randn(N**2, 1, dtype=torch.float32)  ### if not defined
@@ -57,10 +68,17 @@ for kk in range(len(Ks)):
         # phi = phis[gg]
         ### scan g disorder strength
         g0 = gs[gg]
-        G = gabor2d(N, f=freq, theta=np.deg2rad(30), gamma=0.5, phi=0.0, normalize=True)
+        ### scan network size
+        # N = Ns[kk]; L=N
+        # Initial state
+        re0 = r0[0] + 0.05 * np.random.rand(L, L)
+        ri0 = r0[1] + 0.08 * np.random.rand(L, L)
+
+        ### make rank-one structure
+        G = gabor2d(N, f=freq, theta=np.deg2rad(30), gamma=0.1, phi=0.0, normalize=True)
         G = torch.tensor(G, dtype=mv.dtype, device=mv.device).reshape(-1, 1)
         mv = G*1  ### use gabor as mv
-        G = gabor2d(N, f=freq, theta=np.deg2rad(30), gamma=0.5, phi=phi, normalize=True) ### 0.5,1,1.5
+        G = gabor2d(N, f=freq, theta=np.deg2rad(30), gamma=0.1, phi=phi, normalize=True) ### 0.5,1,1.5
         G = torch.tensor(G, dtype=mv.dtype, device=mv.device).reshape(-1, 1)
         nv = G*1  ### use gabor as nv
         g = (mv, nv*g0)#, mv2, nv2*5., G)  ### pass in as a tuple
@@ -68,14 +86,16 @@ for kk in range(len(Ks)):
         # mv = torch.sign(mv_continuous)
         # g = (mv, nv*gs[gg]) #
         # g = (mv, nv*gs[gg], mv2, nv2*gs[gg])  ### pass in as a tuple
+
         print(f"Running simulation for K={Ks[kk]}, g={gs[gg]}")
         
         # Run simulation
         re_all, ri_all, mue_all, mui_all = relu2D(L, dt, Nstep_init, Nstep, npf, ntype, K, tau, u, J0, sigma, J2, J3, re0, ri0, g, r_and_mu=True)
-        # Compute coherence metric at the midpoint of the simulation
+        
+        ### Compute coherence metric at the midpoint of the simulation
         # coherence = coherence_metric(re_all[:, :, Nstep // 2])
-        # coherence = coherence_chi(re_all.reshape(N*N, -1), mv.numpy())
-        coherence = linear_dimention(mue_all)#(re_all)
+        coherence = coherence_chi(re_all.reshape(N*N, -1), mv.numpy())
+        # coherence = linear_dimention(mue_all)#(re_all)
         ### compute the fraction of mue_all that is large than zero
         fraction_large = (mue_all > 0).astype(float).mean()
         ### balance: |mue-mui|/mue
@@ -90,10 +110,10 @@ for kk in range(len(Ks)):
         
         ### store measurements
         # scans[kk, gg] = coherence
-        # scans[kk, gg] = fraction_large #coherence
+        scans[kk, gg] = fraction_large #coherence
         # scans[kk, gg] = balance_avg
         # scans[kk, gg] = peak_val
-        scans[kk, gg] = avg_peak
+        # scans[kk, gg] = avg_peak
         print(f"Coherence metric: {coherence}")
 
         ### record kappas
@@ -101,13 +121,15 @@ for kk in range(len(Ks)):
         kappai =  (mv.T @ hist_re / N).T
         kappas[kk, gg, :] = kappai.numpy().squeeze()
 
-# %% plotting
+# %% plotting (remember to change labels accordingly!)
 plt.figure()
-plt.imshow(scans, origin='lower', extent=(phis[0]/np.pi, phis[-1]/np.pi, Ks[0], Ks[-1]), aspect='auto')
-plt.colorbar(label='2nd acf peak')
-plt.xlabel('structure strength') #('Phase (phi)')
-plt.ylabel('Random Strength K')
-# plt.yscale('log')  # Since K values span multiple orders of magnitude
+im = plt.imshow(scans, origin='lower', extent=(gs[0], gs[-1], Ns[0], Ns[-1]), aspect='auto', cmap='viridis')
+plt.colorbar(im, label='2nd acf peak')
+plt.xlabel('Disorder strength g')
+plt.ylabel('Network size N')
+plt.xticks(gs)
+plt.yticks(Ns)
+# plt.yscale('log')  # enable if you want log scale for N
 plt.show()
 
 # %% plot kappas with many tight subplots
