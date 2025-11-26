@@ -38,6 +38,10 @@ def relu2D_step(re, ri, N, dt, npf, ntype, K, tau, u, J0, sigma, J2, J3, chi, r_
     ### learning rule parameters
     tau_J = 0.02
     eta = 0.05
+    # if len(chi) == 2:
+    #     chi, chi_rowb = chi
+    # else:
+    #     chi_rowb = chi*0
     for _ in range(npf):
 
         ### if there is local learnig rule (use Oja's rule here)
@@ -48,7 +52,7 @@ def relu2D_step(re, ri, N, dt, npf, ntype, K, tau, u, J0, sigma, J2, J3, chi, r_
         reP = F.pad(re, (pad[0], pad[0], pad[1], pad[1]), mode='circular')
         riP = F.pad(ri, (pad[0], pad[0], pad[1], pad[1]), mode='circular')
 
-        conv_re = F.conv2d(reP, we_kernel) + (chi @ re.flatten()).reshape(N,N)
+        conv_re = F.conv2d(reP, we_kernel) + (chi @ re.flatten()).reshape(N,N) #- (chi_rowb @ re.flatten()).reshape(N,N)
         conv_ri = F.conv2d(riP, wi_kernel)
 
         mue = K**0.5 * (u[0] + J0[0, 0] * conv_re + J0[0, 1] * conv_ri)
@@ -83,7 +87,9 @@ def relu2D(N, dt, Nstep_init, Nstep, npf, ntype, K, tau, u, J0, sigma, J2, J3, r
         chi = (mv @ nv.T) / N  #### MN ###
     else:
         mv, nv, mv2, nv2 = g
-        chi = (mv @ nv.T + mv2 @ nv2.T) / N  #### MN ###
+        # chi = (mv @ nv.T + mv2 @ nv2.T) / N  #### MN ###
+        chi = (mv @ nv.T + -mv @ mv.T) / N #### row balanced condition
+        # chi = ((mv @ nv.T) / N, -(mv @ mv.T)/N)  #### if we hand over two components, the other for row balance
 
     re = re0.copy()
     ri = ri0.copy()
@@ -437,7 +443,8 @@ if __name__ == "__main__":
     G = gabor2d(N, f=5, theta=np.deg2rad(30), gamma=0.1, phi=.5, normalize=True) ### 0.5,1,1.5
     G = torch.tensor(G, dtype=mv.dtype, device=mv.device).reshape(-1, 1)
     nv = G*1  ### use gabor as nv
-    g = (mv, nv*.5)#, mv2, nv2*5., G)  ### pass in as a tuple
+    g = (mv, nv*.5)
+    # g = (mv, nv*.5, mv2, nv2*5.)#, G)  ### pass in as a tuple
 
 
     plt.figure()
@@ -543,6 +550,34 @@ if __name__ == "__main__":
     plt.legend()
     plt.show()
 
+    ### test with plotting re_heatmaps
+    # reshape to (N*N, T)
+    hist_re = re_all.reshape(-1, re_all.shape[2])  # shape (neurons, time)
+
+    # sort rows so that the time-of-max (peak time) is ordered across rows.
+    # tie-breaker: larger peak amplitude comes earlier for equal peak times
+    peak_times = np.argmax(hist_re, axis=1)
+    peak_vals = np.max(hist_re, axis=1)
+    order = np.lexsort(( -peak_vals, peak_times ))  # primary: peak_times asc, secondary: peak_vals desc
+
+    hist_re_sorted = hist_re[order]
+
+    # optional: if you instead want to sort by peak amplitude (descending), uncomment:
+    # order = np.argsort(-peak_vals)
+    # hist_re_sorted = hist_re[order]
+
+    # visualize as heatmap (neurons on y, time on x)
+    plt.figure(figsize=(6, 8))
+    plt.imshow(hist_re_sorted, aspect='auto', cmap='viridis',
+               extent=[tt[0], tt[-1], 0, hist_re_sorted.shape[0]])
+    plt.xlabel('Time')
+    plt.ylabel('Neuron (sorted by peak time)')
+    plt.title('Sorted Neural Activity (rows sorted by peak time)')
+    plt.colorbar(label='Activity (re)')
+    plt.tight_layout()
+    plt.show()
+
+    
     # Plot three time points of re_all
     fig, axs = plt.subplots(1, 3, figsize=(15, 4))
     time_indices = [10, len(tt) // 2, -1]
