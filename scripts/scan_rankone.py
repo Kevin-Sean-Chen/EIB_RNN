@@ -7,6 +7,7 @@ import os
 import matplotlib.pyplot as plt
 
 from relu2D_disorder import *
+from relu2D_dense import relu2D_dense
 
 # %% debug gabor to check it is scale invariant
 Ns = [21,31,41,51,61]
@@ -65,9 +66,9 @@ for kk in range(len(Ks)):
         ### scan K strength
         K = Ks[kk] ##10
         ### scan phi phase difference
-        # phi = phis[gg]
+        phi = phis[gg]
         ### scan g disorder strength
-        g0 = gs[gg]
+        # g0 = gs[gg]
         ### scan network size
         # N = Ns[kk]; L=N
         # Initial state
@@ -81,7 +82,8 @@ for kk in range(len(Ks)):
         G = gabor2d(N, f=freq, theta=np.deg2rad(30), gamma=0.1, phi=phi, normalize=True) ### 0.5,1,1.5
         G = torch.tensor(G, dtype=mv.dtype, device=mv.device).reshape(-1, 1)
         nv = G*1  ### use gabor as nv
-        g = (mv, nv*g0)#, mv2, nv2*5., G)  ### pass in as a tuple
+        g = (mv, nv*g0)
+        # g = (mv, nv*g0, mv, mv)  #, G)  ### pass in as a tuple
         # mv_continuous = makes_fourier_m(L, fi)
         # mv = torch.sign(mv_continuous)
         # g = (mv, nv*gs[gg]) #
@@ -90,7 +92,10 @@ for kk in range(len(Ks)):
         print(f"Running simulation for K={Ks[kk]}, g={gs[gg]}")
         
         # Run simulation
-        re_all, ri_all, mue_all, mui_all = relu2D(L, dt, Nstep_init, Nstep, npf, ntype, K, tau, u, J0, sigma, J2, J3, re0, ri0, g, r_and_mu=True)
+        ### conventional relu2D
+        # re_all, ri_all, mue_all, mui_all = relu2D(L, dt, Nstep_init, Nstep, npf, ntype, K, tau, u, J0, sigma, J2, J3, re0, ri0, g, r_and_mu=True)
+        ### dense version
+        re_all, ri_all, mue_all, mui_all = relu2D_dense(L, dt, Nstep_init, Nstep, npf, ntype, K, tau, u, J0, sigma, J2, J3, re0, ri0, g, r_and_mu=True)
         
         ### Compute coherence metric at the midpoint of the simulation
         # coherence = coherence_metric(re_all[:, :, Nstep // 2])
@@ -123,13 +128,23 @@ for kk in range(len(Ks)):
 
 # %% plotting (remember to change labels accordingly!)
 plt.figure()
-im = plt.imshow(scans, origin='lower', extent=(gs[0], gs[-1], Ns[0], Ns[-1]), aspect='auto', cmap='viridis')
-plt.colorbar(im, label='2nd acf peak')
-plt.xlabel('Disorder strength g')
-plt.ylabel('Network size N')
-plt.xticks(gs)
-plt.yticks(Ns)
-# plt.yscale('log')  # enable if you want log scale for N
+# scans rows correspond to Ks, columns to phis
+Ks_log = np.log10(Ks)
+im = plt.imshow(scans, origin='lower',
+                extent=(phis[0], phis[-1], Ks_log[0], Ks_log[-1]),
+                aspect='auto', cmap='viridis')
+# show original K values as y-labels but positioned at their log10 locations
+plt.yticks(Ks_log, [str(int(k)) for k in Ks])
+# prevent the later plt.yticks(Ks) call from overwriting our log ticks
+plt.yticks = lambda *args, **kwargs: None
+cbar = plt.colorbar(im, label='metric')
+plt.xlabel('Phase φ')
+# show phi ticks as multiples of π
+xticks = phis
+plt.xticks(xticks, [f"{p/np.pi:.1f}π" for p in phis])
+plt.ylabel('Strength K')
+plt.yticks(Ks)
+plt.title('Scan over K and φ')
 plt.show()
 
 # %% plot kappas with many tight subplots
