@@ -106,7 +106,7 @@ if __name__ == "__main__":
     ### network parameters
     ntype = 'relu_gaussian'
     J0 = np.array([[1, -4], [2, -2]])
-    K = 10 ** 5
+    K = 10 ** 1
     tau = np.array([.01, .01])
     u = np.array([10, 0.0])
     sigma = 0.05 * np.array([1, np.sqrt(2)])
