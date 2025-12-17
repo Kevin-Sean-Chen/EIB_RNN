@@ -7,7 +7,8 @@ import os
 import matplotlib.pyplot as plt
 
 from relu2D_disorder import *
-from relu2D_dense import relu2D_dense
+from relu2D_dense import relu2D_dense, build_dense_operators
+from scipy.sparse.linalg import eigs
 
 # %% debug gabor to check it is scale invariant
 Ns = [21,31,41,51,61]
@@ -61,6 +62,9 @@ yy = np.arange(1, L + 1) / L
 # record kappas
 kappas = np.zeros((len(Ks), len(gs), Nstep // npf))
 
+# record input alignment
+vu_alignments = np.zeros((len(Ks), len(gs)))
+
 for kk in range(len(Ks)):
     for gg in range(len(gs)):
         ### scan K strength
@@ -93,9 +97,9 @@ for kk in range(len(Ks)):
         
         # Run simulation
         ### conventional relu2D
-        re_all, ri_all, mue_all, mui_all = relu2D(L, dt, Nstep_init, Nstep, npf, ntype, K, tau, u, J0, sigma, J2, J3, re0, ri0, g, r_and_mu=True)
+        # re_all, ri_all, mue_all, mui_all = relu2D(L, dt, Nstep_init, Nstep, npf, ntype, K, tau, u, J0, sigma, J2, J3, re0, ri0, g, r_and_mu=True)
         ### dense version
-        # re_all, ri_all, mue_all, mui_all = relu2D_dense(L, dt, Nstep_init, Nstep, npf, ntype, K, tau, u, J0, sigma, J2, J3, re0, ri0, g, r_and_mu=True)
+        re_all, ri_all, mue_all, mui_all = relu2D_dense(L, dt, Nstep_init, Nstep, npf, ntype, K, tau, u, J0, sigma, J2, J3, re0, ri0, g, r_and_mu=True)
         
         ### Compute coherence metric at the midpoint of the simulation
         # coherence = coherence_metric(re_all[:, :, Nstep // 2])
@@ -115,9 +119,9 @@ for kk in range(len(Ks)):
         
         ### store measurements
         # scans[kk, gg] = coherence
-        scans[kk, gg] = fraction_large #coherence
+        # scans[kk, gg] = fraction_large #coherence
         # scans[kk, gg] = balance_avg
-        # scans[kk, gg] = peak_val
+        scans[kk, gg] = peak_val
         # scans[kk, gg] = avg_peak
         print(f"Coherence metric: {coherence}")
 
@@ -125,6 +129,24 @@ for kk in range(len(Ks)):
         hist_re = re_all.reshape(L*L, -1)
         kappai =  (mv.T @ hist_re / N).T
         kappas[kk, gg, :] = kappai.numpy().squeeze()
+
+        ### quantify alignment between v and u
+        We, Wi = build_dense_operators(N, sigma[0], sigma[1])
+        chi = (mv @ nv.T + -mv @ mv.T*0) / N  ### rank-one disorder
+
+        ### make block J matrices with ([[We, Wi],[Wi, We]])
+        # build a 2x2 block-diagonal matrix (no cross-coupling between blocks)
+        J_block = np.block([
+            [We.numpy()/1 + chi.numpy(), Wi.numpy()/1],
+            [We.numpy()/1 + chi.numpy(), Wi.numpy()/1]
+        ])
+        J = (J_block) * np.sqrt(K) - np.eye(J_block.shape[0])  ### scale disorder by sqrt(K/N)
+        ### do spectral analysis of J
+        vals, vecs = eigs(J, k=10, which='LM')
+        leading_eigvec = vecs[:, np.argmax(vals.real)]
+        u_vec = leading_eigvec[:N*N]
+        vu_alignment = np.abs((nv.T @ u_vec).squeeze()) / (np.linalg.norm(nv.numpy()) * np.linalg.norm(u_vec))
+        vu_alignments[kk, gg] = vu_alignment
 
 # %% plotting (remember to change labels accordingly!)
 plt.figure()
@@ -158,4 +180,11 @@ for kk in range(len(Ks)):
         if gg == 0:
             axs[kk, gg].set_ylabel('Kappa')
 plt.tight_layout()
+plt.show()
+
+# %% plot vu_alignments
+plt.figure()
+plt.plot(vu_alignments.reshape(-1), scans.reshape(-1), 'o' )
+plt.xlabel('Alignment |v·u|/(||v||||u||)')
+plt.ylabel('Metric (peak of acf)')
 plt.show()

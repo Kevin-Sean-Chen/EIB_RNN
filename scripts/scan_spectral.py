@@ -57,6 +57,26 @@ yy = np.arange(1, L + 1) / L
 # record kappas
 kappas = np.zeros((len(Ks), len(gs), Nstep // npf))
 
+# %% test visualization for giant matrix
+We, Wi = build_dense_operators(N, sigma[0], sigma[1])
+chi = (mv @ nv.T + -mv @ mv.T*1) / N  ### rank-one disorder
+
+### make block J matrices with ([[We, Wi],[Wi, We]])
+# build a 2x2 block-diagonal matrix (no cross-coupling between blocks)
+J_block = np.block([
+    [We.numpy()/1 + chi.numpy(), Wi.numpy()/1],
+    [We.numpy()/1 + chi.numpy(), Wi.numpy()/1]
+])
+J = (J_block) * np.sqrt(K) - np.eye(J_block.shape[0]) 
+
+plt.figure(figsize=(8,8))
+plt.imshow(J)
+plt.colorbar()
+plt.title('Giant Matrix J Visualization')
+plt.show()
+
+measure_K = []
+measure_lamb = []
 # %% scanning
 for kk in range(len(Ks)):
     for gg in range(len(gs)):
@@ -92,16 +112,19 @@ for kk in range(len(Ks)):
         ### make block J matrices with ([[We, Wi],[Wi, We]])
         # build a 2x2 block-diagonal matrix (no cross-coupling between blocks)
         J_block = np.block([
-            [We.numpy()/tau[0] + chi.numpy(), Wi.numpy()/tau[1]],
-            [Wi.numpy()/tau[1], We.numpy()/tau[0]+chi.numpy()]
+            [We.numpy()/1 + chi.numpy(), Wi.numpy()/1],
+            [We.numpy()/1 + chi.numpy(), Wi.numpy()/1]
         ])
-        J = (J_block) * np.sqrt(K)  ### scale disorder by sqrt(K/N)
+        J = (J_block) * np.sqrt(K) - np.eye(J_block.shape[0])  ### scale disorder by sqrt(K/N)
 
         ### do spectral analysis of J
         vals, vecs = eigs(J, k=leading, which='LM')
         ### store measurements
         scans[kk, gg, :, 0] = vals.real #coherence
         scans[kk, gg, :, 1] = vals.imag
+
+        measure_K.append(K)
+        measure_lamb.append(np.max(vals))
 
 # %% plotting (remember to change labels accordingly!)
 ### make subplost for K along the rows, g along the columns
@@ -114,4 +137,11 @@ for kk in range(len(Ks)):
         plt.ylabel('Imaginary part')
         plt.title(f'K={Ks[kk]}, g={gs[gg]}')
 plt.tight_layout()
+plt.show()
+
+plt.figure()
+plt.scatter(measure_K, [lamb.real for lamb in measure_lamb], color='red')
+plt.xlabel('K')
+plt.ylabel('Leading Eigenvalue Real Part')
+plt.xscale('log'); plt.yscale('log')
 plt.show()
