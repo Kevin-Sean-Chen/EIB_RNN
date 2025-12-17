@@ -92,7 +92,7 @@ def relu2D_bias(N, dt, Nstep_init, Nstep, npf, ntype, K, tau, u, J0, sigma, inpu
 # %% Main function to run the simulation and visualize results
 if __name__ == "__main__":
     # stimulation parameters
-    SAVE = False
+    SAVE = True
     L = 31
     time_f, space_f, drift_rate, device = 1.0, 2.5*3, 0.0, 'cpu'
     N = L
