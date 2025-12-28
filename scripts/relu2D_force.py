@@ -11,6 +11,8 @@ import math
 # from relu2D_main import relu2D_step
 import matplotlib.pyplot as plt
 
+from relu2D_disorder import gabor2d
+
 def relu2D_step(re, ri, N, dt, npf, ntype, K, tau, u, J0, sigma, m_vec, out_t):
     if ntype != 'relu_gaussian':
         raise ValueError("Only 'relu_gaussian' ntype is supported in this version.")
@@ -281,6 +283,11 @@ m_feedback_smooth = smooth_random_matrix(N, sigma_smooth, device=device, scale=0
 m_feedback_noise = torch.randn(N, N, output_dim, device=device) * 0.5
 m_half = m_feedback_noise*1  # make sure it's (N,N,output_dim)
 m_half[:,int(N//2):,:] = 0  # zero out half the matrix for testing
+
+### testing with more spatial structed feedback ###
+G = gabor2d(N, f=0.5, theta=np.deg2rad(30), gamma=0.1, phi=0.0, normalize=True)
+G = torch.tensor(G, dtype=m_half.dtype, device=m_half.device) #.reshape(-1, 1)
+mv = G*1  ### use gabor as mv
 
 # relu2D params
 relu2D_params = {
