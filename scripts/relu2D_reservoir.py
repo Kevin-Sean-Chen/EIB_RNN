@@ -232,78 +232,129 @@ class Relu2DReservoirRNN(nn.Module):
         out = readout.T @ self.W_out  # [T, output_dim]
         return out.T, re_all  # [output_dim, T], [N, N, T]
 
-# --- Setup for training ---
-N = 31
-T = 500
-output_dim = 1
-device = 'cpu'
 
-# relu2D params
-relu2D_params = {
-    'dt': 0.001,
-    'ntype': 'relu_gaussian',
-    'K': 10**1,
-    'tau': np.array([.01, .01]),
-    'u': [10, 0],  # Changed to a list
-    # 'J0': np.array([[1, -1], [1, -1]]), #
-    'J0': np.array([[1, -4], [2, -2]]),
-    'sigma': 0.05 * np.array([1, np.sqrt(2)]),
-    'J2': np.zeros((2,2)),
-    'J3': np.zeros((2,2)),
-}
+def RNN_step(rt, N, dt, tau, u, npf, Jij):
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    rt = torch.tensor(rt, dtype=torch.float32, device=device).unsqueeze(0).unsqueeze(0)  # shape (1,1,N,N)
+    for _ in range(npf):
+        mu = Jij @ rt
+        rt = rt + (dt / tau) * (-rt + torch.relu(mu))
 
-# Make drifting pattern as input and target
-# ipt_img, drift = make_2D_stim_with_drift(N, T, 0.1, 2, .05*2)
-ipt_img, drift = make_2D_stim_with_rigid_shift(N, T, 0.1, 2/N*.5)
-ipt_img = ipt_img.to(device)
-target = drift.unsqueeze(0)  # [1, T]
+    rt = rt.squeeze().cpu().numpy()
+    return rt
 
-# print(np.max(ipt_img[:, :, 0].cpu().numpy()))
-# print(np.min(ipt_img[:, :, 0].cpu().numpy()))
 
-# visualize the input
-plt.figure(figsize=(10, 5))
-plt.subplot(1, 2, 1)
-plt.imshow(ipt_img[:, :, 0].cpu().numpy(), cmap='gray')
-plt.title('Input Pattern at t=0')
-plt.subplot(1, 2, 2)
-plt.plot(drift.cpu().numpy(), label='Drift Direction')
-plt.title('Drift Direction Over Time')
-plt.xlabel('Time Step')
-plt.ylabel('Drift Angle (radians)')
-plt.legend()
-plt.show()
+class Vanilla_ReservoirRNN(nn.Module):
+    def __init__(self, N, T, output_dim, device, rnn_params):
+        super().__init__()
+        self.N = N
+        self.T = T
+        self.output_dim = output_dim
+        self.device = device
+        self.rnn_params = rnn_params
+        # Readout weights
+        self.W_out = nn.Parameter(torch.randn(N, output_dim, device=device) * 0.1)
 
-# Model, optimizer, loss
-model = Relu2DReservoirRNN(N, T, output_dim, device, relu2D_params)
-optimizer = optim.Adam(model.parameters(), lr=0.01)
-criterion = nn.MSELoss()
+    def forward(self, input_pattern):
+        # input_pattern: [N, N, T]
+        N = self.N
+        T = self.T
+        rt = torch.randn(self.N, device=self.device, dtype=torch.float32)
+        r_all = []
+        for t in range(T):
+            # Add input as external drive to excitatory population
+            u = self.rnn_params['u']  # Read baseline u
+            u[0] = u[0]*0 + input_pattern[:, :, t].cpu().numpy()*10  # Add input 2D array at time t
+            rt = RNN_step(
+                rt.cpu().numpy(), N,
+                self.rnn_params['dt'], 1, self.rnn_params['ntype'],
+                self.rnn_params['K'], self.rnn_params['tau'],
+                u, self.rnn_params['J0'], self.rnn_params['sigma'],
+                self.rnn_params['J2'], self.rnn_params['J3']
+            )
+            rt = torch.tensor(rt, device=self.device, dtype=torch.float32)
+            r_all.append(torch.relu(rt)) ### testing with input nonlinearity
 
-# Training loop
-epochs = 60
-for epoch in range(epochs):
-    optimizer.zero_grad()
-    output, _ = model(ipt_img)
-    loss = criterion(output, target)
-    loss.backward()
-    optimizer.step()
-    if epoch % 10 == 0 or epoch == epochs-1:
-        print(f"Epoch {epoch+1}/{epochs}, Loss: {loss.item():.6f}")
+        r_all = torch.stack(r_all, dim=-1)  # [N, N, T]
+        # Readout: flatten spatial, shape [N*N, T]
+        readout = r_all.reshape(N*N, T)
+        out = readout.T @ self.W_out  # [T, output_dim]
+        return out.T, r_all  # [output_dim, T], [N, N, T]
+    
 
-# Evaluation
-output, re_all = model(ipt_img)
-import matplotlib.pyplot as plt
-plt.figure()
-plt.plot(output.detach().cpu().numpy().squeeze(), label='readout')
-plt.plot(target.cpu().numpy().squeeze(), label='target')
-plt.legend()
-plt.show()
+if __name__ == "__main__":
+    # --- Setup for training ---
+    N = 31
+    T = 500
+    output_dim = 1
+    device = 'cpu'
 
-### visualize three frames of the reservoir state, from initial, middle, and end
-re_all = re_all.detach()  # [N, N, T]
-plt.figure(figsize=(15, 5))
-for idx, i in enumerate([0, T//2, T-1]):
-    plt.subplot(1, 3, idx + 1)  # Corrected indexing for subplot
-    plt.imshow(re_all[:, :, i].detach().cpu().numpy(), cmap='gray')
-    plt.title(f'Reservoir State at t={i}')
-plt.show()
+    # relu2D params
+    relu2D_params = {
+        'dt': 0.001,
+        'ntype': 'relu_gaussian',
+        'K': 10**1,
+        'tau': np.array([.01, .01]),
+        'u': [10, 0],  # Changed to a list
+        # 'J0': np.array([[1, -1], [1, -1]]), #
+        'J0': np.array([[1, -4], [2, -2]]),
+        'sigma': 0.05 * np.array([1, np.sqrt(2)]),
+        'J2': np.zeros((2,2)),
+        'J3': np.zeros((2,2)),
+    }
+
+    # Make drifting pattern as input and target
+    # ipt_img, drift = make_2D_stim_with_drift(N, T, 0.1, 2, .05*2)
+    ipt_img, drift = make_2D_stim_with_rigid_shift(N, T, 0.1, 2/N*.5)
+    ipt_img = ipt_img.to(device)
+    target = drift.unsqueeze(0)  # [1, T]
+
+    # print(np.max(ipt_img[:, :, 0].cpu().numpy()))
+    # print(np.min(ipt_img[:, :, 0].cpu().numpy()))
+
+    # visualize the input
+    plt.figure(figsize=(10, 5))
+    plt.subplot(1, 2, 1)
+    plt.imshow(ipt_img[:, :, 0].cpu().numpy(), cmap='gray')
+    plt.title('Input Pattern at t=0')
+    plt.subplot(1, 2, 2)
+    plt.plot(drift.cpu().numpy(), label='Drift Direction')
+    plt.title('Drift Direction Over Time')
+    plt.xlabel('Time Step')
+    plt.ylabel('Drift Angle (radians)')
+    plt.legend()
+    plt.show()
+
+    # Model, optimizer, loss
+    model = Relu2DReservoirRNN(N, T, output_dim, device, relu2D_params)
+    optimizer = optim.Adam(model.parameters(), lr=0.01)
+    criterion = nn.MSELoss()
+
+    # Training loop
+    epochs = 60
+    for epoch in range(epochs):
+        optimizer.zero_grad()
+        output, _ = model(ipt_img)
+        loss = criterion(output, target)
+        loss.backward()
+        optimizer.step()
+        if epoch % 10 == 0 or epoch == epochs-1:
+            print(f"Epoch {epoch+1}/{epochs}, Loss: {loss.item():.6f}")
+
+    # Evaluation
+    output, re_all = model(ipt_img)
+    import matplotlib.pyplot as plt
+    plt.figure()
+    plt.plot(output.detach().cpu().numpy().squeeze(), label='readout')
+    plt.plot(target.cpu().numpy().squeeze(), label='target')
+    plt.legend()
+    plt.show()
+
+    ### visualize three frames of the reservoir state, from initial, middle, and end
+    re_all = re_all.detach()  # [N, N, T]
+    plt.figure(figsize=(15, 5))
+    for idx, i in enumerate([0, T//2, T-1]):
+        plt.subplot(1, 3, idx + 1)  # Corrected indexing for subplot
+        plt.imshow(re_all[:, :, i].detach().cpu().numpy(), cmap='gray')
+        plt.title(f'Reservoir State at t={i}')
+    plt.show()
