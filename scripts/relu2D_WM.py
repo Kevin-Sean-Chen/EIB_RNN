@@ -55,13 +55,13 @@ def make_wm_trial(N, T, delay_period=200, cue_interval=50, lr_trial=None):
     else:
         lr = int(lr_trial)
 
-    trigger_pattern1 = np.random.randn(N, N)
-    trigger_pattern2 = np.random.randn(N, N)
+    trigger_pattern1 = np.random.randn(N, N)*.1
+    trigger_pattern2 = np.random.randn(N, N)*.1
     G1 = gabor2d(N, f=5*.5, theta=np.deg2rad(30), gamma=0.1, phi=.5, normalize=True) ### 0.5,1,1.5
     G2 = gabor2d(N, f=1*.5, theta=np.deg2rad(60), gamma=0.1, phi=.5, normalize=True) ### 0.5,1,1.5
     G3 = gabor2d(N, f=3*.5, theta=np.deg2rad(90), gamma=0.1, phi=.5, normalize=True) ### 0.5,1,1.5
-    trigger_pattern1 = G1.reshape(N, N)*0.1
-    trigger_pattern2 = G2.reshape(N, N)*0.1
+    # trigger_pattern1 = G1.reshape(N, N)*0.1
+    # trigger_pattern2 = G2.reshape(N, N)*0.1
     cue_pattern = np.random.randn(N, N)*0.1  ### amplitude matters #G3*0.1 #
 
     space_stim = np.zeros((N, N, T))
@@ -87,7 +87,7 @@ def make_wm_trial(N, T, delay_period=200, cue_interval=50, lr_trial=None):
             input_traj[tt] = 1
         else:
             target_out[tt] = out_sign
-            space_stim[:, :, tt] = cue_pattern #*np.random.randn()*0.01  ### holds on
+            space_stim[:, :, tt] = np.random.randn(N, N)*0.01  #cue_pattern ### holds on
 
     ### tensorize
     # Convert numpy arrays to PyTorch tensors
@@ -99,7 +99,7 @@ def make_wm_trial(N, T, delay_period=200, cue_interval=50, lr_trial=None):
 
 
 # parameters used previously
-delay_period = 250
+delay_period = 200
 cue_interval = 30
 
 # create one trial (lr_trial left unspecified -> random)
@@ -116,16 +116,24 @@ plt.show()
 
 # %% training
 # Model, optimizer, loss
-model = Relu2DReservoirRNN(N, T, output_dim, device, relu2D_params)
+# model = Relu2DReservoirRNN(N, T, output_dim, device, relu2D_params)
 #############
 # compare to Vanilla_ReservoirRNN
-# also check with input methods (u[0])
+# also check with input methods (u[0])!!!!
 #############
-optimizer = optim.Adam(model.parameters(), lr=0.01)
+NN = N*N
+reluRNN_params = {
+    'dt': 0.001,
+    'tau': 0.01,
+    'J0': torch.randn(NN, NN, device=device, dtype=torch.float32) * (48 / math.sqrt(NN*NN)), ### tune this!
+    'u': 0,
+}
+model = Vanilla_ReservoirRNN(NN, T, output_dim, device, reluRNN_params)
+optimizer = optim.Adam(model.parameters(), lr=1e-5)
 criterion = nn.MSELoss()
 
 # Training loop
-epochs = 100
+epochs = 250
 for epoch in range(epochs):
     optimizer.zero_grad()
     ### randomized trial
@@ -149,11 +157,24 @@ plt.show()
 
 ### visualize three frames of the reservoir state, from initial, middle, and end
 re_all = re_all.detach()  # [N, N, T]
-plt.figure(figsize=(15, 5))
-for idx, i in enumerate([0, T//2, T-1]):
-    plt.subplot(1, 3, idx + 1)  # Corrected indexing for subplot
-    plt.imshow(re_all[:, :, i].detach().cpu().numpy(), cmap='gray')
-    plt.title(f'Reservoir State at t={i}')
+# plt.figure(figsize=(15, 5))
+# for idx, i in enumerate([0, T//2, T-1]):
+#     plt.subplot(1, 3, idx + 1)  # Corrected indexing for subplot
+#     plt.imshow(re_all[:, :, i].detach().cpu().numpy(), cmap='gray')
+#     plt.title(f'Reservoir State at t={i}')
+# plt.show()
+
+### randomly simple some neurons to check activity
+n_sample = 5
+sample_indices = np.random.choice(N*N, n_sample, replace=False)
+plt.figure()
+for idx, neuron_idx in enumerate(sample_indices):
+    # r_trace = re_all.view(N*N, T)[neuron_idx, :].detach().cpu().numpy()  #### for 2D
+    r_trace = re_all[neuron_idx, :].detach().cpu().numpy()   ### for random
+    plt.subplot(n_sample, 1, idx + 1)
+    plt.plot(r_trace)
+    plt.title(f'Neuron {neuron_idx} Activity Trace')
+plt.tight_layout()
 plt.show()
 
 # %% statistics of decision

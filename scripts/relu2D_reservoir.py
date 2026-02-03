@@ -214,7 +214,8 @@ class Relu2DReservoirRNN(nn.Module):
         for t in range(T):
             # Add input as external drive to excitatory population
             u = self.relu2D_params['u']  # Read baseline u
-            u[0] = u[0]*0 + input_pattern[:, :, t].cpu().numpy()*10  # Add input 2D array at time t
+            # u[0] = u[0]*0 + input_pattern[:, :, t].cpu().numpy()*1  #### removeing baseline input scaling for testing
+            u[0] = u[0]*1 + input_pattern[:, :, t].cpu().numpy()*1  # Add input 2D array at time t
             re, ri = relu2D_step(
                 re.cpu().numpy(), ri.cpu().numpy(), N,
                 self.relu2D_params['dt'], 1, self.relu2D_params['ntype'],
@@ -233,15 +234,60 @@ class Relu2DReservoirRNN(nn.Module):
         return out.T, re_all  # [output_dim, T], [N, N, T]
 
 
-def RNN_step(rt, N, dt, tau, u, npf, Jij):
+def RNN_step(rt, dt, tau, u, npf, Jij):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    rt = torch.tensor(rt, dtype=torch.float32, device=device).unsqueeze(0).unsqueeze(0)  # shape (1,1,N,N)
-    for _ in range(npf):
-        mu = Jij @ rt
-        rt = rt + (dt / tau) * (-rt + torch.relu(mu))
 
-    rt = rt.squeeze().cpu().numpy()
-    return rt
+    # Convert rt to a 1D float tensor on the correct device
+    if isinstance(rt, torch.Tensor):
+        rt_tensor = rt.to(device).float().reshape(-1)
+    else:
+        rt_tensor = torch.tensor(rt, dtype=torch.float32, device=device).reshape(-1)
+    n = rt_tensor.shape[0]
+
+    # Convert Jij to a tensor and ensure it is an (n, n) matrix if possible
+    if isinstance(Jij, torch.Tensor):
+        Jij_tensor = Jij.to(device).float()
+    else:
+        Jij_tensor = torch.tensor(Jij, dtype=torch.float32, device=device)
+
+    if Jij_tensor.dim() == 2 and Jij_tensor.shape == (n, n):
+        pass  # already correct shape
+    elif Jij_tensor.numel() == n * n:
+        Jij_tensor = Jij_tensor.reshape(n, n)
+    elif Jij_tensor.dim() == 1 and Jij_tensor.numel() == n:
+        # Interpret a length-n vector as a diagonal matrix
+        Jij_tensor = torch.diag(Jij_tensor)
+    else:
+        raise ValueError(f"Jij has incompatible shape {tuple(Jij_tensor.shape)} for rt length {n}")
+
+    # Convert u to a 1D tensor of length n (broadcast/scalar allowed)
+    if isinstance(u, torch.Tensor):
+        u_tensor = u.to(device).float().reshape(-1)
+    else:
+        u_tensor = torch.tensor(u, dtype=torch.float32, device=device).reshape(-1)
+
+    if u_tensor.numel() == 1:
+        u_tensor = u_tensor.repeat(n)
+    elif u_tensor.numel() == n:
+        u_tensor = u_tensor.reshape(n)
+    else:
+        try:
+            u_tensor = u_tensor.reshape(n)
+        except Exception:
+            raise ValueError(f"u has incompatible shape {tuple(u_tensor.shape)} for rt length {n}")
+
+    # Ensure tau is scalar for the update step
+    tau_val = float(np.array(tau).reshape(-1)[0])
+
+    for _ in range(npf):
+        # compute input drive (matrix product plus external input)
+        mu = torch.matmul(Jij_tensor, rt_tensor) + u_tensor
+        rt_tensor = rt_tensor + (dt / tau_val) * (-rt_tensor + torch.relu(mu))  ### relu vs. tanh
+        nl_input = torch.relu(mu)
+        # rt_tensor = rt_tensor + (dt / tau_val) * (-rt_tensor) + nl_input
+
+    return rt_tensor.cpu().numpy()
+    # return nl_input.cpu().numpy()
 
 
 class Vanilla_ReservoirRNN(nn.Module):
@@ -253,31 +299,28 @@ class Vanilla_ReservoirRNN(nn.Module):
         self.device = device
         self.rnn_params = rnn_params
         # Readout weights
-        self.W_out = nn.Parameter(torch.randn(N, output_dim, device=device) * 0.1)
+        self.W_out = nn.Parameter(torch.randn(N, output_dim, device=device) * 0.01)
 
     def forward(self, input_pattern):
         # input_pattern: [N, N, T]
-        N = self.N
-        T = self.T
         rt = torch.randn(self.N, device=self.device, dtype=torch.float32)
         r_all = []
-        for t in range(T):
+        for t in range(self.T):
             # Add input as external drive to excitatory population
             u = self.rnn_params['u']  # Read baseline u
-            u[0] = u[0]*0 + input_pattern[:, :, t].cpu().numpy()*10  # Add input 2D array at time t
+            # Vectorize input_pattern at time t to an N^2 vector and add to baseline u
+            input_vec = input_pattern[:, :, t].reshape(-1).cpu().numpy()  # shape (N*N,)
+            u = np.asarray(u) * 1 + input_vec * 10
+            ### pass (rt, dt, tau, u, npf, Jij)
             rt = RNN_step(
-                rt.cpu().numpy(), N,
-                self.rnn_params['dt'], 1, self.rnn_params['ntype'],
-                self.rnn_params['K'], self.rnn_params['tau'],
-                u, self.rnn_params['J0'], self.rnn_params['sigma'],
-                self.rnn_params['J2'], self.rnn_params['J3']
+                rt.cpu().numpy(), self.rnn_params['dt'], self.rnn_params['tau'], u, 1, self.rnn_params['J0']
             )
             rt = torch.tensor(rt, device=self.device, dtype=torch.float32)
             r_all.append(torch.relu(rt)) ### testing with input nonlinearity
 
-        r_all = torch.stack(r_all, dim=-1)  # [N, N, T]
-        # Readout: flatten spatial, shape [N*N, T]
-        readout = r_all.reshape(N*N, T)
+        r_all = torch.stack(r_all, dim=-1)  # [N, T] for non-spatial network
+        # Readout: already shape [N, T]
+        readout = r_all
         out = readout.T @ self.W_out  # [T, output_dim]
         return out.T, r_all  # [output_dim, T], [N, N, T]
     
