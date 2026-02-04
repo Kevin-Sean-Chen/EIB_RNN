@@ -241,11 +241,12 @@ def make_wm_trial(N, T, delay_period=200, cue_interval=50, lr_trial=None, inpt_p
             # stay zero during delay
             pass
             target_mem[tt] = out_sign
-            # progress = (tt - cue_interval + 1) / float(delay_period)
-            # progress = np.clip(progress, 0.0, 1.0)
-            # target_mem[tt] = progress * out_sign
+            progress = (tt - cue_interval + 1) / float(delay_period)
+            progress = np.clip(progress, 0.0, 1.0)
+            target_mem[tt] = progress * out_sign
+            space_stim[:, tt] = np.random.randn(N)*0.01  #+ cue_pattern*0.0
         elif tt < cue_interval + delay_period + cue_interval:
-            space_stim[:, tt] = cue_pattern
+            space_stim[:, tt] = cue_pattern + np.random.randn(N)*0.01
             start = cue_interval + delay_period
             progress = (tt - start + 1) / float(cue_interval)
             progress = np.clip(progress, 0.0, 1.0)
@@ -273,13 +274,13 @@ if __name__ == "__main__":
     T = 500
     output_dim = 1
     device = 'cpu'
-    alpha = .1  ### weight for memory loss
+    alpha = 1  ### weight for memory loss
 
 
     reluRNN_params = {
         'dt': 0.001,
         'tau': 0.005,
-        'J0': torch.randn(N, N, device=device, dtype=torch.float32) * (15 / math.sqrt(N*N)), ### tune this!
+        'J0': torch.randn(N, N, device=device, dtype=torch.float32) * (20 / math.sqrt(N*N)), ### tune this! #15 for tanh
         'u': 0,
     }
     model = WM_ReservoirRNN(N, T, output_dim, device, reluRNN_params)
@@ -288,7 +289,7 @@ if __name__ == "__main__":
 
     # task parameters
     # parameters used previously
-    delay_period = 200
+    delay_period = 250
     cue_interval = 30
 
     # inspect one trial
@@ -308,7 +309,7 @@ if __name__ == "__main__":
     plt.show()
 
     # Training loop
-    epochs = 150
+    epochs = 250
     for epoch in range(epochs):
         optimizer.zero_grad()
         ### randomized trial
