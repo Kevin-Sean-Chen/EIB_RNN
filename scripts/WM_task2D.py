@@ -121,18 +121,19 @@ class Relu2DSpatialReservoir(nn.Module):
         self.nl = params.get("nl", "relu")
         if self.nl not in ("relu", "tanh"):
             raise ValueError("params['nl'] must be 'relu' or 'tanh'")
+        self.nl = params['nl']
 
         # --- Trainable readouts on excitatory activity phi(re) ---
         # Flattened dimension: N*N
         self.D = self.N * self.N
-        self.W_out = nn.Parameter(torch.randn(self.D, self.output_dim, device=self.device) * 0.1)
-        self.W_mem = nn.Parameter(torch.randn(self.D, 1, device=self.device) * 0.1)
+        self.W_out = nn.Parameter(torch.randn(self.D, self.output_dim, device=self.device) * 1/self.D**0.5)
+        self.W_mem = nn.Parameter(torch.randn(self.D, 1, device=self.device) * 1/self.D**0.5)
 
         # --- Optional feedback (fixed spatial patterns) ---
         self.fb_gain = float(params['fb_gain'])#float(params.get("fb_gain", 0.0))  # set >0 to enable
         if self.fb_gain != 0.0:
-            self.register_buffer("W_fb_o", torch.randn(1, 1, self.N, self.N, device=self.device) * 0.1)
-            self.register_buffer("W_fb_m", torch.randn(1, 1, self.N, self.N, device=self.device) * 0.1)
+            self.register_buffer("W_fb_o", torch.randn(1, 1, self.N, self.N, device=self.device) * .01)
+            self.register_buffer("W_fb_m", torch.randn(1, 1, self.N, self.N, device=self.device) * .01)
         else:
             self.W_fb_o = None
             self.W_fb_m = None
@@ -176,7 +177,7 @@ class Relu2DSpatialReservoir(nn.Module):
                 self.u0_e
                 + self.J0[0, 0] * conv_re_e
                 + self.J0[0, 1] * conv_ri_i
-                + stim_t*10 ###################### input scale tests
+                + stim_t*200 ###################### input scale tests
             )
             mui = self.sqrtK * (
                 self.u0_i
@@ -195,8 +196,8 @@ class Relu2DSpatialReservoir(nn.Module):
 
                 # broadcast to (B,1,N,N)
                 feedback = (
-                    self.W_fb_o * out_scalar[:, None, None]*0    ############## differential feedback test
-                    + self.W_fb_m * mem_scalar[:, None, None]*0
+                    self.W_fb_o * out_scalar[:, None, None]*1    ############## differential feedback test
+                    + self.W_fb_m * mem_scalar[:, None, None]*1
                 )
                 mue = mue + self.fb_gain * feedback
 
@@ -313,7 +314,7 @@ def make_wm_trial(N, T, delay_period=200, cue_interval=50, lr_trial=None, inpt_p
 
 if __name__ == "__main__":
     # --- Setup for training ---
-    N = 23
+    N = 19
     T = 500
     output_dim = 1
     device = 'cpu'
@@ -322,15 +323,14 @@ if __name__ == "__main__":
     relu2D_params = {
         'dt': 0.001,
         'ntype': 'relu_gaussian',
-        'K': 10**1*5,
+        'K': 10**1*3,
         'tau': np.array([.01, .01]),
         'u': [10, 0],  # Changed to a list
         # 'J0': np.array([[1, -1], [1, -1]]), #
         'J0': np.array([[1, -4], [2, -2]]),
         'sigma': 0.05 * np.array([1, np.sqrt(2)]),
-        'J2': np.zeros((2,2)),
-        'J3': np.zeros((2,2)),
-        'fb_gain': 1.0,
+        'fb_gain': .0,
+        'nl': 'relu',
     }
 
     # %% simple check with spontaneous activity
@@ -357,16 +357,16 @@ if __name__ == "__main__":
     plt.show()
 
     # %% task trial
-    delay_period = 200
-    cue_interval = 50
+    delay_period = 250
+    cue_interval = 20
 
     G1 = gabor2d(N, f=5*.5, theta=np.deg2rad(30), gamma=0.1, phi=.5, normalize=True) ### 0.5,1,1.5
     G2 = gabor2d(N, f=1*.5, theta=np.deg2rad(60), gamma=0.1, phi=.5, normalize=True) ### 0.5,1,1.5
     G3 = gabor2d(N, f=3*.5, theta=np.deg2rad(90), gamma=0.1, phi=.5, normalize=True) ### 0.5,1,1.5
 
-    ipt_patterns = (G1*.1,
-                    G2*.1,
-                    np.random.randn(N, N)*.1)
+    ipt_patterns = (G1*.01,
+                    G2*.01,
+                    np.random.randn(N, N)*.01)
 
     # create one trial (lr_trial left unspecified -> random)
     target_out, target_mem, space_stim, input_traj = make_wm_trial(N, T, delay_period=delay_period, cue_interval=cue_interval, lr_trial=None, inpt_patterns=ipt_patterns)
@@ -385,7 +385,7 @@ if __name__ == "__main__":
     criterion = nn.MSELoss()
 
     # Training loop
-    epochs = 100
+    epochs = 60
     alpha = 1.0  # weight for memory loss
     for epoch in range(epochs):
         optimizer.zero_grad()
