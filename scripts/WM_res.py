@@ -1,14 +1,7 @@
 """
 Reservoir computing (ESN-style) training for your 2D spatial reservoir:
-- Reservoir dynamics are FIXED (no backprop through time).
-- Train readouts W_out, W_mem by ridge regression (closed-form).
-- Optional bias terms are included.
-
-This is a drop-in replacement for your training loop.
-
-Assumes you already have:
-  from scripts.relu2D_disorder import gabor2d
-and your spatial reservoir class below.
+- Reservoir dynamics are fixed without back-propagation through time.
+- Train readouts W_out, W_mem by ridge regression; this is closed-form, without iterative update yet.
 """
 
 import math
@@ -29,7 +22,7 @@ sys.path.append(str(repo_root))
 from scripts.relu2D_disorder import gabor2d
 
 # -----------------------------
-# 2D kernels (same as your code)
+# 2D Gaussian kernels
 # -----------------------------
 def _make_1d_periodic_gaussian_weights(N: int, sigma: float, device, dtype):
     x = torch.arange(-(N - 1) // 2, (N - 1) // 2 + 1, device=device, dtype=dtype)
@@ -48,7 +41,7 @@ def _make_2d_separable_kernel(N: int, sigma: float, device, dtype):
     return K2[None, None, :, :]  # (1,1,N,N)
 
 # -------------------------------------
-# Reservoir model (readout-only trained)
+# Reservoir model (OG one that only has readout trained offline)
 # -------------------------------------
 class Relu2DSpatialReservoir(nn.Module):
     def __init__(self, N, T, output_dim, device, params):
@@ -88,18 +81,16 @@ class Relu2DSpatialReservoir(nn.Module):
         if self.nl not in ("relu", "tanh"):
             raise ValueError("params['nl'] must be 'relu' or 'tanh'")
 
-        # Feature dimension
+        # Full-neuron dimension
         self.D = self.N * self.N
 
-        # Readout weights (will be set by ridge; keep as Parameters for convenience)
+        # Readout weights along with biases(will be set by ridge, not backprop; keep as Parameters for convenience)
         self.W_out = nn.Parameter(torch.zeros(self.D, self.output_dim, device=self.device))
         self.W_mem = nn.Parameter(torch.zeros(self.D, 1, device=self.device))
-
-        # Biases (buffers; also set by ridge)
         self.register_buffer("b_out", torch.zeros(1, self.output_dim, device=self.device))
         self.register_buffer("b_mem", torch.zeros(1, 1, device=self.device))
 
-        # Feedback optional (keep off for classic reservoir training)
+        # Feedback optional (keep off for classic reservoir training; can be used later with iterative update methods)
         self.fb_gain = float(params.get('fb_gain', 0.0))
         if self.fb_gain != 0.0:
             self.register_buffer("W_fb_o", torch.randn(1, 1, self.N, self.N, device=self.device) * .01)
@@ -108,6 +99,7 @@ class Relu2DSpatialReservoir(nn.Module):
             self.W_fb_o = None
             self.W_fb_m = None
 
+        # Initial states and iterations
         self.init_scale = float(params.get("init_scale", 0.1))
         self.npf = int(params.get("npf", 1))
 
@@ -145,8 +137,8 @@ class Relu2DSpatialReservoir(nn.Module):
                 out_scalar = (rflat @ self.W_out).sum(dim=1, keepdim=True)  # (B,1)
                 mem_scalar = (rflat @ self.W_mem).view(-1, 1)              # (B,1)
                 feedback = (
-                    self.W_fb_o * out_scalar[:, None, None]*1   ############### testing
-                    + self.W_fb_m * mem_scalar[:, None, None]*0  ############### testing
+                    self.W_fb_o * out_scalar[:, None, None]*1   ############### testing for now
+                    + self.W_fb_m * mem_scalar[:, None, None]*0  ############### testing for now
                 )
                 mue = mue + self.fb_gain * feedback
 
@@ -171,7 +163,7 @@ class Relu2DSpatialReservoir(nn.Module):
         mem_list = []
 
         for t in range(self.T):
-            stim_t = stim[:, :, :, t].unsqueeze(1)  # (B,1,N,N)
+            stim_t = stim[:, :, :, t].unsqueeze(1)  # (B,1,N,N)  # B for batch training in the future
             re, ri = self.rnn_step(re, ri, stim_t)
 
             phi_re = self.NL(re)  # (B,1,N,N)
@@ -191,7 +183,7 @@ class Relu2DSpatialReservoir(nn.Module):
 
 
 # -------------------
-# Task (your version)
+# Task for WM
 # -------------------
 def make_wm_trial(N, T, delay_period=200, cue_interval=50, lr_trial=None, inpt_patterns=None, ramp_mem=False):
     if lr_trial is None:
@@ -209,6 +201,7 @@ def make_wm_trial(N, T, delay_period=200, cue_interval=50, lr_trial=None, inpt_p
 
     for tt in range(T):
         if tt < cue_interval:
+            # triggered pattern
             space_stim[:, :, tt] = trigger_pattern1 if lr == 0 else trigger_pattern2
             target_out[tt] = 0.0
             target_mem[tt] = out_sign
@@ -216,10 +209,10 @@ def make_wm_trial(N, T, delay_period=200, cue_interval=50, lr_trial=None, inpt_p
         elif tt < cue_interval + delay_period:
             # no input during delay
             space_stim[:, :, tt] = 0.0
-            if ramp_mem:
+            if ramp_mem: ### ramping memory target
                 progress = (tt - cue_interval + 1) / float(delay_period)
                 target_mem[tt] = np.clip(progress, 0.0, 1.0) * out_sign
-            else:
+            else: ### fixed memory target
                 target_mem[tt] = out_sign
             target_out[tt] = 0.0
 
@@ -244,7 +237,7 @@ def make_wm_trial(N, T, delay_period=200, cue_interval=50, lr_trial=None, inpt_p
     )
 
 # -------------------------
-# Ridge regression utilities
+# Ridge regression utilities (GPT helping...)
 # -------------------------
 def ridge_solve(X, Y, lam):
     """
@@ -269,7 +262,7 @@ def collect_xy(model, trial_fn, n_trials, time_selector):
 
     for _ in range(n_trials):
         target_out, target_mem, stim, _ = trial_fn()
-        out, mem, re_all = model(stim)          # re_all: (1,N,N,T)
+        _, _, re_all = model(stim)          # re_all: (1,N,N,T)
         phi = re_all.squeeze(0)                 # (N,N,T)
         N, _, T = phi.shape
         D = N * N
@@ -289,7 +282,7 @@ def collect_xy(model, trial_fn, n_trials, time_selector):
     Yout = torch.cat(Yout_list, dim=0).numpy().astype(np.float64) # (M,1)
     Ymem = torch.cat(Ymem_list, dim=0).numpy().astype(np.float64) # (M,1)
 
-    # bias column
+    # add bias column for regression
     Xb = np.concatenate([X, np.ones((X.shape[0], 1), dtype=np.float64)], axis=1)  # (M, D+1)
     return Xb, Yout, Ymem
 
@@ -324,8 +317,6 @@ def eval_model(model, trial_fn, n_trials):
 # Main: ridge training script
 # -------------------------
 if __name__ == "__main__":
-    # If you use your repo import, keep this line:
-    # from scripts.relu2D_disorder import gabor2d
 
     # --- Setup ---
     N = 39
@@ -336,7 +327,7 @@ if __name__ == "__main__":
     delay_period = 250
     cue_interval = 20
 
-    # Patterns (fixed across trials = essential for learnability/generalization)
+    # Patterns for trigger and cues
     G1 = gabor2d(N, f=5*.5, theta=np.deg2rad(30), gamma=0.1, phi=.5, normalize=True).astype(np.float32)
     G2 = gabor2d(N, f=1*.5, theta=np.deg2rad(60), gamma=0.1, phi=.5, normalize=True).astype(np.float32)
     G3 = gabor2d(N, f=3*.5, theta=np.deg2rad(90), gamma=0.1, phi=.5, normalize=True).astype(np.float32)
@@ -352,12 +343,12 @@ if __name__ == "__main__":
         "dt": 0.001,
         "K": 20.0, ### 20 seems great!!
         "tau": np.array([0.01, 0.01]),
-        "u": [10.0, 0.0],                  # IMPORTANT: reduce baseline vs your old 10
+        "u": [10.0, 0.0],
         "J0": np.array([[1, -4], [2, -2]]),
         "sigma": 0.05 * np.array([1, np.sqrt(2)]),
         "fb_gain": 0.0,                   # OFF for ridge ESN training
-        "nl": "relu",                     # usually easier than relu; try relu later
-        "stim_gain": 10.0,                # IMPORTANT: cue must matter
+        "nl": "relu",                     # relu as usual
+        "stim_gain": 10.0,                # the input strength matters
         "init_scale": 0.1,
         "npf": 1,
     }
@@ -390,8 +381,8 @@ if __name__ == "__main__":
         return np.arange(go_start, T_, dtype=np.int64)
 
     # Collect (separately) for out and mem (best practice)
-    n_train = 20
-    lam = 1e-2*1
+    n_train = 30
+    lam = 1e-2*1  ### this matters
 
     # Collect for mem
     X_mem, _, Y_mem = collect_xy(model, lambda: trial_fn(lr=None), n_train, time_selector_mem)
