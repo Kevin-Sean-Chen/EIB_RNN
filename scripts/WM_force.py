@@ -492,7 +492,7 @@ if __name__ == "__main__":
         return np.arange(go_start, T_, dtype=np.int64)
 
     n_train = 20          # you can increase (e.g., 200-1000)
-    lam_ridge = 1e-1      # sweep 1e-6 ... 1e0 if needed
+    lam_ridge = 1e-2      # sweep 1e-6 ... 1e0 if needed
 
     # collect and solve
     X_mem, _, Y_mem = collect_xy(model, lambda: trial_fn(lr=None), n_train, time_selector_mem)
@@ -636,7 +636,7 @@ if __name__ == "__main__":
 
         # Save as GIF
         os.makedirs('video', exist_ok=True)
-        filename = f"2D_ESN_WM_{datetime.datetime.now().strftime('%m-%d-%Y %H-%M-%S')}"
+        filename = f"2D_forced_WM_{datetime.datetime.now().strftime('%m-%d-%Y %H-%M-%S')}"
         output_path = os.path.join('video', filename + '.gif')
         frames[0].save(output_path, save_all=True, append_images=frames[1:], duration=100, loop=0)
 
