@@ -21,32 +21,23 @@ from scripts.relu2D_disorder import gabor2d
 def _make_1d_periodic_gaussian_weights(N: int, sigma: float, device, dtype):
     """
     Discrete periodic Gaussian weights on a 1D ring of length N.
+    Matches the reference implementation from relu2D_step().
 
     Returns w: (N,) such that w[i] depends on periodic distance from center.
     Uses summation over integer wraps to approximate periodic Gaussian.
     """
-    # grid centered at 0: [-floor(N/2), ..., +floor((N-1)/2)]
-    x = torch.arange(-(N - 1) // 2, (N - 1) // 2 + 1, device=device, dtype=dtype)
     dx = 1.0 / N
-
-    # Sum a few wrapped copies for periodicity (enough for typical sigma)
-    # Choose wrap range based on sigma to ensure tails captured.
-    # For very large sigma, this can be reduced or increased as needed.
-    wrap = int(math.ceil(10.0 * float(sigma))) if sigma > 0 else 0
-    k = torch.arange(-wrap, wrap + 1, device=device, dtype=dtype)
-
-    # distance grid with wraps: (N, 2*wrap+1)
-    # (x + k) is in "index units"; multiply by dx for physical spacing
-    dist = dx * (x[:, None] + k[None, :])
-
-    # Gaussian in physical distance
-    # Note: normalization constant doesn't matter much if you treat J0 as gain,
-    # but we include it for cleanliness.
-    gauss = torch.exp(-0.5 * (dist / sigma) ** 2) / (math.sqrt(2 * math.pi) * sigma)
-
-    w = (dx * gauss).sum(dim=1)  # (N,)
-    # Optional: normalize sum to 1 to interpret as averaging kernel
-    w = w / (w.sum() + 1e-12)
+    x = np.arange(-(N-1)//2, (N-1)//2 + 1)
+    k = np.arange(-int(np.ceil(10 * sigma)), int(np.ceil(10 * sigma)) + 1)
+    
+    # Compute periodic Gaussian (no normalization - matches reference)
+    w = np.sum(
+        dx * (2 * np.pi * sigma**2)**-0.5 *
+        np.exp(-0.5 * (dx * (x[:, None] + k))**2 / sigma**2),
+        axis=1
+    )
+    
+    w = torch.tensor(w, dtype=dtype, device=device)
     return w
 
 
@@ -147,6 +138,9 @@ class Relu2DSpatialReservoir(nn.Module):
         # --- Optional init scale ---
         self.init_scale = float(params.get("init_scale", 0.1))
 
+        # --- Input gain ---
+        self.stim_gain = float(params.get("stim_gain", 1.0))
+
         # --- Optional: multiple internal steps per frame (like your npf) ---
         self.npf = int(params.get("npf", 1))
 
@@ -170,14 +164,14 @@ class Relu2DSpatialReservoir(nn.Module):
             conv_re_e = self._conv_circular(re, self.Ke)
             conv_ri_i = self._conv_circular(ri, self.Ki)
 
-            # Pre-nonlinearity currents
+        # Pre-nonlinearity currents
             # mue = sqrtK * (u0_e + J_EE * conv(re) + J_EI * conv(ri) + stim)
             # mui = sqrtK * (u0_i + J_IE * conv(re) + J_II * conv(ri))
             mue = self.sqrtK * (
                 self.u0_e
                 + self.J0[0, 0] * conv_re_e
                 + self.J0[0, 1] * conv_ri_i
-                + stim_t*200 ###################### input scale tests
+                + self.stim_gain * stim_t
             )
             mui = self.sqrtK * (
                 self.u0_i

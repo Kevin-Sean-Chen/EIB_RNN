@@ -24,6 +24,7 @@ from scripts.relu2D_disorder import gabor2d
 # -----------------------------
 # 2D Gaussian kernels
 # -----------------------------
+### old, with explicit normalization ###
 def _make_1d_periodic_gaussian_weights(N: int, sigma: float, device, dtype):
     x = torch.arange(-(N - 1) // 2, (N - 1) // 2 + 1, device=device, dtype=dtype)
     dx = 1.0 / N
@@ -34,6 +35,29 @@ def _make_1d_periodic_gaussian_weights(N: int, sigma: float, device, dtype):
     w = (dx * gauss).sum(dim=1)
     w = w / (w.sum() + 1e-12)
     return w
+
+### New, without explicit normalization (but more like old relu code...) ###
+# def _make_1d_periodic_gaussian_weights(N: int, sigma: float, device, dtype):
+#     """
+#     Discrete periodic Gaussian weights on a 1D ring of length N.
+#     Matches the reference implementation from relu2D_step().
+
+#     Returns w: (N,) such that w[i] depends on periodic distance from center.
+#     Uses summation over integer wraps to approximate periodic Gaussian.
+#     """
+#     dx = 1.0 / N
+#     x = np.arange(-(N-1)//2, (N-1)//2 + 1)
+#     k = np.arange(-int(np.ceil(10 * sigma)), int(np.ceil(10 * sigma)) + 1)
+    
+#     # Compute periodic Gaussian (no normalization - matches reference)
+#     w = np.sum(
+#         dx * (2 * np.pi * sigma**2)**-0.5 *
+#         np.exp(-0.5 * (dx * (x[:, None] + k))**2 / sigma**2),
+#         axis=1
+#     )
+    
+#     w = torch.tensor(w, dtype=dtype, device=device)
+#     return w
 
 def _make_2d_separable_kernel(N: int, sigma: float, device, dtype):
     w = _make_1d_periodic_gaussian_weights(N, sigma, device=device, dtype=dtype)
@@ -319,7 +343,7 @@ def eval_model(model, trial_fn, n_trials):
 if __name__ == "__main__":
 
     # --- Setup ---
-    N = 39
+    N = 19
     T = 500
     output_dim = 1
     device = "cpu"
@@ -341,7 +365,7 @@ if __name__ == "__main__":
     # Reservoir params
     params = {
         "dt": 0.001,
-        "K": 30.0, ### 20 seems great!!
+        "K": 70.0, ### 20 seems great!!
         "tau": np.array([0.01, 0.01]),
         "u": [10.0, 0.0],
         "J0": np.array([[1, -4], [2, -2]]),
@@ -366,7 +390,6 @@ if __name__ == "__main__":
         plt.imshow(re_all[:, :, i].detach().cpu().numpy(), cmap='gray')
         plt.title(f'Reservoir State at t={i}')
     plt.show()
-
     ############################################
 
     # Trial factory
