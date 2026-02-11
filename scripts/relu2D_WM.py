@@ -131,6 +131,18 @@ plt.show()
 # %% training
 # Model, optimizer, loss
 model = Relu2DReservoirRNN(N, T, output_dim, device, relu2D_params)
+
+### test to observe spontaneous activity ###
+output, re_all = model(space_stim*0)
+re_all = re_all.detach().squeeze()  # [N, N, T]
+plt.figure(figsize=(15, 5))
+for idx, i in enumerate([0, T//2, T-1]):
+    plt.subplot(1, 3, idx + 1)  # Corrected indexing for subplot
+    plt.imshow(re_all[:, :, i].detach().cpu().numpy(), cmap='gray')
+    plt.title(f'Reservoir State at t={i}')
+plt.show()
+############################################
+
 #############
 # compare to Vanilla_ReservoirRNN
 # also check with input methods (u[0])!!!!

@@ -214,8 +214,8 @@ class Relu2DReservoirRNN(nn.Module):
         for t in range(T):
             # Add input as external drive to excitatory population
             u = self.relu2D_params['u']  # Read baseline u
-            u[0] = u[0]*0 + input_pattern[:, :, t].cpu().numpy()*1  #### removeing baseline input scaling for testing
-            # u[0] = u[0]*1 + input_pattern[:, :, t].cpu().numpy()*1  # Add input 2D array at time t
+            # u[0] = u[0]*0 + input_pattern[:, :, t].cpu().numpy()*1  #### removeing baseline input scaling for testing
+            u[0] = u[0]*1 + input_pattern[:, :, t].cpu().numpy()*1  # Add input 2D array at time t
             re, ri = relu2D_step(
                 re.cpu().numpy(), ri.cpu().numpy(), N,
                 self.relu2D_params['dt'], 1, self.relu2D_params['ntype'],
@@ -372,6 +372,18 @@ if __name__ == "__main__":
     model = Relu2DReservoirRNN(N, T, output_dim, device, relu2D_params)
     optimizer = optim.Adam(model.parameters(), lr=0.01)
     criterion = nn.MSELoss()
+
+
+    ### test to observe spontaneous activity ###
+    output, re_all = model(ipt_img*0)
+    re_all = re_all.detach().squeeze()  # [N, N, T]
+    plt.figure(figsize=(15, 5))
+    for idx, i in enumerate([0, T//2, T-1]):
+        plt.subplot(1, 3, idx + 1)  # Corrected indexing for subplot
+        plt.imshow(re_all[:, :, i].detach().cpu().numpy(), cmap='gray')
+        plt.title(f'Reservoir State at t={i}')
+    plt.show()
+    ############################################
 
     # Training loop
     epochs = 60

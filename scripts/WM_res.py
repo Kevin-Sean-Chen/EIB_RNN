@@ -341,7 +341,7 @@ if __name__ == "__main__":
     # Reservoir params
     params = {
         "dt": 0.001,
-        "K": 20.0, ### 20 seems great!!
+        "K": 30.0, ### 20 seems great!!
         "tau": np.array([0.01, 0.01]),
         "u": [10.0, 0.0],
         "J0": np.array([[1, -4], [2, -2]]),
@@ -354,6 +354,20 @@ if __name__ == "__main__":
     }
 
     model = Relu2DSpatialReservoir(N, T, output_dim, device, params)
+
+
+    ### test to observe spontaneous activity ###
+    target_out, target_mem, space_stim, input_traj = make_wm_trial(N, T, delay_period=delay_period, cue_interval=cue_interval, lr_trial=0, inpt_patterns=ipt_patterns)
+    output, mem, re_all = model(space_stim*0)
+    re_all = re_all.detach().squeeze()  # [N, N, T]
+    plt.figure(figsize=(15, 5))
+    for idx, i in enumerate([0, T//2, T-1]):
+        plt.subplot(1, 3, idx + 1)  # Corrected indexing for subplot
+        plt.imshow(re_all[:, :, i].detach().cpu().numpy(), cmap='gray')
+        plt.title(f'Reservoir State at t={i}')
+    plt.show()
+
+    ############################################
 
     # Trial factory
     def trial_fn(lr=None):
