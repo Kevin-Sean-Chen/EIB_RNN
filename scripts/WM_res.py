@@ -177,7 +177,15 @@ class Relu2DSpatialReservoir(nn.Module):
         if stim.dim() == 3:
             stim = stim.unsqueeze(0)  # (1,N,N,T)
         B, N1, N2, T = stim.shape
-        assert (N1, N2, T) == (self.N, self.N, self.T)
+        # Provide a clearer error message than a bare assert so callers can debug shape/order issues.
+        if not (N1 == self.N and N2 == self.N and T == self.T):
+            raise ValueError(
+                f"Stim shape mismatch: received (B,N1,N2,T)=({B},{N1},{N2},{T}), "
+                f"expected (B,N,N,T)=({B},{self.N},{self.N},{self.T}).\n"
+                "Common causes: you passed stim with axes (T,N,N) or "
+                "(N*N, T) flattened; or the model was constructed with the wrong N/T.\n"
+                "Check your trial generator and the model initialization."
+            )
 
         re = torch.randn(B, 1, self.N, self.N, device=self.device) * self.init_scale
         ri = torch.randn(B, 1, self.N, self.N, device=self.device) * self.init_scale
@@ -323,17 +331,54 @@ def set_readouts_from_ridge(model, Wout, Wmem):
         model.b_mem.copy_(torch.tensor(Wmem[D:D+1, :], dtype=torch.float32, device=model.device))
 
 @torch.no_grad()
-def eval_model(model, trial_fn, n_trials):
+def eval_model(model, trial_fn, n_trials, mask=None):
+    """
+    Evaluate model MSE on output and memory readouts over n_trials.
+    mask: optional 1D array/tensor of length T with non-negative weights.
+          If None, compute plain mean squared error over all timepoints.
+    """
     model.eval()
+    # prepare mask if given
+    mask_t = None
+    if mask is not None:
+        if isinstance(mask, np.ndarray):
+            mask_t = torch.tensor(mask, dtype=torch.float32)
+        elif isinstance(mask, torch.Tensor):
+            mask_t = mask.to(dtype=torch.float32)
+        else:
+            # allow lists
+            mask_t = torch.tensor(np.asarray(mask), dtype=torch.float32)
+        # keep on CPU for now; will move to output device per-trial
+        if mask_t.ndim != 1:
+            raise ValueError("mask must be a 1D array/tensor")
+
     lo_list, lm_list = [], []
     for _ in range(n_trials):
         target_out, target_mem, stim, lr = trial_fn()
         out, mem, _ = model(stim)
         out = out.squeeze(0).squeeze(0)  # (T,)
         mem = mem.squeeze(0).squeeze(0)  # (T,)
-        lo = ((out - target_out.to(out.device))**2).mean().item()
-        lm = ((mem - target_mem.to(mem.device))**2).mean().item()
-        lo_list.append(lo); lm_list.append(lm)
+
+        T = out.shape[0]
+
+        if mask_t is None:
+            lo = ((out - target_out.to(out.device)) ** 2).mean().item()
+            lm = ((mem - target_mem.to(mem.device)) ** 2).mean().item()
+        else:
+            if mask_t.shape[0] != T:
+                raise ValueError(f"mask length ({mask_t.shape[0]}) does not match trial length ({T})")
+            m = mask_t.to(out.device)
+            m_sum = m.sum().item()
+            if m_sum <= 0:
+                raise ValueError("mask must have positive sum")
+            se_out = (out - target_out.to(out.device)) ** 2
+            se_mem = (mem - target_mem.to(mem.device)) ** 2
+            lo = (se_out * m).sum().item() / m_sum
+            lm = (se_mem * m).sum().item() / m_sum
+
+        lo_list.append(lo)
+        lm_list.append(lm)
+
     return float(np.mean(lo_list)), float(np.mean(lm_list))
 
 
@@ -343,7 +388,7 @@ def eval_model(model, trial_fn, n_trials):
 if __name__ == "__main__":
 
     # --- Setup ---
-    N = 19
+    N = 37
     T = 500
     output_dim = 1
     device = "cpu"
@@ -365,7 +410,7 @@ if __name__ == "__main__":
     # Reservoir params
     params = {
         "dt": 0.001,
-        "K": 70.0, ### 20 seems great!!
+        "K": 20.0, ### 20 seems great!!
         "tau": np.array([0.01, 0.01]),
         "u": [10.0, 0.0],
         "J0": np.array([[1, -4], [2, -2]]),
