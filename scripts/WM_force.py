@@ -425,7 +425,7 @@ if __name__ == "__main__":
     # np.random.seed(0)
     # torch.manual_seed(0)
 
-    N = 19
+    N = 23
     T = 500
     output_dim = 1
 
@@ -446,7 +446,7 @@ if __name__ == "__main__":
     # --- Reservoir params ---
     params = {
         "dt": 0.001,
-        "K": 50.0,  # gain / spatial scaling
+        "K": 30.0,  # gain / spatial scaling
         "tau": np.array([0.01, 0.01]),
         "u": [10.0, 0.0],  # baseline drives; if learning is weak, try reducing u0_e
         "J0": np.array([[1, -4], [2, -2]]),
@@ -491,7 +491,7 @@ if __name__ == "__main__":
         # train out only after go cue
         return np.arange(go_start, T_, dtype=np.int64)
 
-    n_train = 20          # you can increase (e.g., 200-1000)
+    n_train = 30          # you can increase (e.g., 200-1000)
     lam_ridge = 1e-2      # sweep 1e-6 ... 1e0 if needed
 
     # collect and solve
@@ -524,7 +524,7 @@ if __name__ == "__main__":
             model.register_buffer("W_fb_m", torch.randn(1, 1, N, N, device=model.device) * fb_scale)
 
     # FORCE hyperparams
-    force_trials = 50
+    force_trials = 10
     lam_forget = 1.0       # 1.0 = standard (no forgetting)
     delta = 1e-1           # smaller -> larger early updates
     fb_gain = 0.001          # start small; increase gradually if stable (0.05 -> 0.5)
@@ -597,7 +597,7 @@ if __name__ == "__main__":
     # %% inspect trained activity re_0 and re_1 during the task
     # --- Save animation using tif ---
     # Example: Create dummy 3D data
-    SAVE = True  # set True to save; False to skip (and avoid dependency on PIL)
+    SAVE = False  # set True to save; False to skip (and avoid dependency on PIL)
     if SAVE is True:
         re_0, re_1 = re_0.cpu().numpy().squeeze(0), re_1.cpu().numpy().squeeze(0)  # (N,N,T)
         data = re_0*1  # Use re_all as the data to visualize

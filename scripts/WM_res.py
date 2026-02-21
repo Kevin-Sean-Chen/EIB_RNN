@@ -68,7 +68,7 @@ def _make_2d_separable_kernel(N: int, sigma: float, device, dtype):
 # Reservoir model (OG one that only has readout trained offline)
 # -------------------------------------
 class Relu2DSpatialReservoir(nn.Module):
-    def __init__(self, N, T, output_dim, device, params):
+    def __init__(self, N, T, output_dim, device, params, readout_masked=False, local_dim=10):
         super().__init__()
         self.N = int(N)
         self.T = int(T)
@@ -109,6 +109,14 @@ class Relu2DSpatialReservoir(nn.Module):
         self.D = self.N * self.N
 
         # Readout weights along with biases(will be set by ridge, not backprop; keep as Parameters for convenience)
+        if readout_masked is False:
+            twoD_mask = torch.ones(self.N, self.N, device=self.device)
+        else:
+            twoD_mask = torch.zeros(self.N, self.N, device=self.device)
+            center = self.N // 2
+            half_local = local_dim // 2
+            twoD_mask[center - half_local:center + half_local + 1, center - half_local:center + half_local + 1] = 1.0
+        self.twoD_mask = twoD_mask
         self.W_out = nn.Parameter(torch.zeros(self.D, self.output_dim, device=self.device))
         self.W_mem = nn.Parameter(torch.zeros(self.D, 1, device=self.device))
         self.register_buffer("b_out", torch.zeros(1, self.output_dim, device=self.device))
@@ -156,13 +164,13 @@ class Relu2DSpatialReservoir(nn.Module):
 
             # Optional feedback (typically OFF for ridge training)
             if self.fb_gain != 0.0:
-                phi_re = self.NL(re)
+                phi_re = self.NL(re*self.twoD_mask)
                 rflat = phi_re.flatten(start_dim=1)  # (B, D)
                 out_scalar = (rflat @ self.W_out).sum(dim=1, keepdim=True)  # (B,1)
                 mem_scalar = (rflat @ self.W_mem).view(-1, 1)              # (B,1)
                 feedback = (
                     self.W_fb_o * out_scalar[:, None, None]*1   ############### testing for now
-                    + self.W_fb_m * mem_scalar[:, None, None]*0  ############### testing for now
+                    + self.W_fb_m * mem_scalar[:, None, None]*1  ############### testing for now
                 )
                 mue = mue + self.fb_gain * feedback
 
@@ -388,7 +396,7 @@ def eval_model(model, trial_fn, n_trials, mask=None):
 if __name__ == "__main__":
 
     # --- Setup ---
-    N = 37
+    N = 23
     T = 500
     output_dim = 1
     device = "cpu"
@@ -401,16 +409,18 @@ if __name__ == "__main__":
     G2 = gabor2d(N, f=1*.5, theta=np.deg2rad(60), gamma=0.1, phi=.5, normalize=True).astype(np.float32)
     G3 = gabor2d(N, f=3*.5, theta=np.deg2rad(90), gamma=0.1, phi=.5, normalize=True).astype(np.float32)
 
+    mask_input = np.ones((N, N), dtype=np.float32)
+    # mask_input[1:10, 1:10] = 1.0  # top-left corner, away from center readout mask
     ipt_patterns = (
-        G1 * 0.1,           # make cues not tiny vs baseline
-        G2 * 0.1,
+        mask_input*G1 * 0.1,           # make cues not tiny vs baseline
+        mask_input*G2 * 0.1,
         (np.random.randn(N, N).astype(np.float32) * 0.1)          # go cue
     )
 
     # Reservoir params
     params = {
         "dt": 0.001,
-        "K": 20.0, ### 20 seems great!!
+        "K": 20.0, ### 20 seems great for small network; 30 for larger, but more chaotic
         "tau": np.array([0.01, 0.01]),
         "u": [10.0, 0.0],
         "J0": np.array([[1, -4], [2, -2]]),
@@ -422,7 +432,10 @@ if __name__ == "__main__":
         "npf": 1,
     }
 
+    ### full readout
     model = Relu2DSpatialReservoir(N, T, output_dim, device, params)
+    ### testing local mask
+    # model = Relu2DSpatialReservoir(N, T, output_dim, device, params, readout_masked=True, local_dim=10)
 
 
     ### test to observe spontaneous activity ###
@@ -463,7 +476,7 @@ if __name__ == "__main__":
         return np.arange(go_start, T_, dtype=np.int64)
 
     # Collect (separately) for out and mem (best practice)
-    n_train = 30
+    n_train = 30  #50
     lam = 1e-2*1  ### this matters
 
     # Collect for mem
