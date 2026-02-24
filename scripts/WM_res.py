@@ -5,6 +5,7 @@ Reservoir computing (ESN-style) training for your 2D spatial reservoir:
 """
 
 import math
+from turtle import rt
 import numpy as np
 import torch
 import torch.nn as nn
@@ -492,7 +493,9 @@ if __name__ == "__main__":
     set_readouts_from_ridge(model, Wout, Wmem)
 
     # Evaluate
-    lo, lm = eval_model(model, lambda: trial_fn(lr=None), n_trials=10)
+    mask = np.zeros((T,), dtype=bool)
+    mask[go_start:] = True
+    lo, lm = eval_model(model, lambda: trial_fn(lr=None), n_trials=10, mask=mask)
     print(f"Ridge eval MSE: out={lo:.4g}, mem={lm:.4g}")
 
     # %% Visualize a couple of trials
@@ -509,7 +512,7 @@ if __name__ == "__main__":
         plt.plot(target_mem.cpu().numpy().squeeze(), 'r')
 
         target_out, target_mem, space_stim, input_traj = make_wm_trial(N, T, delay_period=delay_period, cue_interval=cue_interval, lr_trial=1, inpt_patterns=ipt_patterns)
-        output, mem, _ = model(space_stim)
+        output, mem, re_all = model(space_stim)
         plt.subplot(2,1,1)
         plt.plot(output.detach().cpu().numpy().squeeze(), 'b--')
         plt.plot(target_out.cpu().numpy().squeeze(), 'b')
@@ -530,4 +533,18 @@ if __name__ == "__main__":
     plt.title('Memory Readout vs Target')
     plt.ylabel('Output')
     plt.legend(['Output', 'Target'])
+    plt.show()
+
+    ### PCA analysis of re_all
+    X = re_all.detach().cpu().numpy().reshape(N*N, T).T  # (T, N)
+    Xc = X - X.mean(axis=0, keepdims=True)  # center per neuron
+    C = np.cov(Xc, rowvar=False, bias=False)  # (N, N)
+    U, s, Vt = np.linalg.svd(C, full_matrices=False)  # s are eigenvalues (variances)
+    var_ratio = s / s.sum()
+    plt.figure()
+    plt.plot(np.cumsum(var_ratio))
+    plt.xlabel("Number of PCs")
+    plt.ylabel("Cumulative Variance Explained")
+    plt.title("PCA of RNN States")
+    plt.grid(True)
     plt.show()
