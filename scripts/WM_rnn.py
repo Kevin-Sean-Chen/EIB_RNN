@@ -262,10 +262,18 @@ if __name__ == "__main__":
         (np.random.randn(ll, ll).astype(np.float32).reshape(-1) * 0.1),  # go cue (shared)
     )
 
+    ### make random RNN, with row balance
+    Jij = torch.randn(N, N, device=device, dtype=torch.float32) * (1.7 / math.sqrt(N)) #40 #20, 30, 40, 80
+    ### row balance, (testing)
+    Jij = Jij - Jij.mean(dim=1, keepdim=True)
+    ### may still explod ###
+    # will need to implement the true EI network
+    ########################
+
     reluRNN_params = {
         'dt': 0.001,
         'tau': 0.005,
-        'J0': torch.randn(N, N, device=device, dtype=torch.float32) * (40.1 / math.sqrt(N*N)), ### tune this! #35 for Relu
+        'J0': Jij, ### tune this! #35 for Relu
         'u': 0,
         'fb_gain': 0.0,  # OFF for ridge training
     }
