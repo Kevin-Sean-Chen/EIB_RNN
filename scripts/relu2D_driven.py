@@ -54,6 +54,24 @@ def make_2D_stim_with_drift(N, lt, time_f, space_f, drift_rate, device='cpu'):
 
     return I_xyt, drift_series
 
+def make_2D_stim_moving_dot(N, lt, dot_size, drift_rate, device='cpu'):
+    # spatial grid
+    x = torch.linspace(0, 1, N, device=device)
+    y = torch.linspace(0, 1, N, device=device)
+    X, Y = torch.meshgrid(x, y, indexing='ij')
+
+    # base Gaussian dot
+    base_dot = torch.exp(-0.5 * ((X - 0.5)**2 + (Y - 0.5)**2) / dot_size**2)
+
+    # stimulus movie
+    I_xyt = torch.zeros((N, N, lt), device=device)
+
+    for t in range(lt):
+        shift = int(drift_rate * t)
+        I_xyt[:, :, t] = torch.roll(base_dot, shifts=(0, shift), dims=(0, 1))
+
+    return I_xyt
+
 def relu2D_driven_step(re, ri, N, dt, npf, ntype, K, tau, u, J0, sigma, input_pattern):
     if ntype != 'relu_gaussian':
         raise ValueError("Only 'relu_gaussian' ntype is supported in this version.")
@@ -135,6 +153,7 @@ def relu2D_driven(N, dt, Nstep_init, Nstep, npf, ntype, K, tau, u, J0, sigma, in
 if __name__ == "__main__":
     # stimulation parameters
     SAVE = False
+    MOVE_DOT = True
     L = 31
     time_f, space_f, drift_rate, device = 1.0, 2.5*3, 0.0, 'cpu'
     N = L
@@ -143,14 +162,16 @@ if __name__ == "__main__":
     Nstep = 1 * 10 ** 3
     npf = 1
 
+    ### for drifting pattern
     I_xyt, drift_series = make_2D_stim_with_drift(N, Nstep, time_f, space_f, drift_rate, device=device)
-
-    I_xyt = I_xyt*1*0
+    ### for moving dot pattern
+    I_xyt = make_2D_stim_moving_dot(N, Nstep, dot_size=0.05, drift_rate=.5, device=device)
+    I_xyt = I_xyt*20
 
     ### network parameters
     ntype = 'relu_gaussian'
     J0 = np.array([[1, -4], [2, -2]])
-    K = 10 ** 2
+    K = 1#0 ** 1
     tau = np.array([.01, .01])
     u = np.array([10, 0.0])
     sigma = 0.05 * np.array([1, np.sqrt(2)])
@@ -246,6 +267,38 @@ if __name__ == "__main__":
 
     plt.show()
 
+    ### if this is for moving dot
+    if MOVE_DOT:
+        # analyze center of mass of I_xyt and re_all to see if they track each other
+        # Use physical y coordinates in [0, 1]; use torch.arange(N, ...) instead if you want pixel units
+        y_coords = torch.linspace(0, 1, N, device=device, dtype=I_xyt.dtype).view(1, N, 1)  # shape (1, N, 1)
+
+        # COM_y for input stimulus
+        num_input = (I_xyt * y_coords).sum(dim=(0, 1))          # shape (T,)
+        den_input = I_xyt.sum(dim=(0, 1))                       # shape (T,)
+        com_input = num_input / (den_input + 1e-8)              # shape (T,)
+
+        # COM_y for response tensor
+        re_all_t = torch.tensor(re_all, device=device, dtype=torch.float32)
+        y_coords_re = y_coords.to(re_all_t.dtype)
+
+        num_re = (re_all_t * y_coords_re).sum(dim=(0, 1))       # shape (T,)
+        den_re = re_all_t.sum(dim=(0, 1))                       # shape (T,)
+        com_re = num_re / (den_re + 1e-8)                       # shape (T,)
+
+        ### normalize COM to be between 0 and 1 (optional, since we already used physical y coordinates)
+        eps = 1e-8
+        com_input = 2 * (com_input - com_input.min()) / (com_input.max() - com_input.min() + eps) - 1
+        com_re = 2 * (com_re - com_re.min()) / (com_re.max() - com_re.min() + eps) - 1
+        plt.figure()
+        plt.plot(tt, com_input.cpu().numpy(), label='Input Center of Mass')
+        plt.plot(tt, com_re.cpu().numpy(), label='re_all Center of Mass')
+        plt.xlabel('Time')
+        plt.ylabel('Center of Mass (x-axis)')
+        plt.legend()
+        plt.title('Tracking of Center of Mass')
+        plt.show()
+
     # --- Save animation using tif ---
 
     # Example: Create dummy 3D data
@@ -280,3 +333,5 @@ if __name__ == "__main__":
         # Display in notebook (optional)
         from IPython.display import display, Image as IPImage
         display(IPImage(filename=output_path))
+
+        
