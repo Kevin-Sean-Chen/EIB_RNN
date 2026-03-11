@@ -239,6 +239,119 @@ def set_readouts_from_ridge(model, Wout, Wmem):
         # Note: biases stored in last row of Wout/Wmem; you could store separately if needed
 
 
+def make_strict_dale_exact_row_balance(
+    N: int,
+    g: float = 1.7,
+    fE: float = 0.8,
+    p: float = 1.0,
+    w_scale: float = 1.0,          # base magnitude scale before g/sqrt(N)
+    eps: float = 1e-8,
+    device: str = "cpu",
+    dtype: torch.dtype = torch.float32,
+):
+    """
+    Strict Dale: E columns >=0, I columns <=0.
+    Exact row balance: for each postsynaptic neuron i,
+        sum_j J[i,j] = 0   (up to eps)
+    achieved by row-wise scaling of inhibitory inputs.
+
+    Caveat: row-wise scaling makes inhibitory strengths depend on postsynaptic neuron,
+    which is biologically plausible (different I synapses onto different targets),
+    but it's not a single global inhibitory gain anymore.
+    """
+
+    assert 0.0 < fE < 1.0
+    NE = int(round(fE * N))
+    NI = N - NE
+
+    # assign types (columns)
+    is_E = torch.zeros(N, device=device, dtype=torch.bool)
+    is_E[:NE] = True
+    perm = torch.randperm(N, device=device)
+    is_E = is_E[perm]
+    is_I = ~is_E
+
+    E_cols = torch.nonzero(is_E, as_tuple=False).squeeze(1)
+    I_cols = torch.nonzero(is_I, as_tuple=False).squeeze(1)
+
+    # sparsity
+    if p < 1.0:
+        mask = (torch.rand(N, N, device=device) < p).to(dtype)
+    else:
+        mask = torch.ones(N, N, device=device, dtype=dtype)
+
+    # sample positive magnitudes
+    J = torch.zeros(N, N, device=device, dtype=dtype)
+    J[:, E_cols] = torch.relu(torch.randn(N, NE, device=device, dtype=dtype)) * w_scale
+    J[:, I_cols] = -torch.relu(torch.randn(N, NI, device=device, dtype=dtype)) * w_scale
+    J = J * mask
+
+    # exact row balance by scaling inhibitory part per row
+    JE = J[:, E_cols]                    # >= 0
+    JI = J[:, I_cols]                    # <= 0
+    sumE = JE.sum(dim=1, keepdim=True)   # (N,1) >= 0
+    sumI = (-JI).sum(dim=1, keepdim=True)  # magnitude of inhibition, (N,1) >= 0
+
+    # scale inhibitory magnitudes so sumE == sumI per row
+    alpha = sumE / (sumI + eps)          # (N,1)
+    J[:, I_cols] = -alpha * (-J[:, I_cols])
+
+    # final scale
+    J = (g / math.sqrt(N)) * J
+
+    return J ##, is_E
+
+def make_dense_dale_exact_row_balance_J(
+    N: int,
+    K: float,
+    g: float = 1.0,
+    fE: float = 0.8,
+    sigma_E: float = 1.0,
+    sigma_I: float = 1.0,
+    w_scale: float = 1.0,
+    eps: float = 1e-8,
+    device="cpu",
+    dtype=torch.float32,
+):
+    """
+    Dense Dale EI matrix with exact row-balance: sum_j J[i,j] = 0 for every i.
+    K is ONLY used in 1/sqrt(K) scaling (strong coupling).
+    """
+    assert 0 < fE < 1
+    NE = int(round(fE * N))
+    NI = N - NE
+
+    is_E = torch.zeros(N, device=device, dtype=torch.bool)
+    is_E[:NE] = True
+    perm = torch.randperm(N, device=device)
+    is_E = is_E[perm]
+    is_I = ~is_E
+
+    E_cols = torch.nonzero(is_E).squeeze(1)
+    I_cols = torch.nonzero(is_I).squeeze(1)
+
+    J = torch.zeros(N, N, device=device, dtype=dtype)
+
+    # positive magnitudes
+    JE = torch.relu(sigma_E * torch.randn(N, NE, device=device, dtype=dtype)) * w_scale
+    JI = torch.relu(sigma_I * torch.randn(N, NI, device=device, dtype=dtype)) * w_scale
+
+    J[:, E_cols] = +JE
+    J[:, I_cols] = -JI
+
+    # exact row balance by row-wise scaling of inhibitory magnitudes
+    sumE = J[:, E_cols].sum(dim=1, keepdim=True)          # (N,1) >=0
+    sumI = (-J[:, I_cols]).sum(dim=1, keepdim=True)       # (N,1) >=0
+    alpha = sumE / (sumI + eps)
+    J[:, I_cols] = -alpha * (-J[:, I_cols])
+
+    # strong coupling scaling
+    J = (g / math.sqrt(K)) * J
+
+    return J, is_E
+
+
+
 if __name__ == "__main__":
     # --- Setup for training ---
     ll = 23
@@ -263,12 +376,25 @@ if __name__ == "__main__":
     )
 
     ### make random RNN, with row balance
-    Jij = torch.randn(N, N, device=device, dtype=torch.float32) * (1.7 / math.sqrt(N)) #40 #20, 30, 40, 80
+    Jij = torch.randn(N, N, device=device, dtype=torch.float32) * (1.5 / math.sqrt(N)) #1.7
     ### row balance, (testing)
-    Jij = Jij - Jij.mean(dim=1, keepdim=True)
+    # Jij = Jij - Jij.mean(dim=1, keepdim=True)
     ### may still explod ###
+
     # will need to implement the true EI network
     ########################
+    # Jij = make_strict_dale_exact_row_balance(N=N, g=1., fE=0.8, device=device)
+    # K = 4
+    # Jij = Jij*np.sqrt(K)  # strong coupling scaling
+    # inpt_patterns = tuple(pat * np.sqrt(K) for pat in inpt_patterns)
+    # Jij = make_dense_dale_exact_row_balance_J(N=N, K=N//1, g=1., fE=0.8, sigma_E=1.0, sigma_I=4.0, device=device)[0]
+    ########################
+
+    # Jij = Jij.T
+    # print(Jij.sum(dim=0))  # should be close to zero for all rows
+    plt.figure()
+    plt.imshow(Jij.cpu().numpy())
+    plt.show()
 
     reluRNN_params = {
         'dt': 0.001,
@@ -297,7 +423,7 @@ if __name__ == "__main__":
         return np.arange(go_start, T_, dtype=np.int64)
 
     # Collect training data
-    n_train = 30
+    n_train = 50
     lam = 1e-2
 
     print("Collecting training data...")
