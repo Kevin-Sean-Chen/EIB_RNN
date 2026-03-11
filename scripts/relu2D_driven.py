@@ -124,7 +124,7 @@ def relu2D_driven(N, dt, Nstep_init, Nstep, npf, ntype, K, tau, u, J0, sigma, in
         str_temp = str(round(n1 * npf / Nstep_init, 5))
         print(str_temp, end='', flush=True)
 
-        input_pattern_t = input_pattern[:, :, n1 - 1]*0 ### no need to use input pattern in initialization
+        input_pattern_t = input_pattern[:, :, 0]*0 ### no need to use input pattern in initialization
         re, ri = relu2D_driven_step(re, ri, N, dt, npf, ntype, K, tau, u, J0, sigma, input_pattern_t)
 
     print('\nrunning simulation... ', end='', flush=True)
@@ -159,19 +159,19 @@ if __name__ == "__main__":
     N = L
     dt = 0.0001
     Nstep_init = 1 * 10 ** 3
-    Nstep = 1 * 10 ** 3
+    Nstep = 1 * 10 ** 3 //3
     npf = 1
 
     ### for drifting pattern
     I_xyt, drift_series = make_2D_stim_with_drift(N, Nstep, time_f, space_f, drift_rate, device=device)
     ### for moving dot pattern
-    I_xyt = make_2D_stim_moving_dot(N, Nstep, dot_size=0.05, drift_rate=.5, device=device)
-    I_xyt = I_xyt*20
+    I_xyt = make_2D_stim_moving_dot(N, Nstep, dot_size=0.05, drift_rate=1.5, device=device)
+    I_xyt = I_xyt*10
 
     ### network parameters
     ntype = 'relu_gaussian'
     J0 = np.array([[1, -4], [2, -2]])
-    K = 1#0 ** 1
+    K = 10 ** 2
     tau = np.array([.01, .01])
     u = np.array([10, 0.0])
     sigma = 0.05 * np.array([1, np.sqrt(2)])
@@ -297,6 +297,32 @@ if __name__ == "__main__":
         plt.ylabel('Center of Mass (x-axis)')
         plt.legend()
         plt.title('Tracking of Center of Mass')
+        plt.show()
+
+        ### plot the cross correlation of the two COM time series
+        from scipy.signal import correlate
+        x = com_input.detach().cpu().numpy().astype(float)
+        y = com_re.detach().cpu().numpy().astype(float)
+
+        x0 = x - x.mean()
+        y0 = y - y.mean()
+
+        raw_corr = correlate(x0, y0, mode='full')
+        lags = np.arange(-len(x) + 1, len(x))
+
+        # number of overlapping points at each lag
+        overlap = len(x) - np.abs(lags)
+
+        # unbiased-by-overlap normalization
+        corr_unbiased = raw_corr / overlap
+
+        plt.figure()
+        plt.plot(lags, corr_unbiased)
+        plt.xlim([-20, 20])
+        plt.xlabel('Lag')
+        plt.ylabel('Cross-covariance / overlap')
+        plt.title('Overlap-normalized cross-correlation')
+        plt.axhline(0, linestyle='--', linewidth=1)
         plt.show()
 
     # --- Save animation using tif ---
