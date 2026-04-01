@@ -26,7 +26,7 @@ time_f, space_f, drift_rate, device = 0.1*1, 2.5*2, 0.0, 'cpu'
 N = L
 dt = 0.0001
 Nstep_init = 1 * 10 ** 3 //3
-Nstep = 1 * 10 ** 3 //3
+Nstep = 1 * 10 ** 3 //3  ### 150 for speed-accuracy comparison; 1*10**3//3 for visualizing tracking dynamics
 npf = 1
 
 ### network parameters
@@ -105,10 +105,21 @@ I_xyt = I_xyt*10
 
 from scipy.signal import correlate
 
+### for speed-accuaracy comparison
+# reps = 10
+# SAs = np.zeros((len(Ks), 2, reps)) ### speed and accuracy arrays
+
+# for rr in range(reps):
+#     corr_coeffs = []  # scalar Pearson correlation coefficients (one per K)
+#     cross_corrs = []  ### lagged cross-corr arrays between COM and the signal (one array per K)
+#     trackings = [] ### raw COM time series
+
 for kk in range(len(Ks)):
     ### neural dynamics
     K = Ks[kk]    
     print(f"Running simulation for K={K}...")
+    re0 = r0[0] + 0.05 * np.random.rand(L, L)
+    ri0 = r0[1] + 0.08 * np.random.rand(L, L)
     re_all, ri_all = relu2D_driven(L, dt, Nstep_init, Nstep, npf, ntype, K, tau, u, J0, sigma, I_xyt, re0, ri0)
     re_all_reshaped = re_all.reshape(Nstep // npf, L * L)
     readout = re_all_reshaped @ w_readout
@@ -157,6 +168,16 @@ for kk in range(len(Ks)):
 
     cross_corrs.append(corr_unbiased)
 
+    # for kk in range(len(Ks)):
+    #     ### find lag values between -20 and 20
+    #     # get integer indices into `lags` for the window [-20, 20]
+    #     lags_subset = np.where((lags >= -20) & (lags <= 20))[0]
+    #     com_re = cross_corrs[kk][lags_subset]
+    #     peak_idx = np.argmax(com_re)
+    #     peak_value = com_re[peak_idx]
+    #     SAs[kk, 0, rr] = lags[lags_subset][peak_idx]  ### speed: time to peak
+    #     SAs[kk, 1, rr] = peak_value  ### accuracy: height of the peak
+
 # %% plotting
 plt.figure(figsize=(12, 6))
 ### plot responses labeled by K
@@ -178,3 +199,14 @@ plt.xlim([-20, 20])
 plt.title('Cross-Correlation of COM Time Series for Different K')
 plt.legend()
 plt.show()
+
+# # %% plot speed and accuracy
+# # print(SAs)
+# plt.figure(figsize=(8, 6))
+# for kk in range(len(Ks)):
+#     plt.scatter(SAs[kk, 0, :], SAs[kk, 1, :], label=f"K={Ks[kk]}")
+# plt.xlabel('Time to Peak (s)')
+# plt.ylabel('Peak COM Value')
+# plt.title('Speed and Accuracy of COM Tracking for Different K')
+# plt.legend()
+# plt.show()
