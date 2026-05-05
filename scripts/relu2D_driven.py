@@ -54,21 +54,81 @@ def make_2D_stim_with_drift(N, lt, time_f, space_f, drift_rate, device='cpu'):
 
     return I_xyt, drift_series
 
-def make_2D_stim_moving_dot(N, lt, dot_size, drift_rate, device='cpu'):
+def make_2D_stim_moving_dot(N, lt, dot_size, drift_rate, angle=0.0, device='cpu'):
     # spatial grid
     x = torch.linspace(0, 1, N, device=device)
     y = torch.linspace(0, 1, N, device=device)
     X, Y = torch.meshgrid(x, y, indexing='ij')
 
-    # base Gaussian dot
-    base_dot = torch.exp(-0.5 * ((X - 0.5)**2 + (Y - 0.5)**2) / dot_size**2)
+    # base Gaussian dot (centered)
+    base_dot = torch.exp(-0.5 * ((X - 0.5) ** 2 + (Y - 0.5) ** 2) / dot_size ** 2)
+
+    # unit direction vector from angle
+    cos_a = float(np.cos(angle))
+    sin_a = float(np.sin(angle))
 
     # stimulus movie
     I_xyt = torch.zeros((N, N, lt), device=device)
 
     for t in range(lt):
-        shift = int(drift_rate * t)
-        I_xyt[:, :, t] = torch.roll(base_dot, shifts=(0, shift), dims=(0, 1))
+        # continuous shift along x,y (normalized units -> convert to grid shifts)
+        shift_x_f = drift_rate * t * cos_a
+        shift_y_f = drift_rate * t * sin_a
+
+        # convert to integer pixel shifts (rows, cols) -> (shift_y, shift_x)
+        shift_x = int(round(shift_x_f))
+        shift_y = int(round(shift_y_f))
+
+        I_xyt[:, :, t] = torch.roll(base_dot, shifts=(shift_y, shift_x), dims=(0, 1))
+
+    return I_xyt
+
+
+def make_2D_stim_two_dots(N, lt, dot_size, drift_rate, angle=0.0, separation=0.1, device='cpu'):
+    """
+    Two Gaussian dots moving with a given angle.
+
+    Args:
+        N (int): spatial grid size (NxN)
+        lt (int): number of time steps
+        dot_size (float): Gaussian sigma in normalized coordinates (0..1)
+        drift_rate (float): pixels (grid units) per frame along the reference horizontal direction
+        angle (float): motion angle in radians relative to +x (horizontal)
+        separation (float): initial separation between dots (fraction of image size)
+        device (str): 'cpu' or 'cuda'
+
+    Returns:
+        I_xyt (torch.Tensor): shape (N, N, lt) stimulus movie with two moving dots
+    """
+    x = torch.linspace(0, 1, N, device=device)
+    y = torch.linspace(0, 1, N, device=device)
+    X, Y = torch.meshgrid(x, y, indexing='ij')
+
+    # initial centers: place two dots horizontally separated around center
+    cx = 0.5
+    cy = 0.5
+    dx_sep = separation / 2.0
+    c1 = (cx - dx_sep, cy)
+    c2 = (cx + dx_sep, cy)
+
+    base1 = torch.exp(-0.5 * ((X - c1[0])**2 + (Y - c1[1])**2) / dot_size**2)
+    base2 = torch.exp(-0.5 * ((X - c2[0])**2 + (Y - c2[1])**2) / dot_size**2)
+    base = base1 + base2
+
+    I_xyt = torch.zeros((N, N, lt), device=device)
+
+    cos_a = float(np.cos(angle))
+    sin_a = float(np.sin(angle))
+
+    for t in range(lt):
+        # drift_rate is in grid pixels per frame along +x; compute integer shifts
+        shift_float_x = drift_rate * t * cos_a
+        shift_float_y = drift_rate * t * sin_a
+        shift_x = int(round(shift_float_x))
+        shift_y = int(round(shift_float_y))
+
+        # torch.roll expects shifts per dimension: (rows_shift, cols_shift) => (shift_y, shift_x)
+        I_xyt[:, :, t] = torch.roll(base, shifts=(shift_y, shift_x), dims=(0, 1))
 
     return I_xyt
 
@@ -167,11 +227,17 @@ if __name__ == "__main__":
     ### for moving dot pattern
     I_xyt = make_2D_stim_moving_dot(N, Nstep, dot_size=0.05, drift_rate=1.5, device=device)
     I_xyt = I_xyt*10
+    ### for two dots
+    I_xyt1 = make_2D_stim_moving_dot(N, Nstep, dot_size=0.07, drift_rate=1.1, angle=0, device=device)
+    I_xyt2 = make_2D_stim_moving_dot(N, Nstep, dot_size=0.07, drift_rate=1.1, angle=np.pi/2, device=device)
+    I_xyt = I_xyt1 + I_xyt2
+    I_xyt = I_xyt*5
+    I_xyt[:,:,len(I_xyt[0,0,:])//4:] = 0 ### only first half with stimulus, second half without stimulus to see the difference 
 
     ### network parameters
     ntype = 'relu_gaussian'
     J0 = np.array([[1, -4], [2, -2]])
-    K = 10 ** 2
+    K = 10 ** 1
     tau = np.array([.01, .01])
     u = np.array([10, 0.0])
     sigma = 0.05 * np.array([1, np.sqrt(2)])
