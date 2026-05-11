@@ -108,13 +108,14 @@ mask[go_start:] = True
 for kk in range(len(Ks)):
 
     ### for changing  K
-    # K = Ks[kk]
-    # print(f"Training with K={K}...")
-    # params['K'] = K
+    K = Ks[kk]
+    print(f"Training with K={K}...")
+    params['K'] = K
     
     ### for changing N
-    N = Ns[kk]
-    print(f"Training with N={N}...")
+    # N = Ns[kk]
+    # print(f"Training with N={N}...")
+
     # Make model
     model = Relu2DSpatialReservoir(N, T, output_dim, device, params)
 
@@ -140,26 +141,26 @@ for kk in range(len(Ks)):
     errs_K[kk, 1] = lm
 
 # %% Plotting
-# plt.figure(figsize=(6, 4))
-# plt.plot(Ks, errs_K[:, 0], marker='o', label='Output MSE')
-# plt.plot(Ks, errs_K[:, 1], marker='o', label='Memory MSE')
-# plt.xscale('log')
-# # plt.xlabel('Strength K')
-# plt.xlabel('Reservoir Strength K')
-# plt.ylabel('MSE')
-# plt.title('Ridge Regression Performance vs K')
-# plt.legend()
-# plt.grid(True, which="both", ls="--")
-# plt.show()
-
 plt.figure(figsize=(6, 4))
-plt.plot(Ns, errs_K[:, 0], marker='o', label='Output MSE')
-plt.plot(Ns, errs_K[:, 1], marker='o', label='Memory MSE')
+plt.plot(Ks, errs_K[:, 0], marker='o', label='Output MSE')
+plt.plot(Ks, errs_K[:, 1], marker='o', label='Memory MSE')
 plt.xscale('log')
 # plt.xlabel('Strength K')
-plt.xlabel('Reservoir Size N')
+plt.xlabel('Reservoir Strength K')
 plt.ylabel('MSE')
-plt.title('Ridge Regression Performance vs N')
+plt.title('Ridge Regression Performance vs K')
 plt.legend()
 plt.grid(True, which="both", ls="--")
 plt.show()
+
+# plt.figure(figsize=(6, 4))
+# plt.plot(Ns, errs_K[:, 0], marker='o', label='Output MSE')
+# plt.plot(Ns, errs_K[:, 1], marker='o', label='Memory MSE')
+# plt.xscale('log')
+# # plt.xlabel('Strength K')
+# plt.xlabel('Reservoir Size N')
+# plt.ylabel('MSE')
+# plt.title('Ridge Regression Performance vs N')
+# plt.legend()
+# plt.grid(True, which="both", ls="--")
+# plt.show()

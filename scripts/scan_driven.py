@@ -100,7 +100,7 @@ Ks = [0.1, 1, 10, 100, 1000]
 corr_coeffs = []  # scalar Pearson correlation coefficients (one per K)
 cross_corrs = []  ### lagged cross-corr arrays between COM and the signal (one array per K)
 trackings = [] ### raw COM time series
-I_xyt = make_2D_stim_moving_dot(N, Nstep, dot_size=0.1, drift_rate=.7, device=device)  ###0.05; 1.5 ## 0.11, 0.7
+I_xyt = make_2D_stim_moving_dot(N, Nstep, dot_size=0.2, drift_rate=.7, device=device)  ###0.05; 1.5 ## 0.11, 0.7
 I_xyt = I_xyt*10
 
 from scipy.signal import correlate

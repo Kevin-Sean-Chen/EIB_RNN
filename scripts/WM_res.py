@@ -26,12 +26,22 @@ from scripts.relu2D_disorder import gabor2d
 # 2D Gaussian kernels
 # -----------------------------
 ### old, with explicit normalization ###
-def _make_1d_periodic_gaussian_weights(N: int, sigma: float, device, dtype):
+def _make_1d_periodic_gaussian_weights(N: int, sigma: float, device, dtype, bias: float = 0.0):
+    """
+    Discrete periodic Gaussian weights on a 1D ring of length N.
+
+    Parameters
+    - N: size
+    - sigma: std (in same units used by original code)
+    - bias: optional shift of the kernel center (in the same index units as x)
+    """
     x = torch.arange(-(N - 1) // 2, (N - 1) // 2 + 1, device=device, dtype=dtype)
     dx = 1.0 / N
     wrap = int(math.ceil(10.0 * float(sigma))) if sigma > 0 else 0
     k = torch.arange(-wrap, wrap + 1, device=device, dtype=dtype)
-    dist = dx * (x[:, None] + k[None, :])
+    # apply bias by shifting the center; matches relu2D_asym implementation where
+    # the x+k term is shifted by `bias`.
+    dist = dx * (x[:, None] + k[None, :] - float(bias))
     gauss = torch.exp(-0.5 * (dist / sigma) ** 2) / (math.sqrt(2 * math.pi) * sigma)
     w = (dx * gauss).sum(dim=1)
     w = w / (w.sum() + 1e-12)
@@ -60,8 +70,8 @@ def _make_1d_periodic_gaussian_weights(N: int, sigma: float, device, dtype):
 #     w = torch.tensor(w, dtype=dtype, device=device)
 #     return w
 
-def _make_2d_separable_kernel(N: int, sigma: float, device, dtype):
-    w = _make_1d_periodic_gaussian_weights(N, sigma, device=device, dtype=dtype)
+def _make_2d_separable_kernel(N: int, sigma: float, device, dtype, bias: float = 0.0):
+    w = _make_1d_periodic_gaussian_weights(N, sigma, device=device, dtype=dtype, bias=bias)
     K2 = torch.outer(w, w)
     return K2[None, None, :, :]  # (1,1,N,N)
 
@@ -95,8 +105,11 @@ class Relu2DSpatialReservoir(nn.Module):
         self.sigma_e = float(sigma[0])
         self.sigma_i = float(sigma[1])
 
-        Ke = _make_2d_separable_kernel(self.N, self.sigma_e, self.device, torch.float32)
-        Ki = _make_2d_separable_kernel(self.N, self.sigma_i, self.device, torch.float32)
+        # Optional kernel bias to shift the center of the spatial kernels
+        # (useful to introduce asymmetry similar to relu2D_asym.py)
+        self.kernel_bias = float(params.get('kernel_bias', 0.0))
+        Ke = _make_2d_separable_kernel(self.N, self.sigma_e, self.device, torch.float32, bias=self.kernel_bias)
+        Ki = _make_2d_separable_kernel(self.N, self.sigma_i, self.device, torch.float32, bias=self.kernel_bias)
         self.register_buffer("Ke", Ke)
         self.register_buffer("Ki", Ki)
 
@@ -421,7 +434,7 @@ if __name__ == "__main__":
     # Reservoir params
     params = {
         "dt": 0.001,
-        "K": 20.0, ### 20 seems great for small network; 30 for larger, but more chaotic
+        "K": 25.0, ### 20 seems great for small network; 30 for larger, but more chaotic
         "tau": np.array([0.01, 0.01]),
         "u": [10.0, 0.0],
         "J0": np.array([[1, -4], [2, -2]]),
@@ -431,6 +444,7 @@ if __name__ == "__main__":
         "stim_gain": 10.0,                # the input strength matters
         "init_scale": 0.1,
         "npf": 1,
+        'kernel_bias': 4/N,              # 0.0  #optional bias to shift the center of the spatial kernels (can help with asymmetry)
     }
 
     ### full readout
