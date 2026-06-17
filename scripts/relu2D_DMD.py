@@ -486,7 +486,7 @@ if __name__ == "__main__":
 
     # Network parameters
     J0 = np.array([[1, -4], [2, -2]])
-    K = 10 **1
+    K = 10 ** 2
     tau = np.array([.01, .01])
     u = np.array([10, 0])
     sigma = 0.05 * np.array([1, np.sqrt(2)])
@@ -504,23 +504,23 @@ if __name__ == "__main__":
     yy = np.arange(1, L + 1) / L
 
     # Run simulation
-    # re_all, ri_all, mue_all, mui_all = relu2D(L, dt, Nstep_init, Nstep, npf, ntype, K, tau, u, J0, sigma, J2, J3, re0, ri0, g, r_and_mu=True)
+    re_all, ri_all, mue_all, mui_all = relu2D(L, dt, Nstep_init, Nstep, npf, ntype, K, tau, u, J0, sigma, J2, J3, re0, ri0, g, r_and_mu=True)
 
-    bias = 5*1/N #2.0
-    I_xyt = torch.zeros((N, N, Nstep))  ### no input
-    re_all, ri_all = relu2D_bias(L, dt, Nstep_init, Nstep, npf, ntype, K, tau, u, J0, sigma, I_xyt, re0, ri0, bias)
+    # bias = 20*1/N #2.0
+    # I_xyt = torch.zeros((N, N, Nstep))  ### no input
+    # re_all, ri_all = relu2D_bias(L, dt, Nstep_init, Nstep, npf, ntype, K, tau, u, J0, sigma, I_xyt, re0, ri0, bias)
 
 
 
     ### DMD analysis
     res = dmd_spatial_modes(
-                            re_all, #mue_all, #re_all,
+                            mue_all, #mue_all, #re_all,
                             dt=1,
                             dx=1.0,
                             dy=1.0,
                             rank=40,
                             n_show=8,
-                            lag=10,
+                            lag=1, ##50
                         )
     plt.figure()
     plt.scatter(res["dominant_k"], np.abs(res["omega"]), c=res["growth"])
