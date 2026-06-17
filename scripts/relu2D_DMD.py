@@ -15,6 +15,18 @@ from PIL import Image
 from scipy.ndimage import sobel, gaussian_filter
 from numpy.fft import fft2, fftfreq
 
+### import function from relu2D_asym
+### import WM task for space
+import sys
+from pathlib import Path
+# add repo root to sys.path so `scripts` files can import each other
+repo_root = Path(__file__).resolve().parents[1]
+sys.path.append(str(repo_root))
+
+# from scripts.WM_task import make_wm_trial
+from scripts.relu2D_asym import relu2D_bias
+
+
 # relu2D_step function to perform one step of the ReLU 2D simulation
 # This function uses PyTorch for efficient computation, especially on GPU.
 # %% functional
@@ -27,6 +39,7 @@ def dmd_spatial_modes(
     rank=30,
     n_show=8,
     subtract_mean=True,
+    lag=1
 ):
     """
     DMD analysis for r(x,y,t).
@@ -69,8 +82,8 @@ def dmd_spatial_modes(
     # Build data matrices
     # -----------------------------
     X = r0.reshape(T, Nx * Ny).T
-    X1 = X[:, :-1]
-    X2 = X[:, 1:]
+    X1 = X[:, :-lag]
+    X2 = X[:, lag:]
 
     # -----------------------------
     # SVD truncation
@@ -108,10 +121,15 @@ def dmd_spatial_modes(
 
     dominant_k = np.zeros(rank)
 
+    # for j in range(rank):
+    #     F = np.abs(fft2(modes[j])) ** 2
+    #     idx = np.unravel_index(np.argmax(F), F.shape)
+    #     dominant_k[j] = Kmag[idx]
+
     for j in range(rank):
-        F = np.abs(fft2(modes[j])) ** 2
-        idx = np.unravel_index(np.argmax(F), F.shape)
-        dominant_k[j] = Kmag[idx]
+        P = np.abs(fft2(modes[j]))**2
+
+        dominant_k[j] = np.sum(Kmag * P) / np.sum(P)
 
     # Sort modes by oscillation frequency
     order = np.argsort(np.abs(omega))[::-1]
@@ -399,7 +417,7 @@ if __name__ == "__main__":
     N = L
     dt = 0.0001
     Nstep_init = 1 * 10 ** 3
-    Nstep = 3 * 10 ** 3
+    Nstep = 2 * 10 ** 3
     npf = 1
     g = .0  ### disorder strength
     ### test with low-rank structure
@@ -453,7 +471,7 @@ if __name__ == "__main__":
     G = gabor2d(N, f=2, theta=np.deg2rad(30), gamma=0.1, phi=.5, normalize=True) ### 0.5,1,1.5
     G = torch.tensor(G, dtype=mv.dtype, device=mv.device).reshape(-1, 1)
     nv = G*1  ### use gabor as nv
-    g = (mv*1, nv*.1)
+    g = (mv*0, nv*.0)
     # g = (mv, nv*.5, mv2, nv2*5.)#, G)  ### pass in as a tuple
 
 
@@ -486,17 +504,23 @@ if __name__ == "__main__":
     yy = np.arange(1, L + 1) / L
 
     # Run simulation
-    re_all, ri_all = relu2D(L, dt, Nstep_init, Nstep, npf, ntype, K, tau, u, J0, sigma, J2, J3, re0, ri0, g)
+    # re_all, ri_all, mue_all, mui_all = relu2D(L, dt, Nstep_init, Nstep, npf, ntype, K, tau, u, J0, sigma, J2, J3, re0, ri0, g, r_and_mu=True)
+
+    bias = 5*1/N #2.0
+    I_xyt = torch.zeros((N, N, Nstep))  ### no input
+    re_all, ri_all = relu2D_bias(L, dt, Nstep_init, Nstep, npf, ntype, K, tau, u, J0, sigma, I_xyt, re0, ri0, bias)
+
 
 
     ### DMD analysis
     res = dmd_spatial_modes(
-                            re_all,
-                            dt=0.01,
+                            re_all, #mue_all, #re_all,
+                            dt=1,
                             dx=1.0,
                             dy=1.0,
                             rank=40,
                             n_show=8,
+                            lag=10,
                         )
     plt.figure()
     plt.scatter(res["dominant_k"], np.abs(res["omega"]), c=res["growth"])
