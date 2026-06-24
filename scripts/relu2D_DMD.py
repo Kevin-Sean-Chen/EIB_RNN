@@ -25,6 +25,7 @@ sys.path.append(str(repo_root))
 
 # from scripts.WM_task import make_wm_trial
 from scripts.relu2D_asym import relu2D_bias
+from scripts.relu2D_driven import make_2D_stim_moving_dot, make_2D_stim_with_drift
 
 
 # relu2D_step function to perform one step of the ReLU 2D simulation
@@ -486,7 +487,7 @@ if __name__ == "__main__":
 
     # Network parameters
     J0 = np.array([[1, -4], [2, -2]])
-    K = 10 ** 2
+    K = 10 ** 0
     tau = np.array([.01, .01])
     u = np.array([10, 0])
     sigma = 0.05 * np.array([1, np.sqrt(2)])
@@ -504,17 +505,38 @@ if __name__ == "__main__":
     yy = np.arange(1, L + 1) / L
 
     # Run simulation
-    re_all, ri_all, mue_all, mui_all = relu2D(L, dt, Nstep_init, Nstep, npf, ntype, K, tau, u, J0, sigma, J2, J3, re0, ri0, g, r_and_mu=True)
+    # re_all, ri_all, mue_all, mui_all = relu2D(L, dt, Nstep_init, Nstep, npf, ntype, K, tau, u, J0, sigma, J2, J3, re0, ri0, g, r_and_mu=True)
 
-    # bias = 20*1/N #2.0
+    ###### test with bias or with input drive #####
+    bias = 0*1/N #2.0
     # I_xyt = torch.zeros((N, N, Nstep))  ### no input
-    # re_all, ri_all = relu2D_bias(L, dt, Nstep_init, Nstep, npf, ntype, K, tau, u, J0, sigma, I_xyt, re0, ri0, bias)
+    # I_xyt = make_2D_stim_moving_dot(N, Nstep, dot_size=0.1, drift_rate=1.1, angle=0)*3  ### moving dot
+    I_xyt,_ = make_2D_stim_with_drift(N, Nstep, time_f=1, space_f=7.5, drift_rate=0) #2.5,5,7.5  ### drift gratings
+    # I_xyt = I_xyt*3  ### adjust for strength
+    re_all, ri_all, mue_all, mui_all = relu2D_bias(L, dt, Nstep_init, Nstep, npf, ntype, K, tau, u, J0, sigma, I_xyt, re0, ri0, bias, r_and_mu=True)
+    ###############################################
+    
+    record_all = mue_all*1 # re_all, mue_all
 
+    ### inspect first, middle, and last time points in subplots
+    fig, axs = plt.subplots(1, 3, figsize=(15, 4))
+    time_indices = [10, len(tt) // 2, -1]
+    titles = ['Beginning', 'Middle', 'End']
 
+    for i, idx in enumerate(time_indices):
+        im = axs[i].imshow(record_all[:, :, idx], aspect='auto', origin='lower', extent=[xx[0], xx[-1], yy[0], yy[-1]])
+        axs[i].set_title(f"{titles[i]} (t={tt[idx]:.3f})")
+        axs[i].set_xlabel('x')
+        axs[i].set_ylabel('y')
+        fig.colorbar(im, ax=axs[i], fraction=0.046, pad=0.04)
+
+    plt.suptitle('mue_all at Three Time Points')
+    plt.tight_layout(rect=[0, 0, 1, 0.95])
+    plt.show()
 
     ### DMD analysis
     res = dmd_spatial_modes(
-                            mue_all, #mue_all, #re_all,
+                            record_all, #mue_all, #re_all,
                             dt=1,
                             dx=1.0,
                             dy=1.0,

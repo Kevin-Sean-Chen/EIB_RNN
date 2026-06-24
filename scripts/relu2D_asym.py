@@ -47,9 +47,9 @@ def relu2D_driven_step(re, ri, N, dt, npf, ntype, K, tau, u, J0, sigma, input_pa
 
     re = re.squeeze().cpu().numpy()
     ri = ri.squeeze().cpu().numpy()
-    return re, ri
+    return re, ri, mue, mui
 
-def relu2D_bias(N, dt, Nstep_init, Nstep, npf, ntype, K, tau, u, J0, sigma, input_pattern, re0, ri0, bias):
+def relu2D_bias(N, dt, Nstep_init, Nstep, npf, ntype, K, tau, u, J0, sigma, input_pattern, re0, ri0, bias, r_and_mu=False):
     if N % 2 != 1:
         raise ValueError('N must be an odd integer')
 
@@ -65,7 +65,7 @@ def relu2D_bias(N, dt, Nstep_init, Nstep, npf, ntype, K, tau, u, J0, sigma, inpu
         print(str_temp, end='', flush=True)
 
         input_pattern_t = input_pattern[:, :, n1 - 1]*0 ### no need to use input pattern in initialization
-        re, ri = relu2D_driven_step(re, ri, N, dt, npf, ntype, K, tau, u, J0, sigma, input_pattern_t, bias)
+        re, ri, mue, mui = relu2D_driven_step(re, ri, N, dt, npf, ntype, K, tau, u, J0, sigma, input_pattern_t, bias)
 
     print('\nrunning simulation... ', end='', flush=True)
     str_temp = ''
@@ -73,6 +73,8 @@ def relu2D_bias(N, dt, Nstep_init, Nstep, npf, ntype, K, tau, u, J0, sigma, inpu
     n_record = int(np.floor(Nstep / npf))
     re_all = np.full((N, N, n_record), np.nan)
     ri_all = np.full((N, N, n_record), np.nan)
+    mue_all = np.full((N, N, n_record), np.nan)
+    mui_all = np.full((N, N, n_record), np.nan)
 
     for n1 in range(1, n_record + 1):
         print('\b' * len(str_temp), end='', flush=True)
@@ -80,13 +82,19 @@ def relu2D_bias(N, dt, Nstep_init, Nstep, npf, ntype, K, tau, u, J0, sigma, inpu
         print(str_temp, end='', flush=True)
 
         input_pattern_t = input_pattern[:, :, n1 - 1]
-        re, ri = relu2D_driven_step(re, ri, N, dt, npf, ntype, K, tau, u, J0, sigma, input_pattern_t, bias)
+        re, ri, mue, mui = relu2D_driven_step(re, ri, N, dt, npf, ntype, K, tau, u, J0, sigma, input_pattern_t, bias)
 
         re_all[:, :, n1 - 1] = re
         ri_all[:, :, n1 - 1] = ri
+        if r_and_mu is True:
+            mue_all[:, :, n1 - 1] = mue
+            mui_all[:, :, n1 - 1] = mui
 
     print('\n')
-    return re_all, ri_all
+    if r_and_mu:
+        return re_all, ri_all, mue_all, mui_all
+    else:
+        return re_all, ri_all
 
 
 # %% Main function to run the simulation and visualize results
