@@ -122,11 +122,13 @@ def dmd_spatial_modes(
 
     dominant_k = np.zeros(rank)
 
+    ### Kmag
     # for j in range(rank):
     #     F = np.abs(fft2(modes[j])) ** 2
     #     idx = np.unravel_index(np.argmax(F), F.shape)
     #     dominant_k[j] = Kmag[idx]
 
+    ### weighted average of Kmag
     for j in range(rank):
         P = np.abs(fft2(modes[j]))**2
 
@@ -154,6 +156,27 @@ def dmd_spatial_modes(
     plt.ylabel(r"$\mathrm{Im}(\lambda)$")
     plt.title("DMD eigenvalues")
     plt.axis("equal")
+    plt.tight_layout()
+    plt.show()
+
+    # -----------------------------
+    # Plot 1.5: one-step prediction error vs rank
+    # -----------------------------
+    plt.figure()
+    ranks = np.arange(1, rank + 1)
+    errors = np.zeros_like(ranks, dtype=float)
+
+    for idx, ss in enumerate(ranks):
+        # Build the rank-ss full-state DMD map M_ss and test X2 \approx M_ss X1.
+        M = X2 @ V_r[:, :ss] @ np.diag(1 / S_r[:ss]) @ U_r[:, :ss].conj().T
+        X2_pred = M @ X1
+        errors[idx] = np.linalg.norm(X2 - X2_pred) / np.linalg.norm(X2)
+
+    plt.plot(ranks, errors, "o-")
+
+    plt.xlabel("Rank")
+    plt.ylabel(r"Relative one-step error $\|X_2 - MX_1\| / \|X_2\|$")
+    plt.title("DMD one-step prediction error vs rank")
     plt.tight_layout()
     plt.show()
 
@@ -418,7 +441,7 @@ if __name__ == "__main__":
     N = L
     dt = 0.0001
     Nstep_init = 1 * 10 ** 3
-    Nstep = 2 * 10 ** 3
+    Nstep = 3 * 10 ** 3
     npf = 1
     g = .0  ### disorder strength
     ### test with low-rank structure
@@ -487,7 +510,7 @@ if __name__ == "__main__":
 
     # Network parameters
     J0 = np.array([[1, -4], [2, -2]])
-    K = 10 ** 0
+    K = 10 ** 4
     tau = np.array([.01, .01])
     u = np.array([10, 0])
     sigma = 0.05 * np.array([1, np.sqrt(2)])
@@ -512,7 +535,7 @@ if __name__ == "__main__":
     # I_xyt = torch.zeros((N, N, Nstep))  ### no input
     # I_xyt = make_2D_stim_moving_dot(N, Nstep, dot_size=0.1, drift_rate=1.1, angle=0)*3  ### moving dot
     I_xyt,_ = make_2D_stim_with_drift(N, Nstep, time_f=1, space_f=7.5, drift_rate=0) #2.5,5,7.5  ### drift gratings
-    # I_xyt = I_xyt*3  ### adjust for strength
+    I_xyt = I_xyt*0  ### adjust for strength
     re_all, ri_all, mue_all, mui_all = relu2D_bias(L, dt, Nstep_init, Nstep, npf, ntype, K, tau, u, J0, sigma, I_xyt, re0, ri0, bias, r_and_mu=True)
     ###############################################
     
@@ -540,7 +563,7 @@ if __name__ == "__main__":
                             dt=1,
                             dx=1.0,
                             dy=1.0,
-                            rank=40,
+                            rank=50,
                             n_show=8,
                             lag=1, ##50
                         )
