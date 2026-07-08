@@ -96,11 +96,12 @@ plt.show()
 ######################################################################################################################
 ######################################################################################################################
 # %% testing object tracking vs. K strength
-Ks = [0.1, 1, 10, 100, 1000]
-corr_coeffs = []  # scalar Pearson correlation coefficients (one per K)
-cross_corrs = []  ### lagged cross-corr arrays between COM and the signal (one array per K)
-trackings = [] ### raw COM time series
-I_xyt = make_2D_stim_moving_dot(N, Nstep, dot_size=0.2, drift_rate=.7, device=device)  ###0.05; 1.5 ## 0.11, 0.7
+Ks = [0.1, 1, 10, 100, 1000, 10000]
+rep = 5
+corr_coeffs = np.zeros((len(Ks), rep))  # scalar Pearson correlation coefficients per (K, rep)
+cross_corrs_first = []  # cross-corr for the first rep only (for plotting)
+trackings_first = []  # COM traces for the first rep only (for plotting)
+I_xyt = make_2D_stim_moving_dot(N, Nstep, dot_size=0.2, drift_rate=0.7, device=device)  ###0.05; 1.5 ## 0.11, 0.7
 I_xyt = I_xyt*10
 
 from scipy.signal import correlate
@@ -109,64 +110,55 @@ from scipy.signal import correlate
 # reps = 10
 # SAs = np.zeros((len(Ks), 2, reps)) ### speed and accuracy arrays
 
-# for rr in range(reps):
-#     corr_coeffs = []  # scalar Pearson correlation coefficients (one per K)
-#     cross_corrs = []  ### lagged cross-corr arrays between COM and the signal (one array per K)
-#     trackings = [] ### raw COM time series
+# COM_y for input stimulus (same for all K and reps)
+y_coords = torch.linspace(0, 1, N, device=device, dtype=I_xyt.dtype).view(1, N, 1)  # shape (1, N, 1)
+num_input = (I_xyt * y_coords).sum(dim=(0, 1))          # shape (T,)
+den_input = I_xyt.sum(dim=(0, 1))                       # shape (T,)
+com_input = num_input / (den_input + 1e-8)              # shape (T,)
+
+eps = 1e-8
+com_input = 2 * (com_input - com_input.min()) / (com_input.max() - com_input.min() + eps) - 1
+x = com_input.detach().cpu().numpy().astype(float)
+lags = np.arange(-len(x) + 1, len(x))
+lags_subset = np.where((lags >= -20) & (lags <= 20))[0]
+
+peak_lags_all = np.zeros((len(Ks), rep))
+peak_heights_all = np.zeros((len(Ks), rep))
 
 for kk in range(len(Ks)):
-    ### neural dynamics
-    K = Ks[kk]    
-    print(f"Running simulation for K={K}...")
-    re0 = r0[0] + 0.05 * np.random.rand(L, L)
-    ri0 = r0[1] + 0.08 * np.random.rand(L, L)
-    re_all, ri_all = relu2D_driven(L, dt, Nstep_init, Nstep, npf, ntype, K, tau, u, J0, sigma, I_xyt, re0, ri0)
-    re_all_reshaped = re_all.reshape(Nstep // npf, L * L)
-    readout = re_all_reshaped @ w_readout
-    corr = np.corrcoef(readout, drift_series.cpu().numpy())[0, 1]
-    corr_coeffs.append(corr)
+    K = Ks[kk]
+    for rr in range(rep):
+        print(f"Running simulation for K={K}, rep {rr+1}/{rep}...")
+        re0 = r0[0] + 0.05 * np.random.rand(L, L)
+        ri0 = r0[1] + 0.08 * np.random.rand(L, L)
+        re_all, ri_all = relu2D_driven(L, dt, Nstep_init, Nstep, npf, ntype, K, tau, u, J0, sigma, I_xyt, re0, ri0)
+        re_all_reshaped = re_all.reshape(Nstep // npf, L * L)
+        readout = re_all_reshaped @ w_readout
+        corr_coeffs[kk, rr] = np.corrcoef(readout, drift_series.cpu().numpy())[0, 1]
 
-    ### analyae tracking with COM
-    y_coords = torch.linspace(0, 1, N, device=device, dtype=I_xyt.dtype).view(1, N, 1)  # shape (1, N, 1)
+        # COM_y for response tensor
+        re_all_t = torch.tensor(re_all, device=device, dtype=torch.float32)
+        y_coords_re = y_coords.to(re_all_t.dtype)
+        num_re = (re_all_t * y_coords_re).sum(dim=(0, 1))       # shape (T,)
+        den_re = re_all_t.sum(dim=(0, 1))                       # shape (T,)
+        com_re = num_re / (den_re + 1e-8)                       # shape (T,)
+        com_re = 2 * (com_re - com_re.min()) / (com_re.max() - com_re.min() + eps) - 1
 
-    # COM_y for input stimulus
-    num_input = (I_xyt * y_coords).sum(dim=(0, 1))          # shape (T,)
-    den_input = I_xyt.sum(dim=(0, 1))                       # shape (T,)
-    com_input = num_input / (den_input + 1e-8)              # shape (T,)
+        y = com_re.detach().cpu().numpy().astype(float)
+        x0 = x - x.mean()
+        y0 = y - y.mean()
+        raw_corr = correlate(x0, y0, mode='full')
+        overlap = len(x) - np.abs(lags)
+        corr_unbiased = raw_corr / overlap
 
-    # COM_y for response tensor
-    re_all_t = torch.tensor(re_all, device=device, dtype=torch.float32)
-    y_coords_re = y_coords.to(re_all_t.dtype)
+        if rr == 0:
+            trackings_first.append(y)
+            cross_corrs_first.append(corr_unbiased)
 
-    num_re = (re_all_t * y_coords_re).sum(dim=(0, 1))       # shape (T,)
-    den_re = re_all_t.sum(dim=(0, 1))                       # shape (T,)
-    com_re = num_re / (den_re + 1e-8)                       # shape (T,)
-
-    ### normalize COM to be between 0 and 1 (optional, since we already used physical y coordinates)
-    eps = 1e-8
-    com_input = 2 * (com_input - com_input.min()) / (com_input.max() - com_input.min() + eps) - 1
-    com_re = 2 * (com_re - com_re.min()) / (com_re.max() - com_re.min() + eps) - 1
-    
-    trackings.append(com_re.detach().cpu().numpy())
-
-    ### plot the cross correlation of the two COM time series
-        
-    x = com_input.detach().cpu().numpy().astype(float)
-    y = com_re.detach().cpu().numpy().astype(float)
-
-    x0 = x - x.mean()
-    y0 = y - y.mean()
-
-    raw_corr = correlate(x0, y0, mode='full')
-    lags = np.arange(-len(x) + 1, len(x))
-
-    # number of overlapping points at each lag
-    overlap = len(x) - np.abs(lags)
-
-    # unbiased-by-overlap normalization
-    corr_unbiased = raw_corr / overlap
-
-    cross_corrs.append(corr_unbiased)
+        com_re_window = corr_unbiased[lags_subset]
+        peak_idx = np.argmax(com_re_window)
+        peak_lags_all[kk, rr] = lags[lags_subset][peak_idx]
+        peak_heights_all[kk, rr] = com_re_window[peak_idx]
 
     # for kk in range(len(Ks)):
     #     ### find lag values between -20 and 20
@@ -182,21 +174,21 @@ for kk in range(len(Ks)):
 plt.figure(figsize=(12, 6))
 ### plot responses labeled by K
 for kk in range(len(Ks)):
-    plt.plot(trackings[kk], label=f"K={Ks[kk]}")
+    plt.plot(trackings_first[kk], label=f"K={Ks[kk]} (rep 1)")
 plt.plot(com_input.detach().cpu().numpy(), label='Input COM', color='k', linestyle='--')
 plt.xlabel('Time (s)')
 plt.ylabel('COM of Network Response')
-plt.title('COM of Network Response Over Time for Different K')
+plt.title('COM of Network Response Over Time for Different K (rep 1)')
 plt.legend()
 plt.show()
 
 plt.figure(figsize=(12, 6))
 for kk in range(len(Ks)):
-    plt.plot(lags,cross_corrs[kk], label=f"K={Ks[kk]}")
+    plt.plot(lags, cross_corrs_first[kk], label=f"K={Ks[kk]} (rep 1)")
 plt.xlabel('Lag')
 plt.ylabel('Cross-Correlation')
 plt.xlim([-20, 20])
-plt.title('Cross-Correlation of COM Time Series for Different K')
+plt.title('Cross-Correlation of COM Time Series for Different K (rep 1)')
 plt.legend()
 plt.show()
 
@@ -210,3 +202,27 @@ plt.show()
 # plt.title('Speed and Accuracy of COM Tracking for Different K')
 # plt.legend()
 # plt.show()
+
+# %% plot peak location and height vs K
+peak_lags_mean = peak_lags_all.mean(axis=1)
+peak_lags_std = peak_lags_all.std(axis=1)
+peak_heights_mean = peak_heights_all.mean(axis=1)
+peak_heights_std = peak_heights_all.std(axis=1)
+    
+plt.figure(figsize=(12, 6))
+plt.errorbar(Ks, peak_lags_mean, yerr=peak_lags_std, fmt='o-', capsize=4, label='Time to Peak (mean ± std)')
+plt.xlabel('Reservoir Strength K')
+plt.ylabel('Lag')
+plt.xscale('log')
+plt.title('Peak Location vs K (mean ± std over reps)')
+plt.legend()
+plt.show()
+
+plt.figure(figsize=(12, 6))
+plt.errorbar(Ks, peak_heights_mean, yerr=peak_heights_std, fmt='o-', capsize=4, label='Peak Height (mean ± std)')
+plt.xlabel('Reservoir Strength K')
+plt.ylabel('Cross-Correlation')
+plt.xscale('log')
+plt.title('Peak Height vs K (mean ± std over reps)')
+plt.legend()
+plt.show()

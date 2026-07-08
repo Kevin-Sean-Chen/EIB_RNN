@@ -32,7 +32,7 @@ delay_period = 250
 cue_interval = 20
 
 # Collect (separately) for out and mem (best practice)
-n_train = 30
+n_train = 20#30
 lam = 1e-2*1  ### this matters
 
 # Patterns for trigger and cues
@@ -98,10 +98,57 @@ def time_selector_out(T_):
     # train out on post-go only (where target_out is informative)
     return np.arange(go_start, T_, dtype=np.int64)
 
+
+@torch.no_grad()
+def eval_r2(model, trial_fn, n_trials, mask=None):
+    """
+    Compute pooled R^2 scores for output and memory readouts.
+    If mask is provided, it is applied before pooling.
+    """
+    model.eval()
+    if mask is not None:
+        mask = np.asarray(mask).astype(bool)
+
+    out_true_all, out_pred_all = [], []
+    mem_true_all, mem_pred_all = [], []
+
+    for _ in range(n_trials):
+        target_out, target_mem, stim, _ = trial_fn()
+        out, mem, _ = model(stim)
+
+        out = out.squeeze(0).squeeze(0).detach().cpu().numpy().astype(np.float64)
+        mem = mem.squeeze(0).squeeze(0).detach().cpu().numpy().astype(np.float64)
+        target_out = target_out.detach().cpu().numpy().astype(np.float64)
+        target_mem = target_mem.detach().cpu().numpy().astype(np.float64)
+
+        if mask is not None:
+            if mask.shape[0] != out.shape[0]:
+                raise ValueError(f"mask length ({mask.shape[0]}) does not match trial length ({out.shape[0]})")
+            out = out[mask]
+            target_out = target_out[mask]
+            mem = mem[mask]
+            target_mem = target_mem[mask]
+
+        out_true_all.append(target_out)
+        out_pred_all.append(out)
+        mem_true_all.append(target_mem)
+        mem_pred_all.append(mem)
+
+    def _r2(y_true_list, y_pred_list):
+        y_true = np.concatenate(y_true_list, axis=0)
+        y_pred = np.concatenate(y_pred_list, axis=0)
+        sse = np.sum((y_true - y_pred) ** 2)
+        sst = np.sum((y_true - y_true.mean()) ** 2)
+        return float(1.0 - sse / (sst + 1e-12))
+
+    return _r2(out_true_all, out_pred_all), _r2(mem_true_all, mem_pred_all)
+
 # %% looping K for performance
 Ks = np.array([1, 10, 20, 40, 80, 160])
+Ks = np.array([1, 10, 100, 1000])
 Ns = np.array([15, 21, 27, 33, 37, 41])
 errs_K = np.zeros((len(Ks), 2))  # out, mem
+r2s_K = np.zeros((len(Ks), 2))    # out, mem
 
 mask = np.zeros((T,), dtype=bool)
 mask[go_start:] = True
@@ -136,9 +183,13 @@ for kk in range(len(Ks)):
 
     # Evaluate (pass the same ipt_patterns and N used for training to avoid default-arg mismatch)
     lo, lm = eval_model(model, lambda: trial_fn(lr=None, ipt_patterns=ipt_patterns, N=N), n_trials=10, mask=mask)
+    r2o, r2m = eval_r2(model, lambda: trial_fn(lr=None, ipt_patterns=ipt_patterns, N=N), n_trials=10, mask=mask)
     print(f"Ridge eval MSE: out={lo:.4g}, mem={lm:.4g}")
+    print(f"Ridge eval R2:  out={r2o:.4g}, mem={r2m:.4g}")
     errs_K[kk, 0] = lo
     errs_K[kk, 1] = lm
+    r2s_K[kk, 0] = r2o
+    r2s_K[kk, 1] = r2m
 
 # %% Plotting
 plt.figure(figsize=(6, 4))
@@ -149,6 +200,17 @@ plt.xscale('log')
 plt.xlabel('Reservoir Strength K')
 plt.ylabel('MSE')
 plt.title('Ridge Regression Performance vs K')
+plt.legend()
+plt.grid(True, which="both", ls="--")
+plt.show()
+
+plt.figure(figsize=(6, 4))
+plt.plot(Ks, r2s_K[:, 0], marker='o', label='Output R2')
+plt.plot(Ks, r2s_K[:, 1], marker='o', label='Memory R2')
+plt.xscale('log')
+plt.xlabel('Reservoir Strength K')
+plt.ylabel('R2')
+plt.title('Ridge Regression R2 vs K')
 plt.legend()
 plt.grid(True, which="both", ls="--")
 plt.show()
@@ -164,3 +226,13 @@ plt.show()
 # plt.legend()
 # plt.grid(True, which="both", ls="--")
 # plt.show()
+
+# %% just show readout
+plt.figure(figsize=(12, 6))
+plt.plot(Ks, r2s_K[:, 1], marker='o', label='Memory R2')
+plt.xlabel('Reservoir Strength K')
+plt.ylabel('R2')
+plt.xscale('log')
+plt.title('Memory R2 vs K')
+plt.legend()
+plt.show()

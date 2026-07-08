@@ -10,7 +10,9 @@ from relu2D_disorder import *
 
 # %% parameter setup
 Ks = np.array([10, 10**2, 10**3, 10**4, 10**5])  ### random strength
+Ks = np.array([1, 10, 100, 1000, 10000, 100000])
 gs = np.array([0, 0.5, 1.0, 1.5, 2.0])  ### disorder strength
+gs = np.array([0, 2.0])  ### to scan robustness
 fs = np.array([0.5, 1, 2, 4, 8])*1 ### frequency of disorder pattern
 scans = np.zeros((len(Ks), len(gs)))  # store (mean, std) of coherence metric
 
@@ -41,23 +43,23 @@ Q_n, _ = torch.linalg.qr(random_n)
 nv, nv2 = Q_n[:, 0:1], Q_n[:, 1:2]
 
 
-def make_fourier_m(N, freq):
-    x_coords = torch.arange(N, dtype=torch.float32)
-    y_coords = torch.arange(N, dtype=torch.float32)
-    X, Y = torch.meshgrid(x_coords, y_coords, indexing='ij')
-    fourier_m = torch.sin(freq * X.flatten()).unsqueeze(1)
-    return fourier_m
-# Create sine and cosine vectors for nv and nv2
-# Create spatial coordinates for the N x N grid
-x_coords = torch.arange(N, dtype=torch.float32)
-y_coords = torch.arange(N, dtype=torch.float32)
-X, Y = torch.meshgrid(x_coords, y_coords, indexing='ij')
-freq = 2 * torch.pi / N  # One full period across the grid
-mv_continuous = torch.sin(freq * X.flatten()).unsqueeze(1)
-mv2_continuous = torch.cos(freq * X.flatten()).unsqueeze(1)  # Use X for both to maintain orthogonality
-# # Binarize to +1/-1
-mv = torch.sign(mv_continuous)
-mv2 = torch.sign(mv2_continuous)
+# def make_fourier_m(N, freq):
+#     x_coords = torch.arange(N, dtype=torch.float32)
+#     y_coords = torch.arange(N, dtype=torch.float32)
+#     X, Y = torch.meshgrid(x_coords, y_coords, indexing='ij')
+#     fourier_m = torch.sin(freq * X.flatten()).unsqueeze(1)
+#     return fourier_m
+# # Create sine and cosine vectors for nv and nv2
+# # Create spatial coordinates for the N x N grid
+# x_coords = torch.arange(N, dtype=torch.float32)
+# y_coords = torch.arange(N, dtype=torch.float32)
+# X, Y = torch.meshgrid(x_coords, y_coords, indexing='ij')
+# freq = 2 * torch.pi / N  # One full period across the grid
+# mv_continuous = torch.sin(freq * X.flatten()).unsqueeze(1)
+# mv2_continuous = torch.cos(freq * X.flatten()).unsqueeze(1)  # Use X for both to maintain orthogonality
+# # # Binarize to +1/-1
+# mv = torch.sign(mv_continuous)
+# mv2 = torch.sign(mv2_continuous)
 # # Handle any zeros (though unlikely with sine/cosine)
 # mv[mv == 0] = 1
 # mv2[mv2 == 0] = 1
@@ -97,7 +99,7 @@ yy = np.arange(1, L + 1) / L
 for kk in range(len(Ks)):
     for gg in range(len(gs)):
         K = Ks[kk] ##10
-        fi = fs[kk]*freq
+        # fi = fs[kk]*freq
         # mv_continuous = makes_fourier_m(L, fi)
         # mv = torch.sign(mv_continuous)
         g = (mv, nv*gs[gg]) #
@@ -108,7 +110,7 @@ for kk in range(len(Ks)):
         # Compute coherence metric at the midpoint of the simulation
         # coherence = coherence_metric(re_all[:, :, Nstep // 2])
         # coherence = coherence_chi(re_all.reshape(N*N, -1), mv.numpy())
-        coherence = linear_dimention(mue_all)#(re_all)
+        coherence = linear_dimention(re_all) #(mue_all)#
         scans[kk, gg] = coherence
         print(f"Coherence metric: {coherence}")
 
@@ -119,4 +121,15 @@ plt.colorbar(label='linear dimension') #('Coherence Metric')
 plt.xlabel('Disorder Strength g')
 # plt.ylabel('Frequency of Disorder Pattern f') #
 plt.ylabel('Random Strength K')
+plt.show()
+
+# %% plot fractional change of coherence metric (gs[0] vs gs[-1]) as a function of K
+frac_change = (scans[:, -1] - scans[:, 0]) / scans[:, 0]
+print(frac_change)
+plt.figure()
+plt.plot(Ks, frac_change, marker='o')
+plt.xscale('log')
+plt.xlabel('Strength K')
+plt.ylabel('Fractional Change in Coherence Metric')
+plt.title('Fractional Change of Coherence Metric vs K')
 plt.show()
