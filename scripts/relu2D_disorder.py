@@ -87,8 +87,8 @@ def relu2D(N, dt, Nstep_init, Nstep, npf, ntype, K, tau, u, J0, sigma, J2, J3, r
         chi = (mv @ nv.T) / N  #### MN ###
     else:
         mv, nv, mv2, nv2 = g
-        # chi = (mv @ nv.T + mv2 @ nv2.T) / N  #### MN ###
-        chi = (mv @ nv.T + -mv @ mv.T) / N #### row balanced condition
+        chi = (mv @ nv.T + mv2 @ nv2.T) / N  #### MN ###
+        # chi = (mv @ nv.T + -mv @ mv.T) / N #### row balanced condition
         # chi = ((mv @ nv.T) / N, -(mv @ mv.T)/N)  #### if we hand over two components, the other for row balance
 
     re = re0.copy()
