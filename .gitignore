@@ -1,9 +1,12 @@
 
-simulations/
+/simulations/
 
 notes.txt
 
 latex_help.txt
+
+# macOS metadata
+.DS_Store
 
 # Ignore GIF images
 *.gif
@@ -21,3 +24,8 @@ __pycache__/
 
 # Notebook checkpoints
 .ipynb_checkpoints/
+
+# Generated research results
+output/*
+!output/.gitkeep
+!output/README.md
