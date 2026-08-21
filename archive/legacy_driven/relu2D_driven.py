@@ -1,3 +1,5 @@
+"""Archived exploratory driven simulation. Use scripts/run_driven_dot.py."""
+
 from ctypes.wintypes import RGB
 import numpy as np
 import torch
@@ -22,7 +24,7 @@ def make_2D_stim_with_drift(N, lt, time_f, space_f, drift_rate, device='cpu'):
         space_f (float): Spatial frequency factor.
         drift_rate (float): Rate of change in drift direction (radians per time step).
         device (str): Device to place tensors on ('cpu' or 'cuda').
-        
+
     Returns:
         torch.Tensor: Stimulus tensor of shape (N, N, lt).
         torch.Tensor: Drift direction angles (in radians) of shape (lt,).
@@ -425,5 +427,3 @@ if __name__ == "__main__":
         # Display in notebook (optional)
         from IPython.display import display, Image as IPImage
         display(IPImage(filename=output_path))
-
-        

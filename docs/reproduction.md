@@ -33,3 +33,21 @@ Each command creates one directory under `output/scans/`. The directory contains
 - `summary.png`: summary figure.
 
 Use `--run-id` only when you need a fixed directory name. The command stops if that directory already exists. This rule prevents accidental result replacement.
+
+## Driven moving-dot task
+
+Run one driven moving-dot simulation:
+
+```bash
+python scripts/run_driven_dot.py \
+  --config configs/simulations/driven_dot.yaml
+```
+
+Scan moving-dot tracking across `K`:
+
+```bash
+python scripts/scan_driven_dot.py \
+  --config configs/tasks/driven_dot_tracking.yaml
+```
+
+These workflows use input and response center of mass. The tracking scan measures peak lag and peak overlap-normalized cross-correlation.

@@ -25,7 +25,7 @@ sys.path.append(str(repo_root))
 
 # from scripts.WM_task import make_wm_trial
 from scripts.relu2D_asym import relu2D_bias
-from scripts.relu2D_driven import make_2D_stim_moving_dot, make_2D_stim_with_drift
+from src.stimuli import drifting_sine, moving_dot
 
 
 # relu2D_step function to perform one step of the ReLU 2D simulation
@@ -533,8 +533,14 @@ if __name__ == "__main__":
     ###### test with bias or with input drive #####
     bias = 0*1/N #2.0
     # I_xyt = torch.zeros((N, N, Nstep))  ### no input
-    # I_xyt = make_2D_stim_moving_dot(N, Nstep, dot_size=0.1, drift_rate=1.1, angle=0)*3  ### moving dot
-    I_xyt,_ = make_2D_stim_with_drift(N, Nstep, time_f=1, space_f=7.5, drift_rate=0) #2.5,5,7.5  ### drift gratings
+    # I_xyt = moving_dot(N, Nstep, dot_size=0.1, drift_rate=1.1, angle=0) * 3
+    I_xyt, _ = drifting_sine(
+        N,
+        Nstep,
+        temporal_frequency=1,
+        spatial_frequency=7.5,
+        drift_rate=0,
+    )
     I_xyt = I_xyt*0  ### adjust for strength
     re_all, ri_all, mue_all, mui_all = relu2D_bias(L, dt, Nstep_init, Nstep, npf, ntype, K, tau, u, J0, sigma, I_xyt, re0, ri0, bias, r_and_mu=True)
     ###############################################
@@ -574,5 +580,4 @@ if __name__ == "__main__":
     plt.colorbar(label="growth rate")
     plt.title("DMD dispersion relation")
     plt.show()
-
 

@@ -1,3 +1,5 @@
+"""Archived exploratory driven scan. Use scripts/scan_driven_dot.py."""
+
 from ctypes.wintypes import RGB
 import numpy as np
 import torch

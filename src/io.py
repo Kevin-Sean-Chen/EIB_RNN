@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 from datetime import datetime
+from importlib.metadata import PackageNotFoundError, version
 import json
 from pathlib import Path
 import platform
@@ -45,10 +46,21 @@ def runtime_metadata(repository_root: Path) -> dict[str, Any]:
         "created_at": datetime.now().astimezone().isoformat(),
         "git_commit": git_commit(repository_root),
         "python": platform.python_version(),
-        "numpy": np.__version__,
+        "packages": {
+            name: package_version(name)
+            for name in ("numpy", "scipy", "matplotlib", "torch", "PyYAML")
+        },
         "platform": platform.platform(),
         "command": sys.argv,
     }
+
+
+def package_version(name: str) -> str | None:
+    """Return an installed package version when it is available."""
+    try:
+        return version(name)
+    except PackageNotFoundError:
+        return None
 
 
 def save_json(path: Path, content: Mapping[str, Any]) -> None:

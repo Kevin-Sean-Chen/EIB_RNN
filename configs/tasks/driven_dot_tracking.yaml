@@ -1,0 +1,37 @@
+run:
+  output_root: output/tasks
+  experiment: driven_dot_tracking
+  run_id: null
+
+network:
+  N: 15
+  K: 100.0
+  J_ee: 1.0
+  J_ei: -4.0
+  J_ie: 2.0
+  J_ii: -2.0
+  sigma_e: 0.05
+  sigma_i: 0.07071067811865477
+  u_e: 10.0
+  u_i: 0.0
+
+simulation:
+  seed: 7
+  device: cpu
+  dt: 0.0001
+  init_steps: 333
+  record_steps: 333
+  steps_per_record: 1
+  tau_e: 0.01
+  tau_i: 0.01
+
+stimulus:
+  dot_size: 0.2
+  drift_rate: 0.7
+  angle: 0.0
+  input_amplitude: 10.0
+
+task:
+  K_values: [0.1, 1, 10, 100, 1000, 10000]
+  repetitions: 5
+  max_lag: 20
