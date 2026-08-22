@@ -8,7 +8,7 @@ import sys
 
 import matplotlib.pyplot as plt
 
-repo_root = Path(__file__).resolve().parents[1]
+repo_root = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(repo_root))
 
 from src.analysis.local_network_modes import (
@@ -43,7 +43,7 @@ METRIC_FIELDS = [
 
 
 def parse_args(
-    default_config: Path = Path("configs/scans/local_network_modes.yaml"),
+    default_config: Path = Path("configs/baseline/local_network_modes.yaml"),
 ) -> argparse.Namespace:
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(description=__doc__)

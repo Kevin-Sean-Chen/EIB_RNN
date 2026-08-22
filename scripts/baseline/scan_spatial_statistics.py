@@ -8,10 +8,10 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 
-repo_root = Path(__file__).resolve().parents[1]
+repo_root = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(repo_root))
 
-from scripts.scan_local_network_modes import load_config, parse_args, save_run_files
+from scripts.baseline.scan_local_network_modes import load_config, parse_args, save_run_files
 from src.analysis.local_network_modes import run_scan
 from src.io import create_run_directory
 
@@ -73,7 +73,7 @@ def plot_spatial_statistics(result, args):
 
 
 def main() -> None:
-    args = parse_args(Path("configs/scans/spatial_statistics.yaml"))
+    args = parse_args(Path("configs/baseline/spatial_statistics.yaml"))
     config, run = load_config(args)
     output_root = Path(run.get("output_root", "output/scans"))
     if not output_root.is_absolute():

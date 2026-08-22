@@ -1,0 +1,23 @@
+run:
+  output_root: output/analyses
+  experiment: spectral
+  run_id: null
+
+network:
+  N: 15
+  sigma_e: 0.05
+  sigma_i: 0.07071067811865477
+
+structure:
+  strength: 0.5
+  frequency: 5.0
+  angle: 30.0
+  aspect_ratio: 0.1
+  row_balance: 0.0
+
+scan:
+  K_values: [10, 100]
+  phase_values: [0.0, 1.2566370614359172, 2.5132741228718345]
+
+analysis:
+  leading_eigenvalues: 80

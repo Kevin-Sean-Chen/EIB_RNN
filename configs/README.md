@@ -1,12 +1,15 @@
 # Configurations
 
-Store YAML configuration files in these groups:
+Store YAML configuration files by scientific topic:
 
-- `simulations/` for one simulation.
-- `scans/` for parameter scans.
-- `tasks/` for training and evaluation tasks.
+- `baseline/` for local-network simulations and scans.
+- `disorder/` for non-local connectivity simulations and scans.
+- `driven/` for input-driven simulations and tasks.
+- `working_memory/` for RLS/FORCE training and evaluation.
+- `analyses/` for supporting spectral and dynamic analyses.
+- `extensions/` for secondary scientific workflows.
 
-Each script must state which configuration it uses.
+Each script must state which configuration it uses. Use `_quick` for a small fixed-seed check.
 
 The mode scan configurations use these sections:
 

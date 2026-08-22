@@ -20,7 +20,7 @@ DISORDER_SECTIONS = {
     ),
     "disorder": (
         "strength", "rank", "pattern_type", "frequency", "angle",
-        "phase_offset", "aspect_ratio",
+        "phase_offset", "aspect_ratio", "legacy_dense_modulation",
     ),
 }
 
@@ -54,6 +54,7 @@ class DisorderConfig:
     angle: float = 30.0
     phase_offset: float = 0.5
     aspect_ratio: float = 0.1
+    legacy_dense_modulation: bool = False
 
     def __post_init__(self) -> None:
         if self.N <= 0 or self.N % 2 != 1:
@@ -208,6 +209,18 @@ def simulate_disorder(config: DisorderConfig) -> DisorderResult:
     left = left.to(device)
     right = right.to(device)
     kernel_e, kernel_i, pad = _kernels(config)
+    dense_e = None
+    if config.legacy_dense_modulation:
+        eye = torch.eye(config.N**2, dtype=torch.float32, device=device)
+        basis = eye.reshape(config.N**2, 1, config.N, config.N)
+        responses = F.conv2d(
+            F.pad(basis, (pad[0], pad[0], pad[1], pad[1]), mode="circular"),
+            kernel_e,
+        )
+        dense_e = responses.reshape(config.N**2, config.N**2).T
+        first_left = left[:, 0]
+        row_modulation = torch.outer(first_left, first_left) / config.N
+        dense_e = dense_e - dense_e * row_modulation
     coupling = config.coupling
     drive = config.drive
     record_count = config.record_steps // config.steps_per_record
@@ -218,7 +231,10 @@ def simulate_disorder(config: DisorderConfig) -> DisorderResult:
         for _ in range(config.steps_per_record):
             padded_e = F.pad(re, (pad[0], pad[0], pad[1], pad[1]), mode="circular")
             padded_i = F.pad(ri, (pad[0], pad[0], pad[1], pad[1]), mode="circular")
-            local_e = F.conv2d(padded_e, kernel_e)
+            if dense_e is None:
+                local_e = F.conv2d(padded_e, kernel_e)
+            else:
+                local_e = (dense_e @ re.flatten()).reshape(config.N, config.N)
             local_i = F.conv2d(padded_i, kernel_i)
             disorder = left @ (right.T @ re.flatten()) / config.N
             effective_e = local_e + disorder.reshape(config.N, config.N)

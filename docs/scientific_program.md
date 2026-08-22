@@ -14,10 +14,10 @@ Scientific question: How do E/I balance and connection scale `K` control spontan
 
 | Workflow | Script | Intended output | Status |
 |---|---|---|---|
-| Baseline local simulation | `scripts/run_local.py` | E/I activity, population rates, dimension, spatial coherence, and activity frames | **Ready** |
-| Local-to-network mode transition | `scripts/scan_local_network_modes.py` | Reconstruction curves, mode advantage, dimension, and example activity | **Ready** |
-| Transition across `K` | `scripts/scan_K_rhoF_modes.py` | Transition strength and mode metrics across `K` | **Ready** |
-| Direct spatial statistics | `scripts/scan_spatial_statistics.py` | Neighbor correlation, correlation length, and low-wave-number power | **Ready** |
+| Baseline local simulation | `scripts/baseline/run_local.py` | E/I activity, population rates, dimension, spatial coherence, and activity frames | **Ready** |
+| Local-to-network mode transition | `scripts/baseline/scan_local_network_modes.py` | Reconstruction curves, mode advantage, dimension, and example activity | **Ready** |
+| Transition across `K` | `scripts/baseline/scan_K_rhoF_modes.py` | Transition strength and mode metrics across `K` | **Ready** |
+| Direct spatial statistics | `scripts/baseline/scan_spatial_statistics.py` | Neighbor correlation, correlation length, and low-wave-number power | **Ready** |
 
 These workflows define the baseline for all disorder and task comparisons.
 
@@ -27,10 +27,10 @@ Scientific question: How does low-rank non-local connectivity change spatial org
 
 | Workflow | Script | Intended output | Status |
 |---|---|---|---|
-| One disorder simulation | `scripts/run_disorder.py` | Activity, fields, disorder patterns, dimension, and coherence | **Ready** |
-| Disorder-strength scan | `scripts/scan_disorder_strength.py` | Dimension, spatial coherence, and latent coherence across `K` and strength | **Ready** |
-| Rank-one structure scan | Planned replacement for `scripts/scan_rankone.py` | Mode alignment, latent dynamics, and phase or strength dependence | **Refactor pending** |
-| Connectivity spectrum | Planned replacement for `scripts/scan_spectral.py` | Complex spectrum, leading eigenvalues, and stability measures | **Refactor pending** |
+| One disorder simulation | `scripts/disorder/run_disorder.py` | Activity, fields, disorder patterns, dimension, and coherence | **Ready** |
+| Disorder-strength scan | `scripts/disorder/scan_disorder_strength.py` | Dimension, spatial coherence, and latent coherence across `K` and strength | **Ready** |
+| Rank-one structure scan | `scripts/disorder/scan_rank_one.py` | Mode alignment, latent dynamics, and phase dependence | **Ready** |
+| Connectivity spectrum | `scripts/analyses/run_spectral.py` | Complex spectrum, spectral abscissa, and stability measures | **Ready** |
 
 The rank-one and spectral workflows must connect the connectivity structure to the observed activity transition.
 
@@ -40,8 +40,8 @@ Scientific question: How does the spatial E/I network represent and track struct
 
 | Workflow | Script | Intended output | Status |
 |---|---|---|---|
-| Moving-dot response | `scripts/run_driven_dot.py` | Stimulus, E activity, center-of-mass traces, and tracking metrics | **Ready** |
-| Tracking across `K` | `scripts/scan_driven_dot.py` | Peak lag and cross-correlation across `K` | **Ready** |
+| Moving-dot response | `scripts/driven/run_driven_dot.py` | Stimulus, E activity, center-of-mass traces, and tracking metrics | **Ready** |
+| Tracking across `K` | `scripts/driven/scan_driven_dot.py` | Peak lag and cross-correlation across `K` | **Ready** |
 | Direction discrimination | Planned replacement for `scripts/relu2D_ds.py` | Readout accuracy, activity, and direction-dependent responses | **Refactor pending** |
 | Two-dot transient response | Preserved in `archive/legacy_driven/relu2D_driven.py` | Response during input and after input removal | **Decision pending** |
 
@@ -68,7 +68,7 @@ Scientific question: Which spatial and temporal modes explain spontaneous, disor
 | Workflow | Source script | Intended output | Status |
 |---|---|---|---|
 | Dynamic mode decomposition | `scripts/relu2D_DMD.py` | DMD modes, frequencies, growth rates, prediction error, and dispersion | **Refactor pending** |
-| Connectivity spectrum | `scripts/scan_spectral.py` | Eigenvalue spectrum and leading stability measures | **Refactor pending** |
+| Connectivity spectrum | `scripts/analyses/run_spectral.py` | Eigenvalue spectrum and leading stability measures | **Ready** |
 | Activity-mode comparison | Current mode scan scripts | Local, network, and PCA reconstruction curves | **Ready** |
 
 DMD describes activity dynamics. Spectral analysis describes the connectivity operator. Keep these results separate in saved output.

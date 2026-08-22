@@ -13,27 +13,28 @@ Status terms:
 
 | Script | Purpose | Intended output |
 |---|---|---|
-| `scripts/run_local.py` | Run the canonical baseline local spatial E/I network. | Resolved YAML, metadata, NPZ activity and time arrays, CSV metrics, and a summary figure under `output/simulations/local/`. |
-| `scripts/run_disorder.py` | Run one spatial E/I simulation with configurable rank-one or rank-two disorder. | Resolved YAML, metadata, NPZ activity and disorder patterns, CSV metrics, and a summary figure under `output/simulations/disorder/`. |
-| `scripts/scan_disorder_strength.py` | Scan rank-two random disorder across `K` and disorder strength. | Dimension, spatial coherence, latent coherence, example activity, patterns, configuration, metadata, and a summary figure under `output/scans/disorder_strength/`. |
-| `scripts/run_driven_dot.py` | Run one moving-dot simulation in the driven spatial E/I network. | Resolved YAML, metadata, NPZ activity and tracking arrays, CSV metrics, and a summary figure under `output/simulations/driven_dot/`. |
-| `scripts/scan_driven_dot.py` | Measure moving-dot center-of-mass tracking across `K`. | Peak lag, peak cross-correlation, first-repetition traces, activity arrays, configuration, metadata, and a summary figure under `output/tasks/driven_dot_tracking/`. |
-| `scripts/scan_local_network_modes.py` | Compare local geometric modes with full-network modes across non-local strength. | Reconstruction curves, transition index, PCA dimension, example activity, spatial metrics, configuration, metadata, and a summary figure under `output/scans/local_network_modes/`. |
-| `scripts/scan_K_rhoF_modes.py` | Compare the local-to-network mode transition across `K` and `rho_F`. | Per-`K` mode metrics, crossover strength, dimensions, configuration, metadata, and a summary figure under `output/scans/K_rhoF_modes/`. |
-| `scripts/scan_spatial_statistics.py` | Measure direct spatial statistics across non-local strength. | Neighbor correlation, correlation length, low-wave-number power, mode advantage, configuration, metadata, and a summary figure under `output/scans/spatial_statistics/`. |
+| `scripts/baseline/run_local.py` | Run the canonical baseline local spatial E/I network. | Resolved YAML, metadata, NPZ activity and time arrays, CSV metrics, and a summary figure under `output/simulations/local/`. |
+| `scripts/disorder/run_disorder.py` | Run one spatial E/I simulation with configurable rank-one or rank-two disorder. | Resolved YAML, metadata, NPZ activity and disorder patterns, CSV metrics, and a summary figure under `output/simulations/disorder/`. |
+| `scripts/disorder/scan_disorder_strength.py` | Scan rank-two random disorder across `K` and disorder strength. | Dimension, spatial coherence, latent coherence, example activity, patterns, configuration, metadata, and a summary figure under `output/scans/disorder_strength/`. |
+| `scripts/disorder/scan_rank_one.py` | Scan rank-one Gabor disorder across `K` and phase. | Latent coherence, ACF peaks, balance, eigenvector alignment, spectral abscissa, latent traces, configuration, metadata, and a summary figure under `output/scans/rank_one/`. |
+| `scripts/driven/run_driven_dot.py` | Run one moving-dot simulation in the driven spatial E/I network. | Resolved YAML, metadata, NPZ activity and tracking arrays, CSV metrics, and a summary figure under `output/simulations/driven_dot/`. |
+| `scripts/driven/scan_driven_dot.py` | Measure moving-dot center-of-mass tracking across `K`. | Peak lag, peak cross-correlation, first-repetition traces, activity arrays, configuration, metadata, and a summary figure under `output/tasks/driven_dot_tracking/`. |
+| `scripts/baseline/scan_local_network_modes.py` | Compare local geometric modes with full-network modes across non-local strength. | Reconstruction curves, transition index, PCA dimension, example activity, spatial metrics, configuration, metadata, and a summary figure under `output/scans/local_network_modes/`. |
+| `scripts/baseline/scan_K_rhoF_modes.py` | Compare the local-to-network mode transition across `K` and `rho_F`. | Per-`K` mode metrics, crossover strength, dimensions, configuration, metadata, and a summary figure under `output/scans/K_rhoF_modes/`. |
+| `scripts/baseline/scan_spatial_statistics.py` | Measure direct spatial statistics across non-local strength. | Neighbor correlation, correlation length, low-wave-number power, mode advantage, configuration, metadata, and a summary figure under `output/scans/spatial_statistics/`. |
+| `scripts/analyses/run_spectral.py` | Analyze the legacy two-population connectivity spectrum across `K` and Gabor phase. | Complex eigenvalues, spectral abscissa, stability flags, patterns, configuration, metadata, and a summary figure under `output/analyses/spectral/`. |
 
 ## Migration-pending ReLU dynamics and analysis
 
 | Script | Intended scientific role | Present output | Planned destination |
 |---|---|---|---|
-| `relu2D_main.py` | Baseline local two-population ReLU E/I simulation. | Interactive activity figures and animation. | Replaced by `src/local.py` and `scripts/run_local.py`. Keep it until the legacy comparison and video decision are complete. |
-| `scripts/relu2D_disorder.py` | Add low-rank non-local disorder and measure spatial and temporal organization. | Interactive activity, coherence, dimension, autocorrelation, and optional GIF output. | Partly replaced by `src/disorder.py`, `src/metrics.py`, and `scripts/run_disorder.py`. Keep it until scan and video checks are complete. |
+| `relu2D_main.py` | Baseline local two-population ReLU E/I simulation. | Interactive activity figures and animation. | Replaced by `src/local.py` and `scripts/baseline/run_local.py`. Keep it until the legacy comparison and video decision are complete. |
+| `scripts/relu2D_disorder.py` | Add low-rank non-local disorder and measure spatial and temporal organization. | Interactive activity, coherence, dimension, autocorrelation, and optional GIF output. | Partly replaced by `src/disorder.py`, `src/metrics.py`, and `scripts/disorder/run_disorder.py`. Keep it until scan and video checks are complete. |
 | `scripts/relu2D_dense.py` | Validate a dense-matrix implementation of local and non-local connectivity. | Interactive activity, coherence metrics, and optional GIF output. | Dense reference model or validation tool under `src/`; a small comparison script. |
 | `scripts/relu2D_asym.py` | Simulate driven dynamics with an asymmetric excitatory kernel. | Interactive activity and optional GIF output. | Asymmetric connectivity in `src/`; a wave or direction-selectivity simulation script. |
 | `scripts/relu2D_DMD.py` | Apply dynamic mode decomposition to spontaneous or driven activity. | DMD eigenvalues, spatial modes, prediction error, dispersion, growth, and dimension figures. | `src/analysis/dmd.py` and `scripts/analyses/run_dmd.py`. |
-| `scripts/scan_disorder.py` | Scan `K` and low-rank disorder strength or frequency. | Interactive heatmaps and dimension or coherence summaries. | Strength scan replaced by `scripts/scan_disorder_strength.py`. Preserve the commented frequency experiment before archive. |
-| `scripts/scan_rankone.py` | Scan rank-one strength and phase; inspect coherence and mode alignment. | Interactive heatmaps, spectra, and alignment plots. | YAML rank-one scan under `scripts/scans/`. |
-| `scripts/scan_spectral.py` | Analyze the spectrum of block connectivity across `K` and disorder. | Interactive complex-spectrum and leading-eigenvalue plots. | `src/analysis/spectral.py` and a YAML scan. |
+| `scripts/scan_disorder.py` | Scan `K` and low-rank disorder strength or frequency. | Interactive heatmaps and dimension or coherence summaries. | Strength scan replaced by `scripts/disorder/scan_disorder_strength.py`. Preserve the commented frequency experiment before archive. |
+| `scripts/scan_rankone.py` | Scan rank-one strength and phase; inspect coherence and mode alignment. | Interactive heatmaps, spectra, and alignment plots. | Replaced by `scripts/disorder/scan_rank_one.py`. Keep it until the legacy-modulation figure receives visual confirmation. |
 | `scripts/scan_asym.py` | Scan asymmetric coupling and estimate wave speed with phase correlation. | Interactive speed, autocorrelation, and activity plots. | YAML asymmetry scan under `scripts/scans/`. |
 
 ## Migration-pending driven and reservoir tasks
@@ -73,8 +74,14 @@ These scripts are outside the current core model. Decide later whether they belo
 
 | Script | Preserved scientific content | Replacement |
 |---|---|---|
-| `archive/legacy_driven/relu2D_driven.py` | Sine, one-dot, and two-dot stimulus experiments; driven E/I dynamics; center-of-mass analysis; optional GIF creation. The script replaced its stimulus several times in one run. | `scripts/run_driven_dot.py`, `src/stimuli.py`, and `src/driven.py`. |
-| `archive/legacy_driven/scan_driven.py` | Random-readout exploration and moving-dot center-of-mass tracking across `K`. The random-readout metric used a stale sine target. | `scripts/scan_driven_dot.py` and `src/tasks/driven_dot.py`. |
+| `archive/legacy_driven/relu2D_driven.py` | Sine, one-dot, and two-dot stimulus experiments; driven E/I dynamics; center-of-mass analysis; optional GIF creation. The script replaced its stimulus several times in one run. | `scripts/driven/run_driven_dot.py`, `src/stimuli.py`, and `src/driven.py`. |
+| `archive/legacy_driven/scan_driven.py` | Random-readout exploration and moving-dot center-of-mass tracking across `K`. The random-readout metric used a stale sine target. | `scripts/driven/scan_driven_dot.py` and `src/tasks/driven_dot.py`. |
+
+## Archived supporting analyses
+
+| Script | Preserved scientific content | Replacement |
+|---|---|---|
+| `archive/legacy_analyses/scan_spectral.py` | Spectrum of the legacy repeated-row block operator across `K` and Gabor phase. | `scripts/analyses/run_spectral.py` and `src/analysis/spectral.py`. |
 
 ## Older tanh and MATLAB archive
 

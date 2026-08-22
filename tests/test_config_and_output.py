@@ -7,7 +7,7 @@ import unittest
 import matplotlib.pyplot as plt
 import numpy as np
 
-from scripts.scan_local_network_modes import save_run_files
+from scripts.baseline.scan_local_network_modes import save_run_files
 from src.analysis.local_network_modes import (
     MODE_SCAN_SECTIONS,
     ModeScanConfig,
@@ -26,7 +26,7 @@ class ConfigurationAndOutputTests(unittest.TestCase):
 
     def test_default_yaml_loads(self) -> None:
         config, document = load_dataclass_sections(
-            repo_root / "configs/scans/local_network_modes.yaml",
+            repo_root / "configs/baseline/local_network_modes.yaml",
             ModeScanConfig,
             tuple(MODE_SCAN_SECTIONS),
         )

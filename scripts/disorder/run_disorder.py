@@ -9,7 +9,7 @@ import sys
 import matplotlib.pyplot as plt
 import numpy as np
 
-repo_root = Path(__file__).resolve().parents[1]
+repo_root = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(repo_root))
 
 from src.config import dataclass_to_sections, load_dataclass_sections, save_yaml
@@ -27,7 +27,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--config",
         type=Path,
-        default=Path("configs/simulations/disorder.yaml"),
+        default=Path("configs/disorder/run.yaml"),
     )
     parser.add_argument("--output-root", type=Path)
     parser.add_argument("--run-id")

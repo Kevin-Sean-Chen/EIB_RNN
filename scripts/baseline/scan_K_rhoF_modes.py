@@ -10,7 +10,7 @@ import sys
 import matplotlib.pyplot as plt
 import numpy as np
 
-repo_root = Path(__file__).resolve().parents[1]
+repo_root = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(repo_root))
 
 from src.analysis.local_network_modes import (
@@ -146,7 +146,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--config",
         type=Path,
-        default=Path("configs/scans/K_rhoF_modes.yaml"),
+        default=Path("configs/baseline/K_rhoF_modes.yaml"),
     )
     parser.add_argument("--output-root", type=Path)
     parser.add_argument("--run-id")

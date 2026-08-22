@@ -10,28 +10,28 @@ conda activate EI2D
 Run the canonical baseline local network:
 
 ```bash
-python scripts/run_local.py \
-  --config configs/simulations/local.yaml \
+python scripts/baseline/run_local.py \
+  --config configs/baseline/local.yaml \
   --show
 ```
 
-For a faster `N=15` check, use `configs/simulations/local_quick.yaml`.
+For a faster `N=15` check, use `configs/baseline/local_quick.yaml`.
 
 Run the local-network mode scan from the repository root:
 
 ```bash
-python scripts/scan_local_network_modes.py \
-  --config configs/scans/local_network_modes.yaml
+python scripts/baseline/scan_local_network_modes.py \
+  --config configs/baseline/local_network_modes.yaml
 ```
 
 Run the related scans:
 
 ```bash
-python scripts/scan_K_rhoF_modes.py \
-  --config configs/scans/K_rhoF_modes.yaml
+python scripts/baseline/scan_K_rhoF_modes.py \
+  --config configs/baseline/K_rhoF_modes.yaml
 
-python scripts/scan_spatial_statistics.py \
-  --config configs/scans/spatial_statistics.yaml
+python scripts/baseline/scan_spatial_statistics.py \
+  --config configs/baseline/spatial_statistics.yaml
 ```
 
 Each command creates one directory under `output/scans/`. The directory contains:
@@ -49,20 +49,20 @@ Use `--run-id` only when you need a fixed directory name. The command stops if t
 Run one driven moving-dot simulation:
 
 ```bash
-python scripts/run_driven_dot.py \
-  --config configs/simulations/driven_dot.yaml
+python scripts/driven/run_driven_dot.py \
+  --config configs/driven/dot.yaml
 ```
 
-For a faster `N=15` check, use `configs/simulations/driven_dot_quick.yaml`.
+For a faster `N=15` check, use `configs/driven/dot_quick.yaml`.
 
 Scan moving-dot tracking across `K`:
 
 ```bash
-python scripts/scan_driven_dot.py \
-  --config configs/tasks/driven_dot_tracking.yaml
+python scripts/driven/scan_driven_dot.py \
+  --config configs/driven/dot_tracking.yaml
 ```
 
-For a short scan, use `configs/tasks/driven_dot_tracking_quick.yaml`.
+For a short scan, use `configs/driven/dot_tracking_quick.yaml`.
 
 These workflows use input and response center of mass. The tracking scan measures peak lag and peak overlap-normalized cross-correlation.
 
@@ -71,20 +71,40 @@ These workflows use input and response center of mass. The tracking scan measure
 Run the legacy-matching disorder simulation:
 
 ```bash
-python scripts/run_disorder.py \
-  --config configs/simulations/disorder.yaml \
+python scripts/disorder/run_disorder.py \
+  --config configs/disorder/run.yaml \
   --show
 ```
 
-For a faster `N=15` check, use `configs/simulations/disorder_quick.yaml`.
+For a faster `N=15` check, use `configs/disorder/run_quick.yaml`.
 
 Set `pattern_type` to `random` or `gabor`. Set `rank` to `1` or `2`.
 
 Scan rank-two random disorder across `K` and strength:
 
 ```bash
-python scripts/scan_disorder_strength.py \
-  --config configs/scans/disorder_strength.yaml
+python scripts/disorder/scan_disorder_strength.py \
+  --config configs/disorder/strength_scan.yaml
 ```
 
-For a short `N=15` scan, use `configs/scans/disorder_strength_quick.yaml`.
+For a short `N=15` scan, use `configs/disorder/strength_scan_quick.yaml`.
+
+Scan rank-one Gabor disorder across `K` and phase:
+
+```bash
+python scripts/disorder/scan_rank_one.py \
+  --config configs/disorder/rank_one.yaml
+```
+
+For a short `N=15` scan, use `configs/disorder/rank_one_quick.yaml`.
+
+## Supporting spectral analysis
+
+Run the legacy block-operator spectrum analysis:
+
+```bash
+python scripts/analyses/run_spectral.py \
+  --config configs/analyses/spectral.yaml
+```
+
+For a faster `N=15` check, use `configs/analyses/spectral_quick.yaml`.
