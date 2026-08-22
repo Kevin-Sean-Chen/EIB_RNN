@@ -8,10 +8,15 @@ import torch.nn.functional as F
 import scipy.io as sio
 from datetime import datetime
 import os
+from pathlib import Path
+import sys
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 from PIL import Image
 from scipy.ndimage import sobel, gaussian_filter
+
+repo_root = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(repo_root))
 
 # relu2D_step function to perform one step of the ReLU 2D simulation
 # This function uses PyTorch for efficient computation, especially on GPU.
@@ -258,6 +263,16 @@ def second_acf_peak_latent(ts):
             break
 
     return peak_val, acf
+
+
+# Use the shared metric implementations. Keep the old names until all scripts migrate.
+from src.metrics import (
+    avg_second_acf_peak,
+    coherence_chi,
+    coherence_metric,
+    linear_dimention,
+    second_acf_peak_latent,
+)
 
 
 def gabor2d(N, f=0.1, theta=0.0, sigma_x=None, sigma_y=None, gamma=1.0, phi=0.0,

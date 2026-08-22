@@ -1,10 +1,10 @@
 run:
-  output_root: output/tasks
-  experiment: driven_dot_tracking
+  output_root: output/simulations
+  experiment: driven_dot
   run_id: null
 
 network:
-  N: 31
+  N: 15
   K: 100.0
   J_ee: 1.0
   J_ei: -4.0
@@ -32,6 +32,4 @@ stimulus:
   input_amplitude: 10.0
 
 task:
-  K_values: [0.1, 1, 10, 100, 1000, 10000]
-  repetitions: 5
   max_lag: 20

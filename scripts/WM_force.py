@@ -446,7 +446,7 @@ if __name__ == "__main__":
     # --- Reservoir params ---
     params = {
         "dt": 0.001,
-        "K": 30.0,  # gain / spatial scaling
+        "K": 20.0,  # gain / spatial scaling
         "tau": np.array([0.01, 0.01]),
         "u": [10.0, 0.0],  # baseline drives; if learning is weak, try reducing u0_e
         "J0": np.array([[1, -4], [2, -2]]),

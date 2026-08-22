@@ -5,7 +5,6 @@ import torch.nn.functional as F
 import scipy.io as sio
 from datetime import datetime
 import os
-import cv2
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 from PIL import Image

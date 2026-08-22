@@ -12,3 +12,5 @@ where $\phi$ is now ReLU, $g$ as spatial Gaussian kernels, and weights are chose
 - The role of balance and $K$ in spatiotemporal pattern
 - Computation and input-driven patterns
 - Extensions: Disorder/non-locality, learning/development, adaptation 
+
+See `docs/scientific_program.md` for the scientific questions and their workflow status.

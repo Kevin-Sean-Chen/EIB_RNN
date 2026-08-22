@@ -9,8 +9,13 @@ import matplotlib.pyplot as plt
 from relu2D_asym import relu2D_bias
 from relu2D_dense import relu2D_dense, build_dense_operators
 
-from scripts.relu2D_disorder import coherence_metric, coherence_chi, \
-                                    linear_dimention, avg_second_acf_peak, second_acf_peak_latent
+from src.metrics import (
+    avg_second_acf_peak,
+    coherence_chi,
+    coherence_metric,
+    linear_dimention,
+    second_acf_peak_latent,
+)
 
 # %% network parameters
 L = 31

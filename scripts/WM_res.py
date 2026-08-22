@@ -410,7 +410,7 @@ def eval_model(model, trial_fn, n_trials, mask=None):
 if __name__ == "__main__":
 
     # --- Setup ---
-    N = 23
+    N = 21
     T = 500
     output_dim = 1
     device = "cpu"
@@ -434,7 +434,7 @@ if __name__ == "__main__":
     # Reservoir params
     params = {
         "dt": 0.001,
-        "K": 25.0, ### 20 seems great for small network; 30 for larger, but more chaotic
+        "K": 20.0, ### 20 seems great for small network; 30 for larger, but more chaotic
         "tau": np.array([0.01, 0.01]),
         "u": [10.0, 0.0],
         "J0": np.array([[1, -4], [2, -2]]),
@@ -491,7 +491,7 @@ if __name__ == "__main__":
         return np.arange(go_start, T_, dtype=np.int64)
 
     # Collect (separately) for out and mem (best practice)
-    n_train = 30  #50
+    n_train = 50  #50
     lam = 1e-2*1  ### this matters
 
     # Collect for mem

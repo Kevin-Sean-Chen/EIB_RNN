@@ -1,6 +1,6 @@
 run:
-  output_root: output/tasks
-  experiment: driven_dot_tracking
+  output_root: output/simulations
+  experiment: disorder
   run_id: null
 
 network:
@@ -19,19 +19,17 @@ simulation:
   seed: 7
   device: cpu
   dt: 0.0001
-  init_steps: 333
-  record_steps: 333
+  init_steps: 1000
+  record_steps: 1000
   steps_per_record: 1
   tau_e: 0.01
   tau_i: 0.01
 
-stimulus:
-  dot_size: 0.2
-  drift_rate: 0.7
-  angle: 0.0
-  input_amplitude: 10.0
-
-task:
-  K_values: [0.1, 1, 10, 100, 1000, 10000]
-  repetitions: 5
-  max_lag: 20
+disorder:
+  strength: 0.5
+  rank: 1
+  pattern_type: gabor
+  frequency: 5.0
+  angle: 30.0
+  phase_offset: 0.5
+  aspect_ratio: 0.1

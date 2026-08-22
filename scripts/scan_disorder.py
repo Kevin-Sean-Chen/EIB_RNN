@@ -12,7 +12,7 @@ from relu2D_disorder import *
 Ks = np.array([10, 10**2, 10**3, 10**4, 10**5])  ### random strength
 Ks = np.array([1, 10, 100, 1000, 10000, 100000])
 gs = np.array([0, 0.5, 1.0, 1.5, 2.0])  ### disorder strength
-gs = np.array([0, 2.0])  ### to scan robustness
+# gs = np.array([0, 2.0])  ### to scan robustness
 fs = np.array([0.5, 1, 2, 4, 8])*1 ### frequency of disorder pattern
 scans = np.zeros((len(Ks), len(gs)))  # store (mean, std) of coherence metric
 

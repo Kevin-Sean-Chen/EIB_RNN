@@ -21,8 +21,13 @@ repo_root = Path(__file__).resolve().parents[1]
 sys.path.append(str(repo_root))
 
 from scripts.relu2D_disorder import gabor2d
-from scripts.relu2D_disorder import coherence_metric, coherence_chi, \
-                                    linear_dimention, avg_second_acf_peak, second_acf_peak_latent
+from src.metrics import (
+    avg_second_acf_peak,
+    coherence_chi,
+    coherence_metric,
+    linear_dimention,
+    second_acf_peak_latent,
+)
 
 # %% functional
 # --- helper: build Gaussian 2D kernels identical to your current code ---

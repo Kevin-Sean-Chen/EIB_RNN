@@ -4,9 +4,11 @@ channels:
   - conda-forge
 dependencies:
   - python=3.11.4
-  - numpy
+  # PyTorch 2.1.2 requires the NumPy 1.x binary interface.
+  - numpy=1.26.4
   - scipy
   - matplotlib
+  - pillow
   - pyyaml
   - pytorch=2.1.2
   - pip

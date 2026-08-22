@@ -1,11 +1,11 @@
 run:
   output_root: output/simulations
-  experiment: driven_dot
+  experiment: local
   run_id: null
 
 network:
   N: 31
-  K: 100.0
+  K: 1000.0
   J_ee: 1.0
   J_ei: -4.0
   J_ie: 2.0
@@ -19,17 +19,8 @@ simulation:
   seed: 7
   device: cpu
   dt: 0.0001
-  init_steps: 333
-  record_steps: 333
-  steps_per_record: 1
+  init_steps: 1000
+  record_steps: 2000
+  steps_per_record: 5
   tau_e: 0.01
   tau_i: 0.01
-
-stimulus:
-  dot_size: 0.2
-  drift_rate: 0.7
-  angle: 0.0
-  input_amplitude: 10.0
-
-task:
-  max_lag: 20

@@ -1,0 +1,39 @@
+run:
+  output_root: output/scans
+  experiment: disorder_strength
+  run_id: null
+
+network:
+  N: 31
+  K: 100.0
+  J_ee: 1.0
+  J_ei: -4.0
+  J_ie: 2.0
+  J_ii: -2.0
+  sigma_e: 0.05
+  sigma_i: 0.07071067811865477
+  u_e: 10.0
+  u_i: 0.0
+
+simulation:
+  seed: 7
+  device: cpu
+  dt: 0.0001
+  init_steps: 1000
+  record_steps: 1000
+  steps_per_record: 1
+  tau_e: 0.01
+  tau_i: 0.01
+
+disorder:
+  strength: 0.5
+  rank: 2
+  pattern_type: random
+  frequency: 5.0
+  angle: 30.0
+  phase_offset: 0.5
+  aspect_ratio: 0.1
+
+scan:
+  K_values: [1, 10, 100, 1000, 10000, 100000]
+  strength_values: [0.0, 2.0]
