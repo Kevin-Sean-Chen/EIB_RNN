@@ -66,6 +66,17 @@ For a short scan, use `configs/driven/dot_tracking_quick.yaml`.
 
 These workflows use input and response center of mass. The tracking scan measures peak lag and peak overlap-normalized cross-correlation.
 
+Run same-time rigid-shift reconstruction:
+
+```bash
+python scripts/driven/train_rigid_reconstruction.py \
+  --config configs/driven/rigid_reconstruction.yaml
+```
+
+Use `configs/driven/rigid_reconstruction_quick.yaml` for an `N=15` check.
+
+The default configuration matches the legacy optimizer. Adam changes only the linear readout. The recurrent spatial E/I network is fixed. Set `learning_method: rls` only for a separate readout comparison.
+
 ## Low-rank disorder simulation
 
 Run the legacy-matching disorder simulation:
@@ -108,3 +119,30 @@ python scripts/analyses/run_spectral.py \
 ```
 
 For a faster `N=15` check, use `configs/analyses/spectral_quick.yaml`.
+
+## Working memory with RLS
+
+Train the spatial reservoir with online RLS/FORCE updates:
+
+```bash
+python scripts/working_memory/train_force.py \
+  --config configs/working_memory/force_spatial.yaml
+```
+
+Train the non-spatial control with the same learning rule:
+
+```bash
+python scripts/working_memory/train_force.py \
+  --config configs/working_memory/force_non_spatial.yaml
+```
+
+Use `force_spatial_quick.yaml` or `force_non_spatial_quick.yaml` for a short check. These workflows have fixed recurrent weights. Only the output and memory readouts change through direct RLS updates. They do not use Adam or gradient updates.
+
+Reproduce the legacy spatial ridge performance across `K`:
+
+```bash
+python scripts/working_memory/scan_K.py \
+  --config configs/working_memory/K_scan.yaml
+```
+
+Use `configs/working_memory/K_scan_quick.yaml` for a short check. The scan reports post-go MSE and R2 for the output and memory readouts. The legacy-matched configuration uses ridge fitting, no feedback, and no field clamp. Set `learning_method: rls`, `feedback_gain: 0.001`, and `field_clip: 100.0` only for a separate FORCE/RLS comparison.

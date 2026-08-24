@@ -226,7 +226,7 @@ class Relu2DReservoirRNN(nn.Module):
         for t in range(T):
             # Add input as external drive to excitatory population
             u = self.relu2D_params['u']  # Read baseline u
-            u[0] = u[0]*0 + input_pattern[:, :, t].cpu().numpy()*10  # Add input 2D array at time t
+            u[0] = u[0]*1 + input_pattern[:, :, t].cpu().numpy()*10  # Add input 2D array at time t
             re, ri = relu2D_step(
                 re.cpu().numpy(), ri.cpu().numpy(), N,
                 self.relu2D_params['dt'], 1, self.relu2D_params['ntype'],

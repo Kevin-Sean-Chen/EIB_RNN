@@ -12,7 +12,7 @@ from matplotlib import pyplot as plt
 import sys
 from pathlib import Path
 # add repo root to sys.path so `scripts` files can import each other
-repo_root = Path(__file__).resolve().parents[1]
+repo_root = Path(__file__).resolve().parents[2]
 sys.path.append(str(repo_root))
 
 from scripts.relu2D_reservoir import Relu2DReservoirRNN, make_2D_stim_with_rigid_shift

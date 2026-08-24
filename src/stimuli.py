@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import numpy as np
 import torch
+from scipy.ndimage import shift
+from scipy.signal import convolve2d
 
 
 def moving_dot(
@@ -105,3 +107,38 @@ def drifting_sine(
             (frame - frame.min()) / (frame.max() - frame.min()) * 2 - 1
         )
     return stimulus, drift_series
+
+
+def rigid_shift_movie(
+    N: int,
+    steps: int,
+    dt: float,
+    smoothing_width: float,
+    distance: float,
+    seed: int,
+    device: str = "cpu",
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Return the legacy rigid-shift movie and its angle target."""
+    rng = np.random.default_rng(seed)
+    source = rng.standard_normal((N, N))
+    sigma = smoothing_width * N
+    coordinates = np.arange(N) - (N - 1) / 2
+    X, Y = np.meshgrid(coordinates, coordinates, indexing="ij")
+    kernel = np.exp(-(X**2 + Y**2) / (2 * sigma**2))
+    kernel /= kernel.sum()
+    pattern = convolve2d(source, kernel, mode="same", boundary="wrap")
+    pattern -= pattern.mean()
+    pattern /= np.max(np.abs(pattern))
+
+    time = np.arange(steps) * dt
+    angles = np.sin(time / dt / np.pi / 2) + np.sin(time / dt / np.pi / 4)
+    angles = angles / np.max(np.abs(angles)) * np.pi
+    movie = np.empty((N, N, steps), dtype=np.float32)
+    for index, angle in enumerate(angles):
+        shift_x = distance * np.cos(angle)
+        shift_y = distance * np.sin(angle)
+        movie[:, :, index] = shift(pattern, [shift_y, shift_x], mode="wrap")
+    return (
+        torch.tensor(movie, dtype=torch.float32, device=device),
+        torch.tensor(angles, dtype=torch.float32, device=device),
+    )

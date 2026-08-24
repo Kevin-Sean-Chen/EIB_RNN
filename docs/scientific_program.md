@@ -42,10 +42,12 @@ Scientific question: How does the spatial E/I network represent and track struct
 |---|---|---|---|
 | Moving-dot response | `scripts/driven/run_driven_dot.py` | Stimulus, E activity, center-of-mass traces, and tracking metrics | **Ready** |
 | Tracking across `K` | `scripts/driven/scan_driven_dot.py` | Peak lag and cross-correlation across `K` | **Ready** |
-| Direction discrimination | Planned replacement for `scripts/relu2D_ds.py` | Readout accuracy, activity, and direction-dependent responses | **Refactor pending** |
+| Time-shifted dot prediction | Planned extension of the moving-dot workflow | Prediction error across target lead time | **Refactor pending** |
+| Same-time rigid-shift reconstruction | `scripts/driven/train_rigid_reconstruction.py` | Rigid-shift target, linear readout, reconstruction error, and activity | **Refactor pending** |
+| Direction discrimination | `scripts/alternative_tasks/relu2D_ds.py` | Secondary direction-decoding experiment | **Decision pending** |
 | Two-dot transient response | Preserved in `archive/legacy_driven/relu2D_driven.py` | Response during input and after input removal | **Decision pending** |
 
-The moving-dot workflow measures tracking. Direction discrimination will measure task performance.
+The moving-dot workflow will support time-shifted prediction. Rigid-shift reconstruction measures same-time input representation. Its legacy-matched Adam optimizer changes only the linear readout. Direction discrimination is a secondary task.
 
 ## 4. Working memory with RLS
 
@@ -53,13 +55,13 @@ Scientific question: Can fixed spatial recurrent dynamics support working memory
 
 | Workflow | Source script | Intended replacement | Status |
 |---|---|---|---|
-| Working-memory trial | `scripts/WM_res.py` and `scripts/WM_force.py` | Shared task generator in `src/tasks/` | **Refactor pending** |
-| Spatial reservoir | `scripts/WM_force.py` | Shared fixed recurrent model in `src/` | **Refactor pending** |
-| RLS/FORCE learning | `scripts/WM_force.py` | Shared RLS code and a `train_` script | **Refactor pending** |
-| Performance across `K` | `scripts/scan_WM_k.py` | YAML-driven working-memory scan | **Refactor pending** |
-| Random-RNN comparison | `scripts/WM_rnn.py` | Reproducible non-spatial control workflow | **Refactor pending** |
+| Working-memory trial | `scripts/WM_res.py` and archived `WM_force.py` | `src/tasks/working_memory.py` | **Ready** |
+| Spatial reservoir | Archived `WM_force.py` | `src/models/working_memory.py` | **Ready** |
+| RLS/FORCE learning | Archived `WM_force.py` | `src/learning/` and `scripts/working_memory/train_force.py` | **Ready** |
+| Performance across `K` | `scripts/working_memory/scan_K.py` | Legacy-matched ridge MSE and R2 across `K`; optional RLS comparison | **Ready** |
+| Random-RNN comparison | `scripts/WM_rnn.py` | `scripts/working_memory/train_force.py` with the non-spatial configuration | **Ready** |
 
-The main learning method is recursive least squares through FORCE. The main program does not use Adam, gradient descent, or back-propagation through time. Offline ridge initialization can remain a configurable option.
+The supported learning method is recursive least squares through FORCE. The spatial and non-spatial workflows use the same RLS update. They do not use Adam, gradient descent, back-propagation through time, or offline ridge initialization.
 
 ## 5. Dynamic and spectral interpretation
 

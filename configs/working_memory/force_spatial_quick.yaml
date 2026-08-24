@@ -1,0 +1,59 @@
+run:
+  output_root: output/working_memory
+  experiment: force_spatial
+  run_id: null
+
+model:
+  model_type: spatial
+  N: 9
+  device: cpu
+  nonlinearity: relu
+  seed: 7
+
+network:
+  dt: 0.001
+  tau_e: 0.01
+  tau_i: 0.01
+  K: 20.0
+  J_ee: 1.0
+  J_ei: -4.0
+  J_ie: 2.0
+  J_ii: -2.0
+  sigma_e: 0.05
+  sigma_i: 0.07071067811865477
+  u_e: 10.0
+  u_i: 0.0
+  recurrent_gain: 1.5
+  normalize_kernel: true
+  init_scale: 0.1
+  microsteps: 1
+  field_clip: 100.0
+
+task:
+  steps: 80
+  delay_steps: 40
+  cue_steps: 10
+  stimulus_gain: 10.0
+  ramp_memory: false
+  trigger_one_frequency: 2.5
+  trigger_one_angle: 30.0
+  trigger_two_frequency: 0.5
+  trigger_two_angle: 60.0
+  go_frequency: 1.5
+  go_angle: 90.0
+  pattern_scale: 0.1
+  go_pattern_type: random
+
+learning:
+  training_trials: 4
+  evaluation_trials: 4
+  delta: 0.1
+  forgetting_factor: 1.0
+  feedback_gain: 0.001
+  feedback_scale: 0.01
+  use_feedback_output: true
+  use_feedback_memory: true
+  train_output: true
+  train_memory: true
+  learning_method: rls
+  ridge_lambda: 0.01
