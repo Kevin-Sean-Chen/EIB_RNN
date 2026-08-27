@@ -13,8 +13,12 @@ sys.path.insert(0, str(repo_root))
 
 from src.config import dataclass_to_sections, load_dataclass_sections, save_yaml
 from src.io import create_run_directory, runtime_metadata, save_csv, save_json, save_npz
-from src.learning.rigid_reconstruction import train_rigid_reconstruction
-from src.models.rigid_reconstruction import RigidReconstructionReservoir
+from src.learning.rigid_reconstruction import driven_lyapunov_exponent, train_rigid_reconstruction
+from src.models.rigid_reconstruction import (
+    NonSpatialRigidReconstructionReservoir,
+    RandomEIRigidReconstructionReservoir,
+    RigidReconstructionReservoir,
+)
 from src.stimuli import rigid_shift_movie
 from src.tasks.rigid_reconstruction import RIGID_RECONSTRUCTION_SECTIONS, RigidReconstructionConfig
 
@@ -44,7 +48,15 @@ def main() -> None:
         config.N, config.steps, config.dt, config.smoothing_width,
         config.shift_distance, config.seed, config.device,
     )
-    result = train_rigid_reconstruction(RigidReconstructionReservoir(config), stimulus, target)
+    model_classes = {
+        "spatial": RigidReconstructionReservoir,
+        "non_spatial": NonSpatialRigidReconstructionReservoir,
+        "random_ei": RandomEIRigidReconstructionReservoir,
+    }
+    model_class = model_classes[config.model_type]
+    model = model_class(config)
+    lyapunov = driven_lyapunov_exponent(model, stimulus, config.seed)
+    result = train_rigid_reconstruction(model, stimulus, target)
     output_root = Path(run.get("output_root", "output/tasks"))
     if not output_root.is_absolute():
         output_root = repo_root / output_root
@@ -62,12 +74,19 @@ def main() -> None:
     axes[1, 0].set(title="Rigid pattern", xticks=[], yticks=[])
     axes[1, 1].imshow(result.activity, origin="lower", aspect="auto", cmap="viridis")
     axes[1, 1].set(title="Reservoir activity", xlabel="Step", ylabel="Unit")
-    figure.suptitle("Rigid-shift reconstruction")
+    figure.suptitle(f"Rigid-shift reconstruction: {config.model_type}")
     resolved = {"run": {"run_directory": str(directory)}}
     resolved.update(dataclass_to_sections(config, RIGID_RECONSTRUCTION_SECTIONS))
     save_yaml(directory / "config.yaml", resolved)
     save_npz(directory / "results.npz", {**result.__dict__, "stimulus": stimulus.cpu().numpy()})
-    save_csv(directory / "metrics.csv", ["mse", "r2"], [{"mse": result.evaluation_mse, "r2": result.evaluation_r2}])
+    save_csv(
+        directory / "metrics.csv",
+        ["model_type", "mse", "r2", "driven_lyapunov_per_second"],
+        [{
+            "model_type": config.model_type, "mse": result.evaluation_mse,
+            "r2": result.evaluation_r2, "driven_lyapunov_per_second": lyapunov,
+        }],
+    )
     save_json(directory / "metadata.json", runtime_metadata(repo_root))
     figure.savefig(directory / "summary.png", dpi=180)
     print(f"Saved training run to {directory}")

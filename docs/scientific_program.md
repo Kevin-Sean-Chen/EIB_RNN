@@ -43,11 +43,11 @@ Scientific question: How does the spatial E/I network represent and track struct
 | Moving-dot response | `scripts/driven/run_driven_dot.py` | Stimulus, E activity, center-of-mass traces, and tracking metrics | **Ready** |
 | Tracking across `K` | `scripts/driven/scan_driven_dot.py` | Peak lag and cross-correlation across `K` | **Ready** |
 | Time-shifted dot prediction | Planned extension of the moving-dot workflow | Prediction error across target lead time | **Refactor pending** |
-| Same-time rigid-shift reconstruction | `scripts/driven/train_rigid_reconstruction.py` | Rigid-shift target, RLS readout, reconstruction error, and activity | **Ready** |
+| Same-time rigid-shift reconstruction | `scripts/driven/train_rigid_reconstruction.py` | Spatial and same-size non-spatial RLS reconstruction controls | **Ready** |
 | Direction discrimination | `scripts/alternative_tasks/relu2D_ds.py` | Secondary direction-decoding experiment | **Decision pending** |
 | Two-dot transient response | Preserved in `archive/legacy_driven/relu2D_driven.py` | Response during input and after input removal | **Decision pending** |
 
-The moving-dot workflow will support time-shifted prediction. Rigid-shift reconstruction measures same-time input representation and uses an RLS readout. Direction discrimination is a secondary task.
+The moving-dot workflow will support time-shifted prediction. Rigid-shift reconstruction measures same-time input representation and uses an RLS readout. The balanced non-spatial control has `N²` units, matching the number of spatial excitatory readout units. This control tests if spatial structure improves reconstruction. Current single-seed results do not show an improvement. Direction discrimination is a secondary task.
 
 ## 4. Working memory with RLS
 

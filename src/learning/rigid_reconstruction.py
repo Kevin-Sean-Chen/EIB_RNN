@@ -36,6 +36,44 @@ def settled_state(model, seed: int):
 
 
 @torch.no_grad()
+def driven_lyapunov_exponent(
+    model, stimulus: torch.Tensor, seed: int, perturbation: float = 1e-2,
+    discard_steps: int = 50,
+) -> float:
+    """Estimate driven perturbation growth with repeated normalization."""
+    reference = settled_state(model, seed)
+    generator = torch.Generator(device="cpu").manual_seed(seed + 10000)
+    direction = tuple(
+        torch.randn(value.shape, generator=generator).to(value.device)
+        for value in reference
+    )
+    direction_norm = torch.sqrt(sum(torch.sum(value**2) for value in direction))
+    perturbed = tuple(
+        value + perturbation * delta / direction_norm
+        for value, delta in zip(reference, direction)
+    )
+    log_growth = []
+    for step in range(stimulus.shape[-1]):
+        frame = stimulus[:, :, step]
+        reference = model.step(reference, frame)
+        perturbed = model.step(perturbed, frame)
+        difference = tuple(
+            changed - base for base, changed in zip(reference, perturbed)
+        )
+        distance = torch.sqrt(sum(torch.sum(value**2) for value in difference))
+        if not torch.isfinite(distance) or distance <= 0:
+            return float("nan")
+        log_growth.append(torch.log(distance / perturbation))
+        perturbed = tuple(
+            base + perturbation * delta / distance
+            for base, delta in zip(reference, difference)
+        )
+    start = min(discard_steps, max(0, len(log_growth) - 1))
+    elapsed = (len(log_growth) - start) * model.config.dt
+    return float(torch.stack(log_growth[start:]).sum() / elapsed)
+
+
+@torch.no_grad()
 def run_reconstruction_trial(
     model, stimulus, target, seed: int, update: bool, inverse=None,
     initial_state=None,

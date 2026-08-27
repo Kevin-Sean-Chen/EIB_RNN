@@ -77,6 +77,44 @@ Use `configs/driven/rigid_reconstruction_quick.yaml` for an `N=15` check.
 
 The default configuration uses one-pass RLS and the canonical driven-network condition: `dt=0.0001`, `K=100`, additive baseline input, stimulus gain `10`, and initial scale `0.1`. Use `configs/driven/rigid_reconstruction_adam.yaml` only to compare with the replacement-baseline optimizer in the original ReLU script.
 
+Run the same-size non-spatial control:
+
+```bash
+python scripts/driven/train_rigid_reconstruction.py \
+  --config configs/driven/rigid_reconstruction_non_spatial.yaml
+```
+
+The control has `N²` random recurrent units and the same `N²+1` readout features as the spatial excitatory population. The extra feature is the bias. Both models multiply the baseline and stimulus by `sqrt(K)`. They use the same movie, target, timing, RLS rule, initialization scale, and evaluation perturbation. Each row of the random recurrent matrix has zero sum. This condition gives an explicit balance between its positive and negative recurrent weights. The non-spatial recurrent gain is `0.8`, and its connection probability is `0.5`.
+
+Run the strongly coupled random E/I control:
+
+```bash
+python scripts/driven/train_rigid_reconstruction.py \
+  --config configs/driven/rigid_reconstruction_random_ei.yaml
+```
+
+This control has the same E and I population sizes, in-degree `K`, coupling values, time constants, strong-drive scaling, and excitatory readout size as the spatial network. Each random connectivity row has exactly `K` inputs. Only the recurrent topology changes from local spatial kernels to random connections.
+
+The metrics file includes a driven finite-time Lyapunov exponent. A positive value indicates perturbation growth under the fixed task input. A negative value indicates contraction toward an input-locked trajectory.
+
+Scan the spatial smoothing width for both models:
+
+```bash
+python scripts/driven/scan_rigid_smoothing.py \
+  --config configs/driven/rigid_reconstruction_smoothing_scan.yaml
+```
+
+The scan reports smoothing width in grid pixels. Larger values produce smoother textures with longer spatial correlations.
+
+Compare raw input with one fixed spatial permutation:
+
+```bash
+python scripts/driven/scan_rigid_smoothing.py \
+  --config configs/driven/rigid_reconstruction_shuffle_scan.yaml
+```
+
+The fixed permutation is identical at all time steps. It preserves pixel values and temporal identity, but it removes local spatial correlations.
+
 ## Low-rank disorder simulation
 
 Run the legacy-matching disorder simulation:

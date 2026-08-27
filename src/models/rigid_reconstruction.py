@@ -56,3 +56,107 @@ class RigidReconstructionReservoir(nn.Module):
 
     def predict(self, features: torch.Tensor) -> torch.Tensor:
         return features @ self.readout
+
+
+class NonSpatialRigidReconstructionReservoir(nn.Module):
+    """Run a same-size random ReLU reservoir with one RLS readout."""
+
+    def __init__(self, config: RigidReconstructionConfig) -> None:
+        super().__init__()
+        self.config = config
+        unit_count = config.N**2
+        self.feature_count = unit_count + 1
+        device = torch.device(config.device)
+        generator = torch.Generator(device="cpu").manual_seed(config.seed)
+        mask = torch.rand(unit_count, unit_count, generator=generator) < config.recurrent_sparsity
+        recurrent = torch.randn(unit_count, unit_count, generator=generator)
+        recurrent *= mask
+        connected_count = mask.sum(dim=1, keepdim=True).clamp_min(1)
+        connected_mean = recurrent.sum(dim=1, keepdim=True) / connected_count
+        recurrent = (recurrent - connected_mean) * mask
+        recurrent *= config.recurrent_gain / (config.recurrent_sparsity * unit_count) ** 0.5
+        self.register_buffer("recurrent", recurrent.to(device))
+        self.register_buffer("readout", torch.zeros(self.feature_count, 1, device=device))
+
+    def initial_state(self, seed: int) -> tuple[torch.Tensor]:
+        generator = torch.Generator(device="cpu").manual_seed(seed)
+        state = torch.randn(self.config.N**2, generator=generator).to(self.readout.device)
+        return (state * self.config.init_scale,)
+
+    @torch.no_grad()
+    def step(self, state, stimulus: torch.Tensor):
+        rate = state[0]
+        baseline = 0.0 if self.config.baseline_mode == "replace" else self.config.u_e
+        external_drive = self.config.K**0.5 * (
+            baseline + self.config.stimulus_gain * stimulus.reshape(-1)
+        )
+        field = self.recurrent @ rate + external_drive
+        if self.config.field_clip is not None:
+            field = torch.clamp(field, -self.config.field_clip, self.config.field_clip)
+        rate = rate + self.config.dt / self.config.tau_e * (-rate + F.relu(field))
+        return (rate,)
+
+    def features(self, state) -> torch.Tensor:
+        return torch.cat([F.relu(state[0]), torch.ones(1, device=self.readout.device)])
+
+    def predict(self, features: torch.Tensor) -> torch.Tensor:
+        return features @ self.readout
+
+
+class RandomEIRigidReconstructionReservoir(nn.Module):
+    """Run a strongly coupled random E/I ReLU reservoir."""
+
+    def __init__(self, config: RigidReconstructionConfig) -> None:
+        super().__init__()
+        self.config = config
+        unit_count = config.N**2
+        degree = int(round(config.K))
+        if degree <= 0 or degree > unit_count:
+            raise ValueError("K must give a valid random E/I in-degree.")
+        self.feature_count = unit_count + 1
+        device = torch.device(config.device)
+        for name, seed_offset in (("ee", 0), ("ei", 1), ("ie", 2), ("ii", 3)):
+            generator = torch.Generator(device="cpu").manual_seed(config.seed + seed_offset)
+            scores = torch.rand((unit_count, unit_count), generator=generator)
+            indices = torch.topk(scores, degree, dim=1, sorted=False).indices
+            connectivity = torch.zeros((unit_count, unit_count))
+            connectivity.scatter_(1, indices, 1.0 / degree)
+            self.register_buffer(f"connectivity_{name}", connectivity.to(device))
+        self.register_buffer("readout", torch.zeros(self.feature_count, 1, device=device))
+
+    def initial_state(self, seed: int) -> tuple[torch.Tensor, torch.Tensor]:
+        generator = torch.Generator(device="cpu").manual_seed(seed)
+        shape = (self.config.N, self.config.N)
+        re = torch.randn(shape, generator=generator).to(self.readout.device) * self.config.init_scale
+        ri = torch.randn(shape, generator=generator).to(self.readout.device) * self.config.init_scale
+        return re, ri
+
+    @torch.no_grad()
+    def step(self, state, stimulus: torch.Tensor):
+        re, ri = state
+        flat_e = re.reshape(-1)
+        flat_i = ri.reshape(-1)
+        local_ee = self.connectivity_ee @ flat_e
+        local_ei = self.connectivity_ei @ flat_i
+        local_ie = self.connectivity_ie @ flat_e
+        local_ii = self.connectivity_ii @ flat_i
+        baseline_e = 0.0 if self.config.baseline_mode == "replace" else self.config.u_e
+        field_e = self.config.K**0.5 * (
+            baseline_e + self.config.J_ee * local_ee + self.config.J_ei * local_ei
+            + self.config.stimulus_gain * stimulus.reshape(-1)
+        )
+        field_i = self.config.K**0.5 * (
+            self.config.u_i + self.config.J_ie * local_ie + self.config.J_ii * local_ii
+        )
+        if self.config.field_clip is not None:
+            field_e = torch.clamp(field_e, -self.config.field_clip, self.config.field_clip)
+            field_i = torch.clamp(field_i, -self.config.field_clip, self.config.field_clip)
+        flat_e = flat_e + self.config.dt / self.config.tau_e * (-flat_e + F.relu(field_e))
+        flat_i = flat_i + self.config.dt / self.config.tau_i * (-flat_i + F.relu(field_i))
+        return flat_e.reshape_as(re), flat_i.reshape_as(ri)
+
+    def features(self, state) -> torch.Tensor:
+        return torch.cat([F.relu(state[0]).reshape(-1), torch.ones(1, device=self.readout.device)])
+
+    def predict(self, features: torch.Tensor) -> torch.Tensor:
+        return features @ self.readout

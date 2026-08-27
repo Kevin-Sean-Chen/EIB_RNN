@@ -1,8 +1,8 @@
 run:
   output_root: output/tasks
-  experiment: rigid_reconstruction
+  experiment: rigid_reconstruction_smoothing_scan
   run_id: null
-model: {model_type: spatial, N: 15, device: cpu, seed: 7}
+model: {model_type: spatial, N: 31, device: cpu, seed: 7}
 network:
   dt: 0.0001
   tau_e: 0.01
@@ -20,16 +20,18 @@ network:
   init_scale: 0.1
   baseline_mode: add
   field_clip: null
-  init_steps: 50
-  recurrent_gain: 1.5
+  init_steps: 333
+  recurrent_gain: 0.8
   recurrent_sparsity: 0.5
-task: {steps: 100, smoothing_width: 0.06666666666666667, shift_distance: 5.0}
+task: {steps: 500, smoothing_width: 0.03225806451612903, shift_distance: 10.0}
 learning:
   learning_method: rls
   training_trials: 1
-  evaluation_trials: 4
-  epochs: 20
+  evaluation_trials: 10
+  epochs: 60
   learning_rate: 0.01
   delta: 1.0
   forgetting_factor: 1.0
   evaluation_perturbation: 0.1
+scan:
+  sigma_pixels: [1.0, 2.0, 4.0, 6.0, 8.0]

@@ -2,7 +2,7 @@ run:
   output_root: output/tasks
   experiment: rigid_reconstruction
   run_id: null
-model: {N: 31, device: cpu, seed: 7}
+model: {model_type: spatial, N: 31, device: cpu, seed: 7}
 network:
   dt: 0.0001
   tau_e: 0.01
@@ -21,6 +21,8 @@ network:
   baseline_mode: add
   field_clip: null
   init_steps: 333
+  recurrent_gain: 1.5
+  recurrent_sparsity: 0.5
 task: {steps: 500, smoothing_width: 0.03225806451612903, shift_distance: 10.0}
 learning:
   learning_method: rls

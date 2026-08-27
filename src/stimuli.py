@@ -142,3 +142,14 @@ def rigid_shift_movie(
         torch.tensor(movie, dtype=torch.float32, device=device),
         torch.tensor(angles, dtype=torch.float32, device=device),
     )
+
+
+def fixed_spatial_permutation(movie: torch.Tensor, seed: int) -> torch.Tensor:
+    """Apply one fixed pixel permutation to all movie frames."""
+    if movie.ndim != 3 or movie.shape[0] != movie.shape[1]:
+        raise ValueError("The movie must have shape N by N by time.")
+    generator = torch.Generator(device="cpu").manual_seed(seed)
+    pixel_count = movie.shape[0] * movie.shape[1]
+    permutation = torch.randperm(pixel_count, generator=generator).to(movie.device)
+    flat_movie = movie.reshape(pixel_count, movie.shape[-1])
+    return flat_movie[permutation].reshape_as(movie)
