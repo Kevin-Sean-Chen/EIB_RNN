@@ -283,6 +283,7 @@ plt.legend(fontsize=20)
 plt.ylabel('drift angle', fontsize=20)
 plt.xlabel('time steps', fontsize=20)
 plt.title('training (RLS)', fontsize=20)
+plt.show()
 
 # %% testing!!!
 y_test = np.zeros(lt)
@@ -322,6 +323,7 @@ plt.legend(fontsize=20)
 plt.ylabel('drift angle', fontsize=20)
 plt.xlabel('time steps', fontsize=20)
 plt.title('k=0.06', fontsize=20); #plt.title('testing', fontsize=20)
+plt.show()
 
 # %%
 MSE = np.mean((y_test[50:]-f_t[50:])**2)

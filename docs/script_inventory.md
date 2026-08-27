@@ -25,7 +25,7 @@ Status terms:
 | `scripts/analyses/run_spectral.py` | Analyze the legacy two-population connectivity spectrum across `K` and Gabor phase. | Complex eigenvalues, spectral abscissa, stability flags, patterns, configuration, metadata, and a summary figure under `output/analyses/spectral/`. |
 | `scripts/working_memory/train_force.py` | Train fixed spatial or non-spatial reservoirs with online RLS/FORCE updates. | Resolved YAML, metadata, NPZ training and evaluation arrays, CSV metrics, and a summary figure under `output/working_memory/`. |
 | `scripts/working_memory/scan_K.py` | Reproduce the ridge-trained spatial working-memory scan across `K`; allow an RLS comparison. | Post-go output and memory MSE and R2, configuration, metadata, arrays, and a summary figure under `output/scans/working_memory_K/`. |
-| `scripts/driven/train_rigid_reconstruction.py` | Reconstruct the same-time rigid-shift angle from a fixed spatial reservoir. Adam changes only the legacy linear readout; RLS remains optional. | Training error, target and prediction, activity, stimulus, metrics, configuration, metadata, and a summary figure under `output/tasks/rigid_reconstruction/`. |
+| `scripts/driven/train_rigid_reconstruction.py` | Reconstruct the same-time rigid-shift angle from a fixed spatial reservoir with RLS. A separate YAML preserves the Adam readout comparison. | Training error, target and prediction, activity, stimulus, metrics, configuration, metadata, and a summary figure under `output/tasks/rigid_reconstruction/`. |
 
 ## Migration-pending ReLU dynamics and analysis
 

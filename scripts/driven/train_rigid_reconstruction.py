@@ -50,7 +50,9 @@ def main() -> None:
         output_root = repo_root / output_root
     directory = create_run_directory(output_root, str(run.get("experiment", "rigid_reconstruction")), run.get("run_id"))
     figure, axes = plt.subplots(2, 2, figsize=(12, 7), constrained_layout=True)
-    axes[0, 0].plot(result.training_mse)
+    axes[0, 0].plot(result.training_mse, "o-")
+    if result.training_mse.size == 1:
+        axes[0, 0].set_xlim(-0.5, 0.5)
     axes[0, 0].set(title=f"{config.learning_method.upper()} training", xlabel="Update", ylabel="MSE")
     axes[0, 1].plot(result.target, label="Target")
     axes[0, 1].plot(result.prediction, "--", label="Readout")

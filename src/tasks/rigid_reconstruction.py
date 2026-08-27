@@ -11,12 +11,12 @@ RIGID_RECONSTRUCTION_SECTIONS = {
     "network": (
         "dt", "tau_e", "tau_i", "K", "J_ee", "J_ei", "J_ie", "J_ii",
         "sigma_e", "sigma_i", "u_e", "u_i", "stimulus_gain", "init_scale",
-        "baseline_mode", "field_clip",
+        "baseline_mode", "field_clip", "init_steps",
     ),
     "task": ("steps", "smoothing_width", "shift_distance"),
     "learning": (
         "learning_method", "training_trials", "evaluation_trials", "epochs",
-        "learning_rate", "delta", "forgetting_factor",
+        "learning_rate", "delta", "forgetting_factor", "evaluation_perturbation",
     ),
 }
 
@@ -44,6 +44,7 @@ class RigidReconstructionConfig:
     init_scale: float = 1.0
     baseline_mode: str = "replace"
     field_clip: float | None = None
+    init_steps: int = 333
     steps: int = 500
     smoothing_width: float = 1.0 / 31.0
     shift_distance: float = 10.0
@@ -54,6 +55,7 @@ class RigidReconstructionConfig:
     learning_rate: float = 0.01
     delta: float = 0.1
     forgetting_factor: float = 1.0
+    evaluation_perturbation: float = 0.1
 
     def __post_init__(self) -> None:
         if self.N <= 0 or self.N % 2 != 1:
@@ -62,10 +64,14 @@ class RigidReconstructionConfig:
             raise ValueError("baseline_mode must be 'replace' or 'add'.")
         if min(self.steps, self.training_trials, self.evaluation_trials) <= 0:
             raise ValueError("Step and trial counts must be positive.")
+        if self.init_steps < 0:
+            raise ValueError("init_steps must not be negative.")
         if self.learning_method not in ("adam", "rls"):
             raise ValueError("learning_method must be 'adam' or 'rls'.")
         if self.epochs <= 0 or self.learning_rate <= 0:
             raise ValueError("Adam settings must be positive.")
+        if self.evaluation_perturbation < 0:
+            raise ValueError("evaluation_perturbation must not be negative.")
 
     @property
     def coupling(self) -> np.ndarray:

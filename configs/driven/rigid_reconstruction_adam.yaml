@@ -4,10 +4,10 @@ run:
   run_id: null
 model: {N: 31, device: cpu, seed: 7}
 network:
-  dt: 0.0001
+  dt: 0.001
   tau_e: 0.01
   tau_i: 0.01
-  K: 100.0
+  K: 10.0
   J_ee: 1.0
   J_ei: -4.0
   J_ie: 2.0
@@ -16,15 +16,15 @@ network:
   sigma_i: 0.07071067811865477
   u_e: 10.0
   u_i: 0.0
-  stimulus_gain: 10.0
-  init_scale: 0.1
-  baseline_mode: add
+  stimulus_gain: 1.0
+  init_scale: 1.0
+  baseline_mode: replace
   field_clip: null
-  init_steps: 333
+  init_steps: 0
 task: {steps: 500, smoothing_width: 0.03225806451612903, shift_distance: 10.0}
 learning:
-  learning_method: rls
-  training_trials: 1
+  learning_method: adam
+  training_trials: 20
   evaluation_trials: 10
   epochs: 60
   learning_rate: 0.01

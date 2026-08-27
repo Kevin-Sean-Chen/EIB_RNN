@@ -163,6 +163,7 @@ def make_2D_stim_with_rigid_shift(N, lt, dt, sigma_xy, device='cpu'):
     time = np.arange(lt) * dt
     angt += np.sin(time / dt / np.pi / 2)  # Higher frequency (was 5)
     angt += np.sin(time / dt / np.pi / 4)  # Higher frequency (was 10)
+    angt += np.sin(time / dt / np.pi / 8)  # Higher frequency (was 10)
     angt = angt / np.max(np.abs(angt)) * np.pi
 
     # Apply abrupt changes
@@ -336,7 +337,7 @@ if __name__ == "__main__":
     relu2D_params = {
         'dt': 0.001,
         'ntype': 'relu_gaussian',
-        'K': 10**1,
+        'K': 10**0,
         'tau': np.array([.01, .01]),
         'u': [10, 0],  # Changed to a list
         # 'J0': np.array([[1, -1], [1, -1]]), #
@@ -386,7 +387,7 @@ if __name__ == "__main__":
     ############################################
 
     # Training loop
-    epochs = 60
+    epochs = 150
     for epoch in range(epochs):
         optimizer.zero_grad()
         output, _ = model(ipt_img)

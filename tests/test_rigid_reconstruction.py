@@ -11,7 +11,7 @@ class RigidReconstructionTest(unittest.TestCase):
     def test_small_run_is_finite(self):
         config = RigidReconstructionConfig(
             N=5, steps=20, smoothing_width=0.2, shift_distance=2,
-            training_trials=2, evaluation_trials=2, epochs=2,
+            training_trials=2, evaluation_trials=2, epochs=2, init_steps=2,
         )
         stimulus, target = rigid_shift_movie(5, 20, config.dt, 0.2, 2, 3)
         result = train_rigid_reconstruction(RigidReconstructionReservoir(config), stimulus, target)

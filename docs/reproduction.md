@@ -75,7 +75,7 @@ python scripts/driven/train_rigid_reconstruction.py \
 
 Use `configs/driven/rigid_reconstruction_quick.yaml` for an `N=15` check.
 
-The default configuration matches the legacy optimizer. Adam changes only the linear readout. The recurrent spatial E/I network is fixed. Set `learning_method: rls` only for a separate readout comparison.
+The default configuration uses one-pass RLS and the canonical driven-network condition: `dt=0.0001`, `K=100`, additive baseline input, stimulus gain `10`, and initial scale `0.1`. Use `configs/driven/rigid_reconstruction_adam.yaml` only to compare with the replacement-baseline optimizer in the original ReLU script.
 
 ## Low-rank disorder simulation
 

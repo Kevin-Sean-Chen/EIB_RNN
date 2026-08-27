@@ -24,9 +24,24 @@ class RigidReconstructionResult:
 
 
 @torch.no_grad()
-def run_reconstruction_trial(model, stimulus, target, seed: int, update: bool, inverse=None):
-    """Run one reconstruction trial and optionally update its readout."""
+def settled_state(model, seed: int):
+    """Return a state settled under the configured baseline input."""
     state = model.initial_state(seed)
+    zero_input = torch.zeros(
+        model.config.N, model.config.N, device=model.readout.device,
+    )
+    for _ in range(model.config.init_steps):
+        state = model.step(state, zero_input)
+    return state
+
+
+@torch.no_grad()
+def run_reconstruction_trial(
+    model, stimulus, target, seed: int, update: bool, inverse=None,
+    initial_state=None,
+):
+    """Run one reconstruction trial and optionally update its readout."""
+    state = settled_state(model, seed) if initial_state is None else initial_state
     predictions = []
     activities = []
     squared_error = 0.0
@@ -53,12 +68,13 @@ def train_rigid_reconstruction(model, stimulus, target) -> RigidReconstructionRe
     """Train the fixed-reservoir linear readout."""
     config = model.config
     history = []
+    training_state = settled_state(model, config.seed)
     if config.learning_method == "adam":
         weights = nn.Parameter(model.readout.detach().clone())
         optimizer = torch.optim.Adam([weights], lr=config.learning_rate)
         for epoch in range(config.epochs):
             with torch.no_grad():
-                state = model.initial_state(config.seed + epoch)
+                state = settled_state(model, config.seed + epoch)
                 features = []
                 for step in range(stimulus.shape[-1]):
                     state = model.step(state, stimulus[:, :, step])
@@ -76,13 +92,21 @@ def train_rigid_reconstruction(model, stimulus, target) -> RigidReconstructionRe
         for trial in range(config.training_trials):
             _, _, mse, inverse = run_reconstruction_trial(
                 model, stimulus, target, config.seed + trial, True, inverse,
+                initial_state=training_state if trial == 0 else None,
             )
             history.append(mse)
     evaluation_predictions = []
     example = None
     for trial in range(config.evaluation_trials):
+        generator = torch.Generator(device="cpu").manual_seed(config.seed + 1000 + trial)
+        evaluation_state = tuple(
+            value + config.evaluation_perturbation
+            * torch.randn(value.shape, generator=generator).to(value.device)
+            for value in training_state
+        )
         run = run_reconstruction_trial(
-            model, stimulus, target, config.seed + config.training_trials + trial, False,
+            model, stimulus, target, config.seed + config.training_trials + trial,
+            False, initial_state=evaluation_state,
         )
         evaluation_predictions.append(run[0])
         if example is None:
