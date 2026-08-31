@@ -26,6 +26,10 @@ The new model uses the same normalized periodic Gaussian kernels. It clamps the 
 
 The new workflow uses direct RLS from zero readout weights. It does not use the legacy offline ridge stage. This difference is intentional. The main scientific program specifies RLS learning.
 
+The canonical configurations disable output and memory feedback. They set `feedback_gain` to zero. This condition tests memory in the fixed reservoir state without learned feedback effects. The legacy feedback values remain recorded below as optional settings.
+
+The canonical non-spatial control enables the row-centering option that was commented in `scripts/WM_rnn.py`. It also applies the same recurrent-field limit as the spatial model. These settings prevent the unbounded ReLU activity seen with the active legacy random matrix at gain `1.5`.
+
 The new workflow uses a fixed seed and balanced choices. The legacy script used unseeded random choices. These changes improve reproducibility and ensure that short runs include both targets.
 
 ## Preserved options
@@ -51,6 +55,8 @@ The new workflow uses a fixed seed and balanced choices. The legacy script used 
 - Optional GIF output saved two choice-specific activity movies.
 
 These ridge and GIF options remain documented. They are not part of the supported direct-RLS workflow.
+
+The archived spatial and random ridge scripts also compute PCA cumulative variance from reservoir activity. The earlier Adam script plots sampled-neuron activity and repeated choice-specific decision traces. These analyses remain available in `archive/legacy_working_memory/`; they are not part of the canonical RLS output.
 
 ## Legacy K scan
 

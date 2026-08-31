@@ -32,6 +32,6 @@ stimulus:
   input_amplitude: 10.0
 
 task:
-  K_values: [0.1, 1, 10, 100, 1000, 10000]
+  K_values: [1, 10, 100, 1000, 10000]
   repetitions: 5
   max_lag: 20

@@ -95,6 +95,19 @@ class WorkingMemoryModelTest(unittest.TestCase):
         next_state = model.step(state, torch.zeros(25))
         self.assertTrue(torch.isfinite(next_state).all())
 
+    def test_balanced_non_spatial_rows_and_field_limit(self):
+        model = NonSpatialWorkingMemoryReservoir(
+            unit_count=25, dt=0.001, tau=0.005, recurrent_gain=1.5,
+            stimulus_gain=1.0, feedback_gain=0.0, feedback_scale=0.0,
+            init_scale=0.1, seed=3, field_clip=10.0, balance_rows=True,
+        )
+        torch.testing.assert_close(
+            model.recurrent.sum(dim=1), torch.zeros(25), atol=1e-6, rtol=0,
+        )
+        state = torch.full((25,), 1e6)
+        next_state = model.step(state, torch.zeros(25))
+        self.assertTrue(torch.isfinite(next_state).all())
+
 
 if __name__ == "__main__":
     unittest.main()

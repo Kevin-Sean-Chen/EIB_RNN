@@ -95,6 +95,8 @@ python scripts/driven/train_rigid_reconstruction.py \
 
 This control has the same E and I population sizes, in-degree `K`, coupling values, time constants, strong-drive scaling, and excitatory readout size as the spatial network. Each random connectivity row has exactly `K` inputs. Only the recurrent topology changes from local spatial kernels to random connections.
 
+Use `configs/driven/rigid_reconstruction_random_ei_quick.yaml` for a short check.
+
 The metrics file includes a driven finite-time Lyapunov exponent. A positive value indicates perturbation growth under the fixed task input. A negative value indicates contraction toward an input-locked trajectory.
 
 Scan the spatial smoothing width for both models:
@@ -157,6 +159,17 @@ python scripts/analyses/run_spectral.py \
 ```
 
 For a faster `N=15` check, use `configs/analyses/spectral_quick.yaml`.
+
+## Dynamic mode decomposition
+
+Analyze excitatory activity from the local spatial network:
+
+```bash
+python scripts/analyses/run_dmd.py \
+  --config configs/analyses/dmd.yaml
+```
+
+For a faster `N=15` check, use `configs/analyses/dmd_quick.yaml`. Frequencies and growth rates use units of inverse seconds. The legacy script analyzed the `mue_all` field. That field analysis is not yet replaced.
 
 ## Working memory with RLS
 

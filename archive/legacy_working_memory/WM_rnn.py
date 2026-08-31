@@ -20,7 +20,7 @@ sys.path.append(str(repo_root))
 
 # from scripts.WM_task import make_wm_trial
 from scripts.relu2D_disorder import gabor2d
-from scripts.WM_res import eval_model
+from archive.legacy_working_memory.WM_res import eval_model
 
 
 # %% NOTE:

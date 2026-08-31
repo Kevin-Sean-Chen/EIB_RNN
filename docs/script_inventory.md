@@ -23,9 +23,11 @@ Status terms:
 | `scripts/baseline/scan_K_rhoF_modes.py` | Compare the local-to-network mode transition across `K` and `rho_F`. | Per-`K` mode metrics, crossover strength, dimensions, configuration, metadata, and a summary figure under `output/scans/K_rhoF_modes/`. |
 | `scripts/baseline/scan_spatial_statistics.py` | Measure direct spatial statistics across non-local strength. | Neighbor correlation, correlation length, low-wave-number power, mode advantage, configuration, metadata, and a summary figure under `output/scans/spatial_statistics/`. |
 | `scripts/analyses/run_spectral.py` | Analyze the legacy two-population connectivity spectrum across `K` and Gabor phase. | Complex eigenvalues, spectral abscissa, stability flags, patterns, configuration, metadata, and a summary figure under `output/analyses/spectral/`. |
+| `scripts/analyses/run_dmd.py` | Apply dynamic mode decomposition to excitatory activity from the local spatial network. | DMD eigenvalues, spatial modes, rank error, dispersion, growth rates, configuration, metadata, and a summary figure under `output/analyses/dmd/`. |
 | `scripts/working_memory/train_force.py` | Train fixed spatial or non-spatial reservoirs with online RLS/FORCE updates. | Resolved YAML, metadata, NPZ training and evaluation arrays, CSV metrics, and a summary figure under `output/working_memory/`. |
 | `scripts/working_memory/scan_K.py` | Reproduce the ridge-trained spatial working-memory scan across `K`; allow an RLS comparison. | Post-go output and memory MSE and R2, configuration, metadata, arrays, and a summary figure under `output/scans/working_memory_K/`. |
-| `scripts/driven/train_rigid_reconstruction.py` | Reconstruct the same-time rigid-shift angle from a fixed spatial reservoir with RLS. A separate YAML preserves the Adam readout comparison. | Training error, target and prediction, activity, stimulus, metrics, configuration, metadata, and a summary figure under `output/tasks/rigid_reconstruction/`. |
+| `scripts/driven/train_rigid_reconstruction.py` | Reconstruct the same-time rigid-shift angle with spatial E/I, random E/I, or one-population reservoirs and RLS. A separate YAML preserves the Adam readout comparison. | Training error, target and prediction, activity, driven Lyapunov exponent, stimulus, metrics, configuration, metadata, and a summary figure under `output/tasks/`. |
+| `scripts/driven/scan_rigid_smoothing.py` | Compare spatial smoothing and fixed pixel permutation effects across spatial and one-population controls. | Reconstruction metrics, stimulus dimension, example frames, configuration, metadata, arrays, and a summary figure under `output/tasks/`. |
 
 ## Migration-pending ReLU dynamics and analysis
 
@@ -35,7 +37,7 @@ Status terms:
 | `scripts/relu2D_disorder.py` | Add low-rank non-local disorder and measure spatial and temporal organization. | Interactive activity, coherence, dimension, autocorrelation, and optional GIF output. | Partly replaced by `src/disorder.py`, `src/metrics.py`, and `scripts/disorder/run_disorder.py`. Keep it until scan and video checks are complete. |
 | `scripts/relu2D_dense.py` | Validate a dense-matrix implementation of local and non-local connectivity. | Interactive activity, coherence metrics, and optional GIF output. | Dense reference model or validation tool under `src/`; a small comparison script. |
 | `scripts/relu2D_asym.py` | Simulate driven dynamics with an asymmetric excitatory kernel. | Interactive activity and optional GIF output. | Asymmetric connectivity in `src/`; a wave or direction-selectivity simulation script. |
-| `scripts/relu2D_DMD.py` | Apply dynamic mode decomposition to spontaneous or driven activity. | DMD eigenvalues, spatial modes, prediction error, dispersion, growth, and dimension figures. | `src/analysis/dmd.py` and `scripts/analyses/run_dmd.py`. |
+| `scripts/relu2D_DMD.py` | Apply dynamic mode decomposition to spontaneous or driven activity. | DMD eigenvalues, spatial modes, prediction error, dispersion, growth, and dimension figures. | The excitatory-rate workflow is ready in `src/analysis/dmd.py` and `scripts/analyses/run_dmd.py`. Keep this script until the legacy `mue_all` field analysis is reproduced or rejected. |
 | `scripts/scan_disorder.py` | Scan `K` and low-rank disorder strength or frequency. | Interactive heatmaps and dimension or coherence summaries. | Strength scan replaced by `scripts/disorder/scan_disorder_strength.py`. Preserve the commented frequency experiment before archive. |
 | `scripts/scan_rankone.py` | Scan rank-one strength and phase; inspect coherence and mode alignment. | Interactive heatmaps, spectra, and alignment plots. | Replaced by `scripts/disorder/scan_rank_one.py`. Keep it until the legacy-modulation figure receives visual confirmation. |
 | `scripts/scan_asym.py` | Scan asymmetric coupling and estimate wave speed with phase correlation. | Interactive speed, autocorrelation, and activity plots. | YAML asymmetry scan under `scripts/scans/`. |
@@ -47,7 +49,6 @@ Status terms:
 | `scripts/alternative_tasks/relu2D_ds.py` | Train a readout for direction discrimination from a driven spatial reservoir. | Interactive readout, target, and activity figures. | Secondary direction-decoding task. Refactor only if it becomes part of the scientific program. |
 | `scripts/alternative_tasks/relu2D_force.py` | Test trained feedback in a driven spatial reservoir. **Intent inferred.** | Interactive target, readout, feedback, and activity figures. | Secondary feedback experiment. Confirm its role before migration. |
 | `scripts/alternative_tasks/relu2D_res_local.py` | Test local or masked readout from a spatial reservoir. | Interactive prediction and activity figures. | Secondary local-readout reconstruction task. |
-| `scripts/relu2D_reservoir.py` | Define spatial and vanilla reservoir models and run an example task. | Interactive prediction and activity figures. | `src/models/reservoir.py`; keep only a thin example script. |
 | `scripts/alternative_tasks/scan_res_memory.py` | Measure reservoir reconstruction error across delay. | Interactive memory-error and reconstructed-signal plots. | Secondary delayed-reconstruction task. Working memory is the main memory workflow. |
 
 ## Migration-pending working-memory tasks
@@ -56,9 +57,6 @@ Status terms:
 |---|---|---|---|
 | `scripts/WM_task.py` | Train a random recurrent network with memory feedback on a working-memory task. | Interactive loss, output, memory, and state figures. | Preserve as an early task implementation; extract the trial definition first. |
 | `scripts/WM_task2D.py` | Train a spatial E/I network on the working-memory task with gradient methods. | Interactive loss, output, memory, and spatial-state figures. | Spatial working-memory training script. |
-| `scripts/WM_rnn.py` | Train a random chaotic reservoir as a non-spatial comparison. | Ridge performance, output, memory, and PCA figures. | The non-spatial model and RLS workflow now exist in `src/models/working_memory.py` and `scripts/working_memory/train_force.py`. Keep this ridge version until the result comparison is complete. |
-| `scripts/WM_res.py` | Train spatial-reservoir readouts with offline ridge regression. | Output and memory errors, readout traces, activity, and PCA figures. | Canonical spatial-reservoir model and ridge training workflow. |
-| `scripts/relu2D_WM.py` | Earlier spatial working-memory experiment. | Interactive readout, memory, state, and decision-statistic figures. | Compare with `WM_res.py`; archive if it has no unique method. |
 
 ## Current non-core network analysis
 
@@ -77,6 +75,7 @@ These scripts are outside the current core model. Decide later whether they belo
 |---|---|---|
 | `archive/legacy_driven/relu2D_driven.py` | Sine, one-dot, and two-dot stimulus experiments; driven E/I dynamics; center-of-mass analysis; optional GIF creation. The script replaced its stimulus several times in one run. | `scripts/driven/run_driven_dot.py`, `src/stimuli.py`, and `src/driven.py`. |
 | `archive/legacy_driven/scan_driven.py` | Random-readout exploration and moving-dot center-of-mass tracking across `K`. The random-readout metric used a stale sine target. | `scripts/driven/scan_driven_dot.py` and `src/tasks/driven_dot.py`. |
+| `archive/legacy_driven/relu2D_reservoir.py` | Spatial and vanilla reservoir prototypes, Adam readout training, alternative target frequencies, and previously tested parameters. | `scripts/driven/train_rigid_reconstruction.py`, `src/models/rigid_reconstruction.py`, and `src/learning/rigid_reconstruction.py`. |
 
 ## Archived working-memory experiments
 
@@ -84,6 +83,9 @@ These scripts are outside the current core model. Decide later whether they belo
 |---|---|---|
 | `archive/legacy_working_memory/WM_force.py` | Spatial E/I working memory with offline ridge initialization, online FORCE/RLS, fixed output and memory feedback maps, alternative kernels, and optional GIF output. | `scripts/working_memory/train_force.py`, `src/models/working_memory.py`, `src/learning/`, and `src/tasks/working_memory.py`. See `docs/working_memory_legacy_audit.md`. |
 | `archive/legacy_working_memory/scan_WM_k.py` | Ridge-trained spatial working-memory MSE and R2 across two alternative `K` lists, with a commented network-size scan. | `scripts/working_memory/scan_K.py` reproduces the ridge protocol and also permits an RLS comparison. The alternative lists remain in `docs/working_memory_legacy_audit.md`. |
+| `archive/legacy_working_memory/WM_res.py` | Spatial offline ridge training, time-specific fitting windows, feedback options, and PCA. | `scripts/working_memory/train_force.py`, `scripts/working_memory/scan_K.py`, and the legacy audit. |
+| `archive/legacy_working_memory/WM_rnn.py` | Random-RNN ridge comparison, balance alternatives, Dale alternatives, and PCA. | `scripts/working_memory/train_force.py` with the non-spatial RLS configuration and the legacy audit. |
+| `archive/legacy_working_memory/relu2D_WM.py` | Earlier Adam readout training, sampled activity traces, and repeated decision plots. | Preserved as a secondary gradient-based experiment; the canonical workflow uses RLS. |
 
 ## Archived supporting analyses
 

@@ -41,7 +41,7 @@ import datetime
 repo_root = Path(__file__).resolve().parents[1]
 sys.path.append(str(repo_root))
 from scripts.relu2D_disorder import gabor2d
-from scripts.WM_res import make_wm_trial, ridge_solve, collect_xy, eval_model
+from archive.legacy_working_memory.WM_res import make_wm_trial, ridge_solve, collect_xy, eval_model
 
 # -----------------------------
 # 2D Gaussian kernels (periodic)

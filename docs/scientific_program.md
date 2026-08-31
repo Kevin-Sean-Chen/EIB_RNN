@@ -42,12 +42,11 @@ Scientific question: How does the spatial E/I network represent and track struct
 |---|---|---|---|
 | Moving-dot response | `scripts/driven/run_driven_dot.py` | Stimulus, E activity, center-of-mass traces, and tracking metrics | **Ready** |
 | Tracking across `K` | `scripts/driven/scan_driven_dot.py` | Peak lag and cross-correlation across `K` | **Ready** |
-| Time-shifted dot prediction | Planned extension of the moving-dot workflow | Prediction error across target lead time | **Refactor pending** |
-| Same-time rigid-shift reconstruction | `scripts/driven/train_rigid_reconstruction.py` | Spatial and same-size non-spatial RLS reconstruction controls | **Ready** |
+| Same-time rigid-shift reconstruction | `scripts/driven/train_rigid_reconstruction.py` | Matched spatial and random E/I RLS reconstruction controls with measured driven stability | **Ready** |
 | Direction discrimination | `scripts/alternative_tasks/relu2D_ds.py` | Secondary direction-decoding experiment | **Decision pending** |
 | Two-dot transient response | Preserved in `archive/legacy_driven/relu2D_driven.py` | Response during input and after input removal | **Decision pending** |
 
-The moving-dot workflow will support time-shifted prediction. Rigid-shift reconstruction measures same-time input representation and uses an RLS readout. The balanced non-spatial control has `N²` units, matching the number of spatial excitatory readout units. This control tests if spatial structure improves reconstruction. Current single-seed results do not show an improvement. Direction discrimination is a secondary task.
+The moving-dot workflow measures tracking without a trained readout. It compares the stimulus and excitatory-response centers of mass, then measures cross-correlation height and lag across `K`. Rigid-shift reconstruction uses a separate random E/I topology control because that task compares general reservoir representations. Direction discrimination is a secondary task.
 
 ## 4. Working memory with RLS
 
@@ -55,13 +54,13 @@ Scientific question: Can fixed spatial recurrent dynamics support working memory
 
 | Workflow | Source script | Intended replacement | Status |
 |---|---|---|---|
-| Working-memory trial | `scripts/WM_res.py` and archived `WM_force.py` | `src/tasks/working_memory.py` | **Ready** |
+| Working-memory trial | Archived `WM_res.py` and `WM_force.py` | `src/tasks/working_memory.py` | **Ready** |
 | Spatial reservoir | Archived `WM_force.py` | `src/models/working_memory.py` | **Ready** |
 | RLS/FORCE learning | Archived `WM_force.py` | `src/learning/` and `scripts/working_memory/train_force.py` | **Ready** |
 | Performance across `K` | `scripts/working_memory/scan_K.py` | Legacy-matched ridge MSE and R2 across `K`; optional RLS comparison | **Ready** |
-| Random-RNN comparison | `scripts/WM_rnn.py` | `scripts/working_memory/train_force.py` with the non-spatial configuration | **Ready** |
+| Random-RNN comparison | Archived `WM_rnn.py` | `scripts/working_memory/train_force.py` with the non-spatial configuration | **Ready** |
 
-The supported learning method is recursive least squares through FORCE. The spatial and non-spatial workflows use the same RLS update. They do not use Adam, gradient descent, back-propagation through time, or offline ridge initialization.
+The supported learning method is recursive least squares. The canonical spatial and non-spatial workflows train readouts without output or memory feedback. They use the same RLS update and do not use Adam, gradient descent, back-propagation through time, or offline ridge initialization.
 
 ## 5. Dynamic and spectral interpretation
 
@@ -69,7 +68,7 @@ Scientific question: Which spatial and temporal modes explain spontaneous, disor
 
 | Workflow | Source script | Intended output | Status |
 |---|---|---|---|
-| Dynamic mode decomposition | `scripts/relu2D_DMD.py` | DMD modes, frequencies, growth rates, prediction error, and dispersion | **Refactor pending** |
+| Dynamic mode decomposition | `scripts/analyses/run_dmd.py` | DMD modes, frequencies, growth rates, prediction error, and dispersion | **Excitatory-rate analysis ready; field analysis pending** |
 | Connectivity spectrum | `scripts/analyses/run_spectral.py` | Eigenvalue spectrum and leading stability measures | **Ready** |
 | Activity-mode comparison | Current mode scan scripts | Local, network, and PCA reconstruction curves | **Ready** |
 

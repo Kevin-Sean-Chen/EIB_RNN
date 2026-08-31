@@ -172,6 +172,8 @@ class NonSpatialWorkingMemoryReservoir(nn.Module):
         seed: int,
         nonlinearity: str = "relu",
         device: str = "cpu",
+        field_clip: float | None = None,
+        balance_rows: bool = False,
     ) -> None:
         super().__init__()
         if nonlinearity not in ("relu", "tanh"):
@@ -183,9 +185,12 @@ class NonSpatialWorkingMemoryReservoir(nn.Module):
         self.stimulus_gain = stimulus_gain
         self.init_scale = init_scale
         self.nonlinearity = nonlinearity
+        self.field_clip = field_clip
         target_device = torch.device(device)
         generator = torch.Generator(device="cpu").manual_seed(seed)
         recurrent = torch.randn(unit_count, unit_count, generator=generator)
+        if balance_rows:
+            recurrent = recurrent - recurrent.mean(dim=1, keepdim=True)
         recurrent *= recurrent_gain / math.sqrt(unit_count)
         self.register_buffer("recurrent", recurrent.to(target_device))
         self.register_buffer(
@@ -216,6 +221,8 @@ class NonSpatialWorkingMemoryReservoir(nn.Module):
         output, memory = self.predict(features)
         feedback = self.feedback_output * output.squeeze() + self.feedback_memory * memory.squeeze()
         field = self.recurrent @ state + self.stimulus_gain * stimulus + self.feedback_gain * feedback
+        if self.field_clip is not None:
+            field = torch.clamp(field, -self.field_clip, self.field_clip)
         return state + (self.dt / self.tau) * (-state + self.activation(field))
 
     def features(self, state: torch.Tensor) -> torch.Tensor:

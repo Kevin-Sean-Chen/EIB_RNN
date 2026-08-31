@@ -25,6 +25,7 @@ network:
   u_i: 0.0
   recurrent_gain: 1.5
   normalize_kernel: true
+  balance_random_rows: false
   init_scale: 0.1
   microsteps: 1
   field_clip: 100.0
@@ -49,10 +50,10 @@ learning:
   evaluation_trials: 4
   delta: 0.1
   forgetting_factor: 1.0
-  feedback_gain: 0.001
+  feedback_gain: 0.0
   feedback_scale: 0.01
-  use_feedback_output: true
-  use_feedback_memory: true
+  use_feedback_output: false
+  use_feedback_memory: false
   train_output: true
   train_memory: true
   learning_method: rls

@@ -130,6 +130,8 @@ def make_model(config: WorkingMemoryConfig):
         seed=config.seed,
         nonlinearity=config.nonlinearity,
         device=config.device,
+        field_clip=config.field_clip,
+        balance_rows=config.balance_random_rows,
     )
 
 

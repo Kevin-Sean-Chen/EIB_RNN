@@ -4,6 +4,12 @@
 
 `scan_WM_k.py` preserves the ridge-trained performance scan across `K` and its commented size-scan option.
 
+`WM_res.py` preserves spatial offline ridge fitting, time-specific training windows, feedback options, and PCA analysis.
+
+`WM_rnn.py` preserves the random-RNN ridge comparison, row-balance alternatives, Dale-network alternatives, and PCA analysis.
+
+`relu2D_WM.py` preserves the earlier Adam readout experiment, sampled-neuron traces, and multi-trial decision plots.
+
 Use these current files:
 
 - `scripts/working_memory/train_force.py` for spatial or non-spatial RLS training.

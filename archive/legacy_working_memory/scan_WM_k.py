@@ -19,7 +19,7 @@ sys.path.append(str(repo_root))
 
 ### import functions
 from scripts.relu2D_disorder import gabor2d
-from scripts.WM_res import Relu2DSpatialReservoir, make_wm_trial, collect_xy, ridge_solve, set_readouts_from_ridge, eval_model
+from archive.legacy_working_memory.WM_res import Relu2DSpatialReservoir, make_wm_trial, collect_xy, ridge_solve, set_readouts_from_ridge, eval_model
 
 
 # --- Setup ---

@@ -12,7 +12,8 @@ WORKING_MEMORY_SECTIONS = {
     "network": (
         "dt", "tau_e", "tau_i", "K", "J_ee", "J_ei", "J_ie", "J_ii",
         "sigma_e", "sigma_i", "u_e", "u_i", "recurrent_gain",
-        "normalize_kernel", "init_scale", "microsteps", "field_clip",
+        "normalize_kernel", "balance_random_rows", "init_scale", "microsteps",
+        "field_clip",
     ),
     "task": (
         "steps", "delay_steps", "cue_steps", "stimulus_gain", "ramp_memory",
@@ -52,6 +53,7 @@ class WorkingMemoryConfig:
     u_i: float = 0.0
     recurrent_gain: float = 1.5
     normalize_kernel: bool = True
+    balance_random_rows: bool = False
     init_scale: float = 0.1
     microsteps: int = 1
     field_clip: float | None = 100.0
