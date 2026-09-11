@@ -4,22 +4,22 @@ run:
   run_id: null
 
 network:
-  N: 15
+  N: 21
   K: 100.0
-  rank: 4
+  rank: 5
   sigma_e: 0.05
   sigma_i: 0.07071067811865477
   u_e: 10.0
   u_i: 0.0
 
 simulation:
-  seed: 7
+  seed: 1
   n_seeds: 3
   dt: 0.0001
   tau_e: 0.01
   tau_i: 0.01
   init_steps: 1000
-  record_steps: 2000
+  record_steps: 10000
   sample_every: 5
   max_rate: 1000000.0
 
@@ -28,7 +28,7 @@ scan:
   rho_f_values: [0, 0.05, 0.1, 0.2, 0.5, 1, 2, 4, 8]
 
 analysis:
-  auc_modes: 40
+  auc_modes: 100
   plot_modes: 80
 
 k_scan:

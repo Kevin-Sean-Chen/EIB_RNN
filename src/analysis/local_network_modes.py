@@ -95,6 +95,62 @@ class ScanResult:
     correlation_length_std: np.ndarray
     low_k_fraction: np.ndarray
     low_k_fraction_std: np.ndarray
+    nonlocal_fraction: np.ndarray
+    nonlocal_fraction_std: np.ndarray
+    null_fraction: np.ndarray
+    null_fraction_std: np.ndarray
+    full_nonlocal_overlap: np.ndarray
+    full_nonlocal_overlap_std: np.ndarray
+    lowrank_power: np.ndarray
+    lowrank_power_std: np.ndarray
+    total_variance: np.ndarray
+    total_variance_std: np.ndarray
+    lowrank_input_variance: np.ndarray
+    lowrank_input_variance_std: np.ndarray
+    lowrank_output_variance: np.ndarray
+    lowrank_output_variance_std: np.ndarray
+    excitatory_active_fraction: np.ndarray
+    excitatory_active_fraction_std: np.ndarray
+    inhibitory_active_fraction: np.ndarray
+    inhibitory_active_fraction_std: np.ndarray
+    excitatory_current_power: np.ndarray
+    excitatory_current_power_std: np.ndarray
+    inhibitory_current_power: np.ndarray
+    inhibitory_current_power_std: np.ndarray
+    net_current_power: np.ndarray
+    net_current_power_std: np.ndarray
+    ei_cancellation_ratio: np.ndarray
+    ei_cancellation_ratio_std: np.ndarray
+    ei_current_correlation: np.ndarray
+    ei_current_correlation_std: np.ndarray
+    mean_balance_e: np.ndarray
+    mean_balance_e_std: np.ndarray
+    mean_balance_i: np.ndarray
+    mean_balance_i_std: np.ndarray
+    active_local_balance_e: np.ndarray
+    active_local_balance_e_std: np.ndarray
+    active_local_balance_i: np.ndarray
+    active_local_balance_i_std: np.ndarray
+    inactive_local_balance_e: np.ndarray
+    inactive_local_balance_e_std: np.ndarray
+    inactive_local_balance_i: np.ndarray
+    inactive_local_balance_i_std: np.ndarray
+    mean_external_current_e: np.ndarray
+    mean_external_current_e_std: np.ndarray
+    mean_excitatory_current_e: np.ndarray
+    mean_excitatory_current_e_std: np.ndarray
+    mean_inhibitory_current_e: np.ndarray
+    mean_inhibitory_current_e_std: np.ndarray
+    mean_net_current_e: np.ndarray
+    mean_net_current_e_std: np.ndarray
+    mean_external_current_i: np.ndarray
+    mean_external_current_i_std: np.ndarray
+    mean_excitatory_current_i: np.ndarray
+    mean_excitatory_current_i_std: np.ndarray
+    mean_inhibitory_current_i: np.ndarray
+    mean_inhibitory_current_i_std: np.ndarray
+    mean_net_current_i: np.ndarray
+    mean_net_current_i_std: np.ndarray
     example_rates: list[np.ndarray]
     stable: np.ndarray
     geometric_shell_counts: np.ndarray
@@ -121,6 +177,62 @@ def scan_result_arrays(result: ScanResult) -> dict[str, np.ndarray]:
         "correlation_length_std": result.correlation_length_std,
         "low_k_fraction": result.low_k_fraction,
         "low_k_fraction_std": result.low_k_fraction_std,
+        "nonlocal_fraction": result.nonlocal_fraction,
+        "nonlocal_fraction_std": result.nonlocal_fraction_std,
+        "null_fraction": result.null_fraction,
+        "null_fraction_std": result.null_fraction_std,
+        "full_nonlocal_overlap": result.full_nonlocal_overlap,
+        "full_nonlocal_overlap_std": result.full_nonlocal_overlap_std,
+        "lowrank_power": result.lowrank_power,
+        "lowrank_power_std": result.lowrank_power_std,
+        "total_variance": result.total_variance,
+        "total_variance_std": result.total_variance_std,
+        "lowrank_input_variance": result.lowrank_input_variance,
+        "lowrank_input_variance_std": result.lowrank_input_variance_std,
+        "lowrank_output_variance": result.lowrank_output_variance,
+        "lowrank_output_variance_std": result.lowrank_output_variance_std,
+        "excitatory_active_fraction": result.excitatory_active_fraction,
+        "excitatory_active_fraction_std": result.excitatory_active_fraction_std,
+        "inhibitory_active_fraction": result.inhibitory_active_fraction,
+        "inhibitory_active_fraction_std": result.inhibitory_active_fraction_std,
+        "excitatory_current_power": result.excitatory_current_power,
+        "excitatory_current_power_std": result.excitatory_current_power_std,
+        "inhibitory_current_power": result.inhibitory_current_power,
+        "inhibitory_current_power_std": result.inhibitory_current_power_std,
+        "net_current_power": result.net_current_power,
+        "net_current_power_std": result.net_current_power_std,
+        "ei_cancellation_ratio": result.ei_cancellation_ratio,
+        "ei_cancellation_ratio_std": result.ei_cancellation_ratio_std,
+        "ei_current_correlation": result.ei_current_correlation,
+        "ei_current_correlation_std": result.ei_current_correlation_std,
+        "mean_balance_e": result.mean_balance_e,
+        "mean_balance_e_std": result.mean_balance_e_std,
+        "mean_balance_i": result.mean_balance_i,
+        "mean_balance_i_std": result.mean_balance_i_std,
+        "active_local_balance_e": result.active_local_balance_e,
+        "active_local_balance_e_std": result.active_local_balance_e_std,
+        "active_local_balance_i": result.active_local_balance_i,
+        "active_local_balance_i_std": result.active_local_balance_i_std,
+        "inactive_local_balance_e": result.inactive_local_balance_e,
+        "inactive_local_balance_e_std": result.inactive_local_balance_e_std,
+        "inactive_local_balance_i": result.inactive_local_balance_i,
+        "inactive_local_balance_i_std": result.inactive_local_balance_i_std,
+        "mean_external_current_e": result.mean_external_current_e,
+        "mean_external_current_e_std": result.mean_external_current_e_std,
+        "mean_excitatory_current_e": result.mean_excitatory_current_e,
+        "mean_excitatory_current_e_std": result.mean_excitatory_current_e_std,
+        "mean_inhibitory_current_e": result.mean_inhibitory_current_e,
+        "mean_inhibitory_current_e_std": result.mean_inhibitory_current_e_std,
+        "mean_net_current_e": result.mean_net_current_e,
+        "mean_net_current_e_std": result.mean_net_current_e_std,
+        "mean_external_current_i": result.mean_external_current_i,
+        "mean_external_current_i_std": result.mean_external_current_i_std,
+        "mean_excitatory_current_i": result.mean_excitatory_current_i,
+        "mean_excitatory_current_i_std": result.mean_excitatory_current_i_std,
+        "mean_inhibitory_current_i": result.mean_inhibitory_current_i,
+        "mean_inhibitory_current_i_std": result.mean_inhibitory_current_i_std,
+        "mean_net_current_i": result.mean_net_current_i,
+        "mean_net_current_i_std": result.mean_net_current_i_std,
         "example_rates": np.stack(result.example_rates),
         "stable": result.stable,
         "geometric_shell_counts": result.geometric_shell_counts,
@@ -141,6 +253,59 @@ def scan_metric_rows(result: ScanResult) -> list[dict[str, float | bool]]:
                 "neighbor_correlation": result.neighbor_correlation[index],
                 "correlation_length": result.correlation_length[index],
                 "low_k_fraction": result.low_k_fraction[index],
+                "nonlocal_fraction": result.nonlocal_fraction[index],
+                "null_fraction": result.null_fraction[index],
+                "full_nonlocal_overlap": result.full_nonlocal_overlap[index],
+                "lowrank_power": result.lowrank_power[index],
+                "lowrank_power_std": result.lowrank_power_std[index],
+                "total_variance": result.total_variance[index],
+                "total_variance_std": result.total_variance_std[index],
+                "lowrank_input_variance": result.lowrank_input_variance[index],
+                "lowrank_input_variance_std": result.lowrank_input_variance_std[index],
+                "lowrank_output_variance": result.lowrank_output_variance[index],
+                "lowrank_output_variance_std": result.lowrank_output_variance_std[index],
+                "excitatory_active_fraction": result.excitatory_active_fraction[index],
+                "excitatory_active_fraction_std": result.excitatory_active_fraction_std[index],
+                "inhibitory_active_fraction": result.inhibitory_active_fraction[index],
+                "inhibitory_active_fraction_std": result.inhibitory_active_fraction_std[index],
+                "excitatory_current_power": result.excitatory_current_power[index],
+                "excitatory_current_power_std": result.excitatory_current_power_std[index],
+                "inhibitory_current_power": result.inhibitory_current_power[index],
+                "inhibitory_current_power_std": result.inhibitory_current_power_std[index],
+                "net_current_power": result.net_current_power[index],
+                "net_current_power_std": result.net_current_power_std[index],
+                "ei_cancellation_ratio": result.ei_cancellation_ratio[index],
+                "ei_cancellation_ratio_std": result.ei_cancellation_ratio_std[index],
+                "ei_current_correlation": result.ei_current_correlation[index],
+                "ei_current_correlation_std": result.ei_current_correlation_std[index],
+                "mean_balance_e": result.mean_balance_e[index],
+                "mean_balance_e_std": result.mean_balance_e_std[index],
+                "mean_balance_i": result.mean_balance_i[index],
+                "mean_balance_i_std": result.mean_balance_i_std[index],
+                "active_local_balance_e": result.active_local_balance_e[index],
+                "active_local_balance_e_std": result.active_local_balance_e_std[index],
+                "active_local_balance_i": result.active_local_balance_i[index],
+                "active_local_balance_i_std": result.active_local_balance_i_std[index],
+                "inactive_local_balance_e": result.inactive_local_balance_e[index],
+                "inactive_local_balance_e_std": result.inactive_local_balance_e_std[index],
+                "inactive_local_balance_i": result.inactive_local_balance_i[index],
+                "inactive_local_balance_i_std": result.inactive_local_balance_i_std[index],
+                "mean_external_current_e": result.mean_external_current_e[index],
+                "mean_external_current_e_std": result.mean_external_current_e_std[index],
+                "mean_excitatory_current_e": result.mean_excitatory_current_e[index],
+                "mean_excitatory_current_e_std": result.mean_excitatory_current_e_std[index],
+                "mean_inhibitory_current_e": result.mean_inhibitory_current_e[index],
+                "mean_inhibitory_current_e_std": result.mean_inhibitory_current_e_std[index],
+                "mean_net_current_e": result.mean_net_current_e[index],
+                "mean_net_current_e_std": result.mean_net_current_e_std[index],
+                "mean_external_current_i": result.mean_external_current_i[index],
+                "mean_external_current_i_std": result.mean_external_current_i_std[index],
+                "mean_excitatory_current_i": result.mean_excitatory_current_i[index],
+                "mean_excitatory_current_i_std": result.mean_excitatory_current_i_std[index],
+                "mean_inhibitory_current_i": result.mean_inhibitory_current_i[index],
+                "mean_inhibitory_current_i_std": result.mean_inhibitory_current_i_std[index],
+                "mean_net_current_i": result.mean_net_current_i[index],
+                "mean_net_current_i_std": result.mean_net_current_i_std[index],
                 "stable": bool(result.stable[index]),
             }
         )
@@ -212,6 +377,202 @@ def ordered_modes(operator: np.ndarray) -> np.ndarray:
     return modes
 
 
+def subspace_variance_fraction(activity: np.ndarray, modes: np.ndarray) -> float:
+    """Return the activity variance captured by an orthonormal subspace."""
+    if not np.isfinite(activity).all():
+        return np.nan
+    centered = activity - activity.mean(axis=1, keepdims=True)
+    total = np.sum(centered**2)
+    if total <= np.finfo(float).eps:
+        return 0.0
+    return float(np.sum((modes.T @ centered) ** 2) / total)
+
+
+@dataclass
+class ActivityDiagnostics:
+    """Store fluctuation power and low-rank input-output variance."""
+
+    lowrank_power: float
+    total_variance: float
+    lowrank_fraction: float
+    lowrank_input_variance: float
+    lowrank_output_variance: float
+
+
+@dataclass
+class CurrentDiagnostics:
+    """Store centered E/I current power and cancellation metrics."""
+
+    excitatory_power: float
+    inhibitory_power: float
+    net_power: float
+    cancellation_ratio: float
+    ei_correlation: float
+
+
+@dataclass
+class PopulationBalanceDiagnostics:
+    """Store mean and local balance for one population."""
+
+    mean_balance: float
+    active_local_balance: float
+    inactive_local_balance: float
+    mean_external_current: float
+    mean_excitatory_current: float
+    mean_inhibitory_current: float
+    mean_net_current: float
+
+
+def population_balance_diagnostics(
+    external_current: np.ndarray,
+    excitatory_current: np.ndarray,
+    inhibitory_current: np.ndarray,
+    active: np.ndarray,
+) -> PopulationBalanceDiagnostics:
+    """Return uncentered mean and sitewise current balance."""
+    shape = external_current.shape
+    if (
+        external_current.ndim != 2
+        or excitatory_current.shape != shape
+        or inhibitory_current.shape != shape
+        or active.shape != shape
+    ):
+        raise ValueError("Balance inputs must have matching (space, time) shapes.")
+    if shape[1] == 0:
+        raise ValueError("Balance inputs must contain at least one time sample.")
+    arrays = (external_current, excitatory_current, inhibitory_current)
+    if not all(np.isfinite(values).all() for values in arrays):
+        return PopulationBalanceDiagnostics(*(np.nan for _ in range(7)))
+
+    net_current = external_current + excitatory_current + inhibitory_current
+    mean_external = float(np.mean(external_current))
+    mean_excitatory = float(np.mean(excitatory_current))
+    mean_inhibitory = float(np.mean(inhibitory_current))
+    mean_net = float(np.mean(net_current))
+    mean_denominator = (
+        abs(mean_external) + abs(mean_excitatory) + abs(mean_inhibitory)
+    )
+    mean_balance = (
+        abs(mean_net) / mean_denominator if mean_denominator > 0.0 else np.nan
+    )
+    local_denominator = (
+        np.abs(external_current)
+        + np.abs(excitatory_current)
+        + np.abs(inhibitory_current)
+    )
+    local_ratio = np.divide(
+        np.abs(net_current),
+        local_denominator,
+        out=np.full(shape, np.nan, dtype=float),
+        where=local_denominator > 0.0,
+    )
+    active_values = local_ratio[active & np.isfinite(local_ratio)]
+    inactive_values = local_ratio[(~active) & np.isfinite(local_ratio)]
+    return PopulationBalanceDiagnostics(
+        mean_balance=mean_balance,
+        active_local_balance=(
+            float(np.mean(active_values)) if active_values.size else np.nan
+        ),
+        inactive_local_balance=(
+            float(np.mean(inactive_values)) if inactive_values.size else np.nan
+        ),
+        mean_external_current=mean_external,
+        mean_excitatory_current=mean_excitatory,
+        mean_inhibitory_current=mean_inhibitory,
+        mean_net_current=mean_net,
+    )
+
+
+def current_diagnostics(
+    excitatory_current: np.ndarray,
+    inhibitory_current: np.ndarray,
+) -> CurrentDiagnostics:
+    """Return temporal E/I current cancellation diagnostics."""
+    if excitatory_current.ndim != 2 or inhibitory_current.shape != excitatory_current.shape:
+        raise ValueError("E and I currents must have matching (space, time) shapes.")
+    if excitatory_current.shape[1] == 0:
+        raise ValueError("Current arrays must contain at least one time sample.")
+    if not np.isfinite(excitatory_current).all() or not np.isfinite(inhibitory_current).all():
+        return CurrentDiagnostics(*(np.nan for _ in range(5)))
+
+    centered_e = excitatory_current - excitatory_current.mean(axis=1, keepdims=True)
+    centered_i = inhibitory_current - inhibitory_current.mean(axis=1, keepdims=True)
+    time_count = excitatory_current.shape[1]
+    power_e = float(np.sum(centered_e**2) / time_count)
+    power_i = float(np.sum(centered_i**2) / time_count)
+    covariance = float(np.sum(centered_e * centered_i) / time_count)
+    centered_net = centered_e + centered_i
+    net_power = float(np.sum(centered_net**2) / time_count)
+    denominator = power_e + power_i
+    cancellation_ratio = net_power / denominator if denominator > 0.0 else np.nan
+    correlation_denominator = np.sqrt(power_e * power_i)
+    correlation = (
+        covariance / correlation_denominator
+        if correlation_denominator > 0.0
+        else np.nan
+    )
+    return CurrentDiagnostics(
+        excitatory_power=power_e,
+        inhibitory_power=power_i,
+        net_power=net_power,
+        cancellation_ratio=cancellation_ratio,
+        ei_correlation=float(np.clip(correlation, -1.0, 1.0)),
+    )
+
+
+def activity_diagnostics(
+    activity: np.ndarray,
+    left_vectors: np.ndarray,
+    right_vectors: np.ndarray,
+    strength: float,
+    spatial_width: int,
+) -> ActivityDiagnostics:
+    """Return diagnostics for time-centered excitatory activity."""
+    if activity.ndim != 2:
+        raise ValueError("Activity must have shape (space, time).")
+    if left_vectors.ndim != 2 or right_vectors.shape != left_vectors.shape:
+        raise ValueError("Low-rank vectors must have matching matrix shapes.")
+    if activity.shape[0] != left_vectors.shape[0]:
+        raise ValueError("Activity and low-rank vectors must use the same space.")
+    if spatial_width <= 0:
+        raise ValueError("Spatial width must be positive.")
+    if not np.isfinite(activity).all():
+        return ActivityDiagnostics(*(np.nan for _ in range(5)))
+
+    centered = activity - activity.mean(axis=1, keepdims=True)
+    time_count = activity.shape[1]
+    total_variance = float(np.sum(centered**2) / time_count)
+    left_modes, singular_values, _ = np.linalg.svd(left_vectors, full_matrices=False)
+    tolerance = (
+        max(left_vectors.shape) * np.finfo(float).eps * singular_values[0]
+        if singular_values.size
+        else 0.0
+    )
+    left_modes = left_modes[:, singular_values > tolerance]
+    lowrank_power = float(np.sum((left_modes.T @ centered) ** 2) / time_count)
+    lowrank_fraction = (
+        lowrank_power / total_variance
+        if total_variance > np.finfo(float).eps
+        else 0.0
+    )
+    lowrank_input = right_vectors.T @ centered / spatial_width
+    lowrank_output = strength * left_vectors @ lowrank_input
+    return ActivityDiagnostics(
+        lowrank_power=lowrank_power,
+        total_variance=total_variance,
+        lowrank_fraction=lowrank_fraction,
+        lowrank_input_variance=float(np.sum(lowrank_input**2) / time_count),
+        lowrank_output_variance=float(np.sum(lowrank_output**2) / time_count),
+    )
+
+
+def subspace_overlap(first: np.ndarray, second: np.ndarray) -> float:
+    """Return the mean squared overlap between equal-size subspaces."""
+    if first.shape[1] != second.shape[1]:
+        raise ValueError("Subspaces must have the same dimension.")
+    return float(np.linalg.norm(first.T @ second, ord="fro") ** 2 / first.shape[1])
+
+
 def simulate(
     W_e: np.ndarray,
     W_i: np.ndarray,
@@ -228,13 +589,29 @@ def simulate(
     re0: np.ndarray,
     ri0: np.ndarray,
     max_rate: float,
-) -> tuple[np.ndarray, bool]:
-    """Return excitatory rates and a flag for finite, bounded dynamics."""
+) -> tuple[
+    np.ndarray,
+    bool,
+    float,
+    float,
+    CurrentDiagnostics,
+    PopulationBalanceDiagnostics,
+    PopulationBalanceDiagnostics,
+]:
+    """Return rates, activity, current, and population balance metrics."""
     re = re0.copy()
     ri = ri0.copy()
     full_e = W_e + g * W_nonlocal
     sqrt_K = np.sqrt(K)
     records = []
+    excitatory_active = []
+    inhibitory_active = []
+    excitatory_currents = []
+    inhibitory_currents = []
+    inhibitory_population_e_currents = []
+    inhibitory_population_i_currents = []
+    excitatory_active_masks = []
+    inhibitory_active_masks = []
 
     for step in range(init_steps + record_steps):
         with np.errstate(over="ignore", invalid="ignore"):
@@ -249,11 +626,63 @@ def simulate(
         bounded = np.max(np.abs(re)) <= max_rate and np.max(np.abs(ri)) <= max_rate
         if not finite or not bounded:
             sample_count = len(range(0, record_steps, sample_every))
-            return np.full((re.size, sample_count), np.nan), False
+            missing = CurrentDiagnostics(*(np.nan for _ in range(5)))
+            missing_balance = PopulationBalanceDiagnostics(
+                *(np.nan for _ in range(7))
+            )
+            return (
+                np.full((re.size, sample_count), np.nan),
+                False,
+                np.nan,
+                np.nan,
+                missing,
+                missing_balance,
+                missing_balance,
+            )
         if step >= init_steps and (step - init_steps) % sample_every == 0:
             records.append(re.copy())
+            excitatory_active.append(np.mean(mu_e > 0.0))
+            inhibitory_active.append(np.mean(mu_i > 0.0))
+            excitatory_currents.append(sqrt_K * J0[0, 0] * conv_e)
+            inhibitory_currents.append(sqrt_K * J0[0, 1] * conv_i)
+            inhibitory_population_e_currents.append(sqrt_K * J0[1, 0] * conv_e)
+            inhibitory_population_i_currents.append(sqrt_K * J0[1, 1] * conv_i)
+            excitatory_active_masks.append(mu_e > 0.0)
+            inhibitory_active_masks.append(mu_i > 0.0)
 
-    return np.stack(records, axis=1), True
+    excitatory_current_array = np.stack(excitatory_currents, axis=1)
+    inhibitory_current_array = np.stack(inhibitory_currents, axis=1)
+    inhibitory_population_e_array = np.stack(
+        inhibitory_population_e_currents, axis=1
+    )
+    inhibitory_population_i_array = np.stack(
+        inhibitory_population_i_currents, axis=1
+    )
+    currents = current_diagnostics(
+        excitatory_current_array,
+        inhibitory_current_array,
+    )
+    excitatory_balance = population_balance_diagnostics(
+        np.full_like(excitatory_current_array, sqrt_K * u[0]),
+        excitatory_current_array,
+        inhibitory_current_array,
+        np.stack(excitatory_active_masks, axis=1),
+    )
+    inhibitory_balance = population_balance_diagnostics(
+        np.full_like(inhibitory_population_e_array, sqrt_K * u[1]),
+        inhibitory_population_e_array,
+        inhibitory_population_i_array,
+        np.stack(inhibitory_active_masks, axis=1),
+    )
+    return (
+        np.stack(records, axis=1),
+        True,
+        float(np.mean(excitatory_active)),
+        float(np.mean(inhibitory_active)),
+        currents,
+        excitatory_balance,
+        inhibitory_balance,
+    )
 
 
 def reconstruction_curve(activity: np.ndarray, modes: np.ndarray) -> np.ndarray:
@@ -360,7 +789,8 @@ def run_scan(args: ModeScanConfig) -> ScanResult:
     sigma = np.array([args.sigma_e, args.sigma_i])
     W_e = convolution_matrix(periodic_gaussian_kernel(args.N, sigma[0]))
     W_i = convolution_matrix(periodic_gaussian_kernel(args.N, sigma[1]))
-    local_modes, geometric_shell_counts = geometric_modes(args.N)
+    _, geometric_shell_counts = geometric_modes(args.N)
+    local_modes = ordered_modes(W_e)
     if args.strengths is None:
         scan_values = np.asarray(args.rho_f_values, dtype=float)
         scan_rho_f = True
@@ -375,6 +805,37 @@ def run_scan(args: ModeScanConfig) -> ScanResult:
     neighbor_correlation_all = []
     correlation_length_all = []
     low_k_fraction_all = []
+    nonlocal_fraction_all = []
+    null_fraction_all = []
+    full_nonlocal_overlap_all = []
+    lowrank_power_all = []
+    total_variance_all = []
+    lowrank_input_variance_all = []
+    lowrank_output_variance_all = []
+    excitatory_active_fraction_all = []
+    inhibitory_active_fraction_all = []
+    excitatory_current_power_all = []
+    inhibitory_current_power_all = []
+    net_current_power_all = []
+    ei_cancellation_ratio_all = []
+    ei_current_correlation_all = []
+    balance_sources = {
+        "mean_balance_e": ("e", "mean_balance"),
+        "mean_balance_i": ("i", "mean_balance"),
+        "active_local_balance_e": ("e", "active_local_balance"),
+        "active_local_balance_i": ("i", "active_local_balance"),
+        "inactive_local_balance_e": ("e", "inactive_local_balance"),
+        "inactive_local_balance_i": ("i", "inactive_local_balance"),
+        "mean_external_current_e": ("e", "mean_external_current"),
+        "mean_excitatory_current_e": ("e", "mean_excitatory_current"),
+        "mean_inhibitory_current_e": ("e", "mean_inhibitory_current"),
+        "mean_net_current_e": ("e", "mean_net_current"),
+        "mean_external_current_i": ("i", "mean_external_current"),
+        "mean_excitatory_current_i": ("i", "mean_excitatory_current"),
+        "mean_inhibitory_current_i": ("i", "mean_inhibitory_current"),
+        "mean_net_current_i": ("i", "mean_net_current"),
+    }
+    balance_values_all = {name: [] for name in balance_sources}
     relative_strengths_all = []
     spectral_strengths_all = []
     strengths_all = []
@@ -388,7 +849,13 @@ def run_scan(args: ModeScanConfig) -> ScanResult:
     local_frobenius_norm = np.linalg.norm(W_e, ord="fro")
     for seed_offset in range(args.n_seeds):
         rng = np.random.default_rng(args.seed + seed_offset)
-        W_nonlocal, _, _ = make_nonlocal_operator(args.N, args.rank, rng)
+        W_nonlocal, left_vectors, right_vectors = make_nonlocal_operator(
+            args.N, args.rank, rng
+        )
+        nonlocal_modes = ordered_modes(W_nonlocal)[:, : args.rank]
+        null_rng = np.random.default_rng(args.seed + seed_offset + 1_000_000)
+        W_null, _, _ = make_nonlocal_operator(args.N, args.rank, null_rng)
+        null_modes = ordered_modes(W_null)[:, : args.rank]
         fixed_rate = -np.linalg.solve(J0, u)
         re0 = fixed_rate[0] + 0.05 * rng.random(args.N * args.N)
         ri0 = fixed_rate[1] + 0.08 * rng.random(args.N * args.N)
@@ -399,6 +866,21 @@ def run_scan(args: ModeScanConfig) -> ScanResult:
         seed_neighbor_correlation = []
         seed_correlation_length = []
         seed_low_k_fraction = []
+        seed_nonlocal_fraction = []
+        seed_null_fraction = []
+        seed_full_nonlocal_overlap = []
+        seed_lowrank_power = []
+        seed_total_variance = []
+        seed_lowrank_input_variance = []
+        seed_lowrank_output_variance = []
+        seed_excitatory_active_fraction = []
+        seed_inhibitory_active_fraction = []
+        seed_excitatory_current_power = []
+        seed_inhibitory_current_power = []
+        seed_net_current_power = []
+        seed_ei_cancellation_ratio = []
+        seed_ei_current_correlation = []
+        seed_balance_values = {name: [] for name in balance_sources}
         seed_relative = []
         seed_spectral = []
         seed_strengths = []
@@ -421,7 +903,15 @@ def run_scan(args: ModeScanConfig) -> ScanResult:
                 f"Run seed {args.seed + seed_offset}, g={strength:g}, "
                 f"rho_F={relative:.3g}, rho_2={spectral:.3g}"
             )
-            activity, is_stable = simulate(
+            (
+                activity,
+                is_stable,
+                active_e,
+                active_i,
+                currents,
+                balance_e,
+                balance_i,
+            ) = simulate(
                 W_e,
                 W_i,
                 W_nonlocal,
@@ -452,6 +942,42 @@ def run_scan(args: ModeScanConfig) -> ScanResult:
             seed_neighbor_correlation.append(neighbor)
             seed_correlation_length.append(length)
             seed_low_k_fraction.append(low_k)
+            seed_nonlocal_fraction.append(
+                subspace_variance_fraction(activity, nonlocal_modes)
+            )
+            seed_null_fraction.append(
+                subspace_variance_fraction(activity, null_modes)
+            )
+            seed_full_nonlocal_overlap.append(
+                subspace_overlap(network_modes[:, : args.rank], nonlocal_modes)
+            )
+            diagnostics = activity_diagnostics(
+                activity,
+                left_vectors,
+                right_vectors,
+                strength,
+                args.N,
+            )
+            seed_lowrank_power.append(diagnostics.lowrank_power)
+            seed_total_variance.append(diagnostics.total_variance)
+            seed_lowrank_input_variance.append(
+                diagnostics.lowrank_input_variance
+            )
+            seed_lowrank_output_variance.append(
+                diagnostics.lowrank_output_variance
+            )
+            seed_excitatory_active_fraction.append(active_e)
+            seed_inhibitory_active_fraction.append(active_i)
+            seed_excitatory_current_power.append(currents.excitatory_power)
+            seed_inhibitory_current_power.append(currents.inhibitory_power)
+            seed_net_current_power.append(currents.net_power)
+            seed_ei_cancellation_ratio.append(currents.cancellation_ratio)
+            seed_ei_current_correlation.append(currents.ei_correlation)
+            balances = {"e": balance_e, "i": balance_i}
+            for name, (population, attribute) in balance_sources.items():
+                seed_balance_values[name].append(
+                    getattr(balances[population], attribute)
+                )
             seed_relative.append(relative)
             seed_spectral.append(spectral)
             seed_strengths.append(strength)
@@ -466,6 +992,22 @@ def run_scan(args: ModeScanConfig) -> ScanResult:
         neighbor_correlation_all.append(seed_neighbor_correlation)
         correlation_length_all.append(seed_correlation_length)
         low_k_fraction_all.append(seed_low_k_fraction)
+        nonlocal_fraction_all.append(seed_nonlocal_fraction)
+        null_fraction_all.append(seed_null_fraction)
+        full_nonlocal_overlap_all.append(seed_full_nonlocal_overlap)
+        lowrank_power_all.append(seed_lowrank_power)
+        total_variance_all.append(seed_total_variance)
+        lowrank_input_variance_all.append(seed_lowrank_input_variance)
+        lowrank_output_variance_all.append(seed_lowrank_output_variance)
+        excitatory_active_fraction_all.append(seed_excitatory_active_fraction)
+        inhibitory_active_fraction_all.append(seed_inhibitory_active_fraction)
+        excitatory_current_power_all.append(seed_excitatory_current_power)
+        inhibitory_current_power_all.append(seed_inhibitory_current_power)
+        net_current_power_all.append(seed_net_current_power)
+        ei_cancellation_ratio_all.append(seed_ei_cancellation_ratio)
+        ei_current_correlation_all.append(seed_ei_current_correlation)
+        for name in balance_sources:
+            balance_values_all[name].append(seed_balance_values[name])
         relative_strengths_all.append(seed_relative)
         spectral_strengths_all.append(seed_spectral)
         strengths_all.append(seed_strengths)
@@ -496,6 +1038,53 @@ def run_scan(args: ModeScanConfig) -> ScanResult:
     low_k_fraction, low_k_fraction_std = finite_mean_std(
         np.asarray(low_k_fraction_all)
     )
+    nonlocal_fraction, nonlocal_fraction_std = finite_mean_std(
+        np.asarray(nonlocal_fraction_all)
+    )
+    null_fraction, null_fraction_std = finite_mean_std(
+        np.asarray(null_fraction_all)
+    )
+    full_nonlocal_overlap, full_nonlocal_overlap_std = finite_mean_std(
+        np.asarray(full_nonlocal_overlap_all)
+    )
+    lowrank_power, lowrank_power_std = finite_mean_std(
+        np.asarray(lowrank_power_all)
+    )
+    total_variance, total_variance_std = finite_mean_std(
+        np.asarray(total_variance_all)
+    )
+    lowrank_input_variance, lowrank_input_variance_std = finite_mean_std(
+        np.asarray(lowrank_input_variance_all)
+    )
+    lowrank_output_variance, lowrank_output_variance_std = finite_mean_std(
+        np.asarray(lowrank_output_variance_all)
+    )
+    excitatory_active_fraction, excitatory_active_fraction_std = finite_mean_std(
+        np.asarray(excitatory_active_fraction_all)
+    )
+    inhibitory_active_fraction, inhibitory_active_fraction_std = finite_mean_std(
+        np.asarray(inhibitory_active_fraction_all)
+    )
+    excitatory_current_power, excitatory_current_power_std = finite_mean_std(
+        np.asarray(excitatory_current_power_all)
+    )
+    inhibitory_current_power, inhibitory_current_power_std = finite_mean_std(
+        np.asarray(inhibitory_current_power_all)
+    )
+    net_current_power, net_current_power_std = finite_mean_std(
+        np.asarray(net_current_power_all)
+    )
+    ei_cancellation_ratio, ei_cancellation_ratio_std = finite_mean_std(
+        np.asarray(ei_cancellation_ratio_all)
+    )
+    ei_current_correlation, ei_current_correlation_std = finite_mean_std(
+        np.asarray(ei_current_correlation_all)
+    )
+    balance_arrays = {}
+    for name, values in balance_values_all.items():
+        mean, std = finite_mean_std(np.asarray(values))
+        balance_arrays[name] = mean
+        balance_arrays[name + "_std"] = std
     relative_strengths, relative_strength_std = finite_mean_std(
         np.asarray(relative_strengths_all)
     )
@@ -523,9 +1112,38 @@ def run_scan(args: ModeScanConfig) -> ScanResult:
         correlation_length_std=correlation_length_std,
         low_k_fraction=low_k_fraction,
         low_k_fraction_std=low_k_fraction_std,
+        nonlocal_fraction=nonlocal_fraction,
+        nonlocal_fraction_std=nonlocal_fraction_std,
+        null_fraction=null_fraction,
+        null_fraction_std=null_fraction_std,
+        full_nonlocal_overlap=full_nonlocal_overlap,
+        full_nonlocal_overlap_std=full_nonlocal_overlap_std,
+        lowrank_power=lowrank_power,
+        lowrank_power_std=lowrank_power_std,
+        total_variance=total_variance,
+        total_variance_std=total_variance_std,
+        lowrank_input_variance=lowrank_input_variance,
+        lowrank_input_variance_std=lowrank_input_variance_std,
+        lowrank_output_variance=lowrank_output_variance,
+        lowrank_output_variance_std=lowrank_output_variance_std,
+        excitatory_active_fraction=excitatory_active_fraction,
+        excitatory_active_fraction_std=excitatory_active_fraction_std,
+        inhibitory_active_fraction=inhibitory_active_fraction,
+        inhibitory_active_fraction_std=inhibitory_active_fraction_std,
+        excitatory_current_power=excitatory_current_power,
+        excitatory_current_power_std=excitatory_current_power_std,
+        inhibitory_current_power=inhibitory_current_power,
+        inhibitory_current_power_std=inhibitory_current_power_std,
+        net_current_power=net_current_power,
+        net_current_power_std=net_current_power_std,
+        ei_cancellation_ratio=ei_cancellation_ratio,
+        ei_cancellation_ratio_std=ei_cancellation_ratio_std,
+        ei_current_correlation=ei_current_correlation,
+        ei_current_correlation_std=ei_current_correlation_std,
         example_rates=example_rates,
         stable=stable,
         geometric_shell_counts=geometric_shell_counts,
+        **balance_arrays,
     )
 
 
@@ -555,7 +1173,7 @@ def plot_result(result: ScanResult, args: ModeScanConfig) -> plt.Figure:
             modes,
             result.local_curves[index, mode_indices],
             "--",
-            label=f"Geometric, {label}",
+            label=f"Local, {label}",
         )
         ax_curve.plot(
             modes,
@@ -592,8 +1210,8 @@ def plot_result(result: ScanResult, args: ModeScanConfig) -> plt.Figure:
     )
     ax_transition.set(
         xlabel="Relative total strength, rho_F",
-        ylabel="Network advantage",
-        title="Local-to-network transition",
+        ylabel="Full minus local variance",
+        title="Full-mode advantage",
     )
 
     ax_dimension = fig.add_subplot(grid[0, 2])
