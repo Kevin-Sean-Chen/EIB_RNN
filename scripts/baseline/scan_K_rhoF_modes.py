@@ -48,6 +48,18 @@ METRIC_FIELDS = [
     "lowrank_power_std",
     "total_variance",
     "total_variance_std",
+    "local_attributed_power",
+    "local_attributed_power_std",
+    "network_attributed_power",
+    "network_attributed_power_std",
+    "residual_power",
+    "residual_power_std",
+    "local_attributed_fraction",
+    "local_attributed_fraction_std",
+    "network_attributed_fraction",
+    "network_attributed_fraction_std",
+    "residual_fraction",
+    "residual_fraction_std",
     "lowrank_input_variance",
     "lowrank_input_variance_std",
     "lowrank_output_variance",
@@ -500,6 +512,79 @@ def plot_balance(
     return figure
 
 
+def plot_power_attribution(results: dict[float, ScanResult]) -> plt.Figure:
+    """Plot additive local, network, and residual fluctuation power."""
+    K_values = list(results)
+    column_count = len(K_values)
+    figure, axes = plt.subplots(
+        2,
+        column_count,
+        figsize=(4.2 * column_count, 8),
+        constrained_layout=True,
+        squeeze=False,
+    )
+    components = (
+        ("local_attributed", "Local", "-", "tab:blue"),
+        ("network_attributed", "Network", "--", "tab:orange"),
+        ("residual", "Residual", ":", "tab:green"),
+    )
+    for column, (K, result) in enumerate(results.items()):
+        ax_absolute = axes[0, column]
+        ax_fraction = axes[1, column]
+        x = result.relative_strengths
+        for prefix, label, linestyle, color in components:
+            power = getattr(result, f"{prefix}_power")
+            power_std = getattr(result, f"{prefix}_power_std")
+            fraction = getattr(result, f"{prefix}_fraction")
+            fraction_std = getattr(result, f"{prefix}_fraction_std")
+            ax_absolute.plot(
+                x, power, linestyle, marker="o", color=color, label=label
+            )
+            ax_absolute.fill_between(
+                x,
+                np.maximum(power - power_std, 0.0),
+                power + power_std,
+                color=color,
+                alpha=0.1,
+            )
+            ax_fraction.plot(
+                x, fraction, linestyle, marker="o", color=color, label=label
+            )
+            ax_fraction.fill_between(
+                x,
+                np.maximum(fraction - fraction_std, 0.0),
+                np.minimum(fraction + fraction_std, 1.0),
+                color=color,
+                alpha=0.1,
+            )
+        absolute_title = (
+            "Absolute fluctuation power"
+            if column_count == 1
+            else f"Absolute power, K={K:g}"
+        )
+        fraction_title = (
+            "Fractional fluctuation power"
+            if column_count == 1
+            else f"Power fractions, K={K:g}"
+        )
+        ax_absolute.set(
+            xlabel="Relative total strength, rho_F",
+            ylabel="Attributed mean squared fluctuation",
+            yscale="symlog",
+            title=absolute_title,
+        )
+        ax_fraction.set(
+            xlabel="Relative total strength, rho_F",
+            ylabel="Fraction of total fluctuation power",
+            ylim=(-0.02, 1.02),
+            title=fraction_title,
+        )
+        ax_absolute.legend(fontsize=8)
+        ax_fraction.legend(fontsize=8)
+    figure.suptitle("Local, network, and residual variance attribution")
+    return figure
+
+
 def parse_args() -> argparse.Namespace:
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(description=__doc__)
@@ -588,11 +673,13 @@ def main() -> None:
     diagnostic_figure = plot_diagnostics(results)
     cancellation_figure = plot_ei_cancellation(results)
     balance_figure = plot_balance(results, config)
+    attribution_figure = plot_power_attribution(results)
     save_run_files(run_directory, config, results, K_values, transition_threshold)
     figure.savefig(run_directory / "summary.png", dpi=180)
     diagnostic_figure.savefig(run_directory / "mechanism_diagnostics.png", dpi=180)
     cancellation_figure.savefig(run_directory / "ei_cancellation.png", dpi=180)
     balance_figure.savefig(run_directory / "balance_diagnostics.png", dpi=180)
+    attribution_figure.savefig(run_directory / "power_attribution.png", dpi=180)
     print(f"Saved run to {run_directory}")
     if args.show:
         plt.show()
@@ -601,6 +688,7 @@ def main() -> None:
         plt.close(diagnostic_figure)
         plt.close(cancellation_figure)
         plt.close(balance_figure)
+        plt.close(attribution_figure)
 
 
 if __name__ == "__main__":

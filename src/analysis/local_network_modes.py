@@ -105,6 +105,18 @@ class ScanResult:
     lowrank_power_std: np.ndarray
     total_variance: np.ndarray
     total_variance_std: np.ndarray
+    local_attributed_power: np.ndarray
+    local_attributed_power_std: np.ndarray
+    network_attributed_power: np.ndarray
+    network_attributed_power_std: np.ndarray
+    residual_power: np.ndarray
+    residual_power_std: np.ndarray
+    local_attributed_fraction: np.ndarray
+    local_attributed_fraction_std: np.ndarray
+    network_attributed_fraction: np.ndarray
+    network_attributed_fraction_std: np.ndarray
+    residual_fraction: np.ndarray
+    residual_fraction_std: np.ndarray
     lowrank_input_variance: np.ndarray
     lowrank_input_variance_std: np.ndarray
     lowrank_output_variance: np.ndarray
@@ -187,6 +199,18 @@ def scan_result_arrays(result: ScanResult) -> dict[str, np.ndarray]:
         "lowrank_power_std": result.lowrank_power_std,
         "total_variance": result.total_variance,
         "total_variance_std": result.total_variance_std,
+        "local_attributed_power": result.local_attributed_power,
+        "local_attributed_power_std": result.local_attributed_power_std,
+        "network_attributed_power": result.network_attributed_power,
+        "network_attributed_power_std": result.network_attributed_power_std,
+        "residual_power": result.residual_power,
+        "residual_power_std": result.residual_power_std,
+        "local_attributed_fraction": result.local_attributed_fraction,
+        "local_attributed_fraction_std": result.local_attributed_fraction_std,
+        "network_attributed_fraction": result.network_attributed_fraction,
+        "network_attributed_fraction_std": result.network_attributed_fraction_std,
+        "residual_fraction": result.residual_fraction,
+        "residual_fraction_std": result.residual_fraction_std,
         "lowrank_input_variance": result.lowrank_input_variance,
         "lowrank_input_variance_std": result.lowrank_input_variance_std,
         "lowrank_output_variance": result.lowrank_output_variance,
@@ -260,6 +284,18 @@ def scan_metric_rows(result: ScanResult) -> list[dict[str, float | bool]]:
                 "lowrank_power_std": result.lowrank_power_std[index],
                 "total_variance": result.total_variance[index],
                 "total_variance_std": result.total_variance_std[index],
+                "local_attributed_power": result.local_attributed_power[index],
+                "local_attributed_power_std": result.local_attributed_power_std[index],
+                "network_attributed_power": result.network_attributed_power[index],
+                "network_attributed_power_std": result.network_attributed_power_std[index],
+                "residual_power": result.residual_power[index],
+                "residual_power_std": result.residual_power_std[index],
+                "local_attributed_fraction": result.local_attributed_fraction[index],
+                "local_attributed_fraction_std": result.local_attributed_fraction_std[index],
+                "network_attributed_fraction": result.network_attributed_fraction[index],
+                "network_attributed_fraction_std": result.network_attributed_fraction_std[index],
+                "residual_fraction": result.residual_fraction[index],
+                "residual_fraction_std": result.residual_fraction_std[index],
                 "lowrank_input_variance": result.lowrank_input_variance[index],
                 "lowrank_input_variance_std": result.lowrank_input_variance_std[index],
                 "lowrank_output_variance": result.lowrank_output_variance[index],
@@ -397,6 +433,62 @@ class ActivityDiagnostics:
     lowrank_fraction: float
     lowrank_input_variance: float
     lowrank_output_variance: float
+
+
+@dataclass
+class VarianceAttribution:
+    """Store an additive attribution of centered activity variance."""
+
+    local_power: float
+    network_power: float
+    residual_power: float
+    total_power: float
+
+
+def _orthonormal_span(vectors: np.ndarray) -> np.ndarray:
+    """Return an orthonormal basis for the span of the input vectors."""
+    left, singular_values, _ = np.linalg.svd(vectors, full_matrices=False)
+    if singular_values.size == 0:
+        return left[:, :0]
+    tolerance = max(vectors.shape) * np.finfo(float).eps * singular_values[0]
+    return left[:, singular_values > tolerance]
+
+
+def variance_attribution(
+    activity: np.ndarray,
+    local_modes: np.ndarray,
+    network_modes: np.ndarray,
+) -> VarianceAttribution:
+    """Attribute centered variance to overlapping local and network spaces."""
+    if activity.ndim != 2:
+        raise ValueError("Activity must have shape (space, time).")
+    if local_modes.ndim != 2 or network_modes.ndim != 2:
+        raise ValueError("Mode arrays must have shape (space, modes).")
+    if local_modes.shape[0] != activity.shape[0] or network_modes.shape[0] != activity.shape[0]:
+        raise ValueError("Activity and modes must use the same space.")
+    if not np.isfinite(activity).all():
+        return VarianceAttribution(*(np.nan for _ in range(4)))
+
+    centered = activity - activity.mean(axis=1, keepdims=True)
+    time_count = activity.shape[1]
+    total_power = float(np.sum(centered**2) / time_count)
+
+    def projected_power(modes: np.ndarray) -> float:
+        basis = _orthonormal_span(modes)
+        return float(np.sum((basis.T @ centered) ** 2) / time_count)
+
+    local_raw = projected_power(local_modes)
+    network_raw = projected_power(network_modes)
+    union_power = projected_power(np.concatenate([local_modes, network_modes], axis=1))
+    local_power = 0.5 * (local_raw + union_power - network_raw)
+    network_power = 0.5 * (network_raw + union_power - local_raw)
+    residual_power = total_power - union_power
+    return VarianceAttribution(
+        local_power=max(0.0, local_power),
+        network_power=max(0.0, network_power),
+        residual_power=max(0.0, residual_power),
+        total_power=total_power,
+    )
 
 
 @dataclass
@@ -810,6 +902,9 @@ def run_scan(args: ModeScanConfig) -> ScanResult:
     full_nonlocal_overlap_all = []
     lowrank_power_all = []
     total_variance_all = []
+    local_attributed_power_all = []
+    network_attributed_power_all = []
+    residual_power_all = []
     lowrank_input_variance_all = []
     lowrank_output_variance_all = []
     excitatory_active_fraction_all = []
@@ -871,6 +966,9 @@ def run_scan(args: ModeScanConfig) -> ScanResult:
         seed_full_nonlocal_overlap = []
         seed_lowrank_power = []
         seed_total_variance = []
+        seed_local_attributed_power = []
+        seed_network_attributed_power = []
+        seed_residual_power = []
         seed_lowrank_input_variance = []
         seed_lowrank_output_variance = []
         seed_excitatory_active_fraction = []
@@ -960,6 +1058,14 @@ def run_scan(args: ModeScanConfig) -> ScanResult:
             )
             seed_lowrank_power.append(diagnostics.lowrank_power)
             seed_total_variance.append(diagnostics.total_variance)
+            attribution = variance_attribution(
+                activity,
+                local_modes[:, : args.rank],
+                nonlocal_modes,
+            )
+            seed_local_attributed_power.append(attribution.local_power)
+            seed_network_attributed_power.append(attribution.network_power)
+            seed_residual_power.append(attribution.residual_power)
             seed_lowrank_input_variance.append(
                 diagnostics.lowrank_input_variance
             )
@@ -997,6 +1103,9 @@ def run_scan(args: ModeScanConfig) -> ScanResult:
         full_nonlocal_overlap_all.append(seed_full_nonlocal_overlap)
         lowrank_power_all.append(seed_lowrank_power)
         total_variance_all.append(seed_total_variance)
+        local_attributed_power_all.append(seed_local_attributed_power)
+        network_attributed_power_all.append(seed_network_attributed_power)
+        residual_power_all.append(seed_residual_power)
         lowrank_input_variance_all.append(seed_lowrank_input_variance)
         lowrank_output_variance_all.append(seed_lowrank_output_variance)
         excitatory_active_fraction_all.append(seed_excitatory_active_fraction)
@@ -1050,9 +1159,41 @@ def run_scan(args: ModeScanConfig) -> ScanResult:
     lowrank_power, lowrank_power_std = finite_mean_std(
         np.asarray(lowrank_power_all)
     )
-    total_variance, total_variance_std = finite_mean_std(
-        np.asarray(total_variance_all)
+    total_variance_all = np.asarray(total_variance_all)
+    local_attributed_power_all = np.asarray(local_attributed_power_all)
+    network_attributed_power_all = np.asarray(network_attributed_power_all)
+    residual_power_all = np.asarray(residual_power_all)
+    total_variance, total_variance_std = finite_mean_std(total_variance_all)
+    local_attributed_power, local_attributed_power_std = finite_mean_std(
+        local_attributed_power_all
     )
+    network_attributed_power, network_attributed_power_std = finite_mean_std(
+        network_attributed_power_all
+    )
+    residual_power, residual_power_std = finite_mean_std(
+        residual_power_all
+    )
+    fraction_arrays = []
+    for power_values in (
+        local_attributed_power_all,
+        network_attributed_power_all,
+        residual_power_all,
+    ):
+        fraction_arrays.append(
+            np.divide(
+                power_values,
+                total_variance_all,
+                out=np.zeros_like(power_values),
+                where=total_variance_all > np.finfo(float).eps,
+            )
+        )
+    local_attributed_fraction, local_attributed_fraction_std = finite_mean_std(
+        fraction_arrays[0]
+    )
+    network_attributed_fraction, network_attributed_fraction_std = finite_mean_std(
+        fraction_arrays[1]
+    )
+    residual_fraction, residual_fraction_std = finite_mean_std(fraction_arrays[2])
     lowrank_input_variance, lowrank_input_variance_std = finite_mean_std(
         np.asarray(lowrank_input_variance_all)
     )
@@ -1122,6 +1263,18 @@ def run_scan(args: ModeScanConfig) -> ScanResult:
         lowrank_power_std=lowrank_power_std,
         total_variance=total_variance,
         total_variance_std=total_variance_std,
+        local_attributed_power=local_attributed_power,
+        local_attributed_power_std=local_attributed_power_std,
+        network_attributed_power=network_attributed_power,
+        network_attributed_power_std=network_attributed_power_std,
+        residual_power=residual_power,
+        residual_power_std=residual_power_std,
+        local_attributed_fraction=local_attributed_fraction,
+        local_attributed_fraction_std=local_attributed_fraction_std,
+        network_attributed_fraction=network_attributed_fraction,
+        network_attributed_fraction_std=network_attributed_fraction_std,
+        residual_fraction=residual_fraction,
+        residual_fraction_std=residual_fraction_std,
         lowrank_input_variance=lowrank_input_variance,
         lowrank_input_variance_std=lowrank_input_variance_std,
         lowrank_output_variance=lowrank_output_variance,

@@ -10,6 +10,7 @@ from scripts.baseline.scan_K_rhoF_modes import (
     plot_balance,
     plot_diagnostics,
     plot_ei_cancellation,
+    plot_power_attribution,
     plot_results,
 )
 from src.analysis.local_network_modes import (
@@ -42,6 +43,48 @@ class LocalNetworkModeTests(unittest.TestCase):
 
         self.assertAlmostEqual(float(curve[-1]), 1.0)
         self.assertTrue(np.all(np.diff(curve) >= 0.0))
+
+    def test_variance_attribution_splits_shared_power_without_double_counting(self) -> None:
+        activity = np.array(
+            [
+                [1.0, -1.0],
+                [1.0, -1.0],
+                [1.0, -1.0],
+            ]
+        )
+        local_modes = np.array([[1.0], [0.0], [0.0]])
+        network_modes = np.array([[1.0], [1.0], [0.0]]) / np.sqrt(2.0)
+
+        result = local_network_modes.variance_attribution(
+            activity, local_modes, network_modes
+        )
+
+        self.assertAlmostEqual(result.local_power, 0.5)
+        self.assertAlmostEqual(result.network_power, 1.5)
+        self.assertAlmostEqual(result.residual_power, 1.0)
+        self.assertAlmostEqual(
+            result.local_power + result.network_power + result.residual_power,
+            result.total_power,
+        )
+
+    def test_variance_attribution_preserves_orthogonal_projected_power(self) -> None:
+        activity = np.array(
+            [
+                [1.0, -1.0],
+                [1.0, -1.0],
+                [1.0, -1.0],
+            ]
+        )
+        local_modes = np.array([[1.0], [0.0], [0.0]])
+        network_modes = np.array([[0.0], [1.0], [0.0]])
+
+        result = local_network_modes.variance_attribution(
+            activity, local_modes, network_modes
+        )
+
+        self.assertAlmostEqual(result.local_power, 1.0)
+        self.assertAlmostEqual(result.network_power, 1.0)
+        self.assertAlmostEqual(result.residual_power, 1.0)
 
     def test_activity_diagnostics_separate_projected_and_total_power(self) -> None:
         activity = np.array(
@@ -247,6 +290,12 @@ class LocalNetworkModeTests(unittest.TestCase):
             result.lowrank_power_std,
             result.total_variance,
             result.total_variance_std,
+            result.local_attributed_power,
+            result.local_attributed_power_std,
+            result.network_attributed_power,
+            result.network_attributed_power_std,
+            result.residual_power,
+            result.residual_power_std,
             result.lowrank_input_variance,
             result.lowrank_input_variance_std,
             result.lowrank_output_variance,
@@ -254,6 +303,13 @@ class LocalNetworkModeTests(unittest.TestCase):
         ):
             self.assertEqual(values.shape, (2,))
             self.assertTrue(np.all(values >= 0.0))
+
+        np.testing.assert_allclose(
+            result.local_attributed_power
+            + result.network_attributed_power
+            + result.residual_power,
+            result.total_variance,
+        )
 
     def test_k_scan_summary_has_four_diagnostic_panels(self) -> None:
         config = ModeScanConfig(
@@ -307,6 +363,56 @@ class LocalNetworkModeTests(unittest.TestCase):
                 "Active fractions",
                 "Low-rank input variance",
                 "Low-rank output variance",
+            ],
+        )
+        plt.close(figure)
+
+    def test_power_attribution_figure_has_absolute_and_fraction_panels(self) -> None:
+        config = ModeScanConfig(
+            N=5,
+            K=10.0,
+            rho_f_values=[0.0, 0.5],
+            rank=2,
+            seed=3,
+            n_seeds=1,
+            init_steps=5,
+            record_steps=10,
+            sample_every=2,
+        )
+        result = run_scan(config)
+
+        figure = plot_power_attribution({10.0: result})
+
+        self.assertEqual(
+            [axis.get_title() for axis in figure.axes],
+            ["Absolute fluctuation power", "Fractional fluctuation power"],
+        )
+        plt.close(figure)
+
+    def test_power_attribution_figure_separates_k_values_by_column(self) -> None:
+        config = ModeScanConfig(
+            N=5,
+            K=10.0,
+            rho_f_values=[0.0, 0.5],
+            rank=2,
+            seed=3,
+            n_seeds=1,
+            init_steps=5,
+            record_steps=10,
+            sample_every=2,
+        )
+        result = run_scan(config)
+
+        figure = plot_power_attribution({10.0: result, 100.0: result})
+
+        self.assertEqual(len(figure.axes), 4)
+        self.assertEqual(
+            [axis.get_title() for axis in figure.axes],
+            [
+                "Absolute power, K=10",
+                "Absolute power, K=100",
+                "Power fractions, K=10",
+                "Power fractions, K=100",
             ],
         )
         plt.close(figure)
