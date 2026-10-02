@@ -21,8 +21,8 @@ from src.metrics import (
 L = 31
 N = L
 dt = 0.0001
-Nstep_init = 1 * 10 ** 3
-Nstep = 1 * 10 ** 3
+Nstep_init = 2 * 10 ** 3
+Nstep = 2 * 10 ** 3
 npf = 2
 
 I_xyt = torch.zeros((N, N, Nstep))  ### no input
@@ -30,10 +30,20 @@ I_xyt = torch.zeros((N, N, Nstep))  ### no input
 ### network parameters
 ntype = 'relu_gaussian'
 J0 = np.array([[1, -4], [2, -2]])
-K = 10 ** 1
+K = 10 ** 4
 tau = np.array([.01, .01])
 u = np.array([10, 0.0])
 sigma = 0.05 * np.array([1, np.sqrt(2)])
+
+# Set g to zero to disable the rank-one term. Replace m and n as needed.
+g = 0 #0.27984 #1.0
+m = torch.ones(N**2)
+n = torch.ones(N**2)
+rng = np.random.default_rng(1)
+m = rng.standard_normal(N**2)
+n = rng.standard_normal(N**2)
+m -= m.mean()
+n -= n.mean()
 
 # Initial state
 r0 = -np.linalg.inv(J0) @ u
@@ -93,7 +103,7 @@ def estimate_speed_phasecorr(U, x, y, t):
 plt_logic = False #True
 biass = np.linspace(0.0, 2.0, 15)/N
 biass = np.array([0, 4, 8, 12, 16, 20])/N
-# biass = np.array([0, 8, 16])/N
+biass = np.array([0, 2, 4])
 samps = 20
 acfs_allb = []
 wv_measure = np.zeros((len(biass), samps))
@@ -102,7 +112,10 @@ dim_measure = np.zeros(len(biass))
 
 for bb in range(len(biass)):
     bias = biass[bb]
-    re_all, ri_all = relu2D_bias(L, dt, Nstep_init, Nstep, npf, ntype, K, tau, u, J0, sigma, I_xyt, re0, ri0, bias)
+    re_all, ri_all = relu2D_bias(
+        L, dt, Nstep_init, Nstep, npf, ntype, K, tau, u, J0, sigma,
+        I_xyt, re0, ri0, bias, g=g, m=m, n=n,
+    )
     ### randomly sample samp from 1:N*N
     samp = np.random.randint(1, L * L, samps)
     ### sample cells
@@ -169,4 +182,64 @@ for bb in range(len(biass)):
     axs[bb].set_ylabel('ACF')
     axs[bb].set_title(f'ACF for bias = {biass[bb]:.4f}')
 plt.tight_layout()
+plt.show()
+
+
+# %% scan bias and K
+Ks = np.array([10**2, 10**3, 10**4, 10**5])
+biass = np.array([0, 2, 4, 8])
+
+mid_t_patterns = np.empty((len(biass), len(Ks), N, N))
+mid_t_index = Nstep // (2 * npf)
+
+for bb, bias in enumerate(biass):
+    for kk, K_value in enumerate(Ks):
+        re_all, _ = relu2D_bias(
+            L,
+            dt,
+            Nstep_init,
+            Nstep,
+            npf,
+            ntype,
+            K_value,
+            tau,
+            u,
+            J0,
+            sigma,
+            I_xyt,
+            re0,
+            ri0,
+            bias,
+            g=g,
+            m=m,
+            n=n,
+        )
+        mid_t_patterns[bb, kk] = re_all[:, :, mid_t_index]
+
+fig, axes = plt.subplots(
+    len(biass),
+    len(Ks),
+    figsize=(3.2 * len(Ks), 3.0 * len(biass)),
+    sharex=True,
+    sharey=True,
+    squeeze=False,
+    constrained_layout=True,
+)
+
+for bb, bias in enumerate(biass):
+    for kk, K_value in enumerate(Ks):
+        image = axes[bb, kk].imshow(
+            mid_t_patterns[bb, kk],
+            origin='lower',
+            extent=[xx[0], xx[-1], yy[0], yy[-1]],
+        )
+        fig.colorbar(image, ax=axes[bb, kk], fraction=0.046, pad=0.04)
+        if bb == 0:
+            axes[bb, kk].set_title(f'K = {K_value:.0e}')
+        if kk == 0:
+            axes[bb, kk].set_ylabel(f'Bias = {bias:g}\ny')
+        if bb == len(biass) - 1:
+            axes[bb, kk].set_xlabel('x')
+
+fig.suptitle(f'Mid-time excitatory firing patterns (t = {tt[mid_t_index]:.4f})')
 plt.show()

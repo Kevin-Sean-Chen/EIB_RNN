@@ -9,7 +9,24 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 from PIL import Image
 
-def relu2D_driven_step(re, ri, N, dt, npf, ntype, K, tau, u, J0, sigma, input_pattern, bias):
+def relu2D_driven_step(
+    re,
+    ri,
+    N,
+    dt,
+    npf,
+    ntype,
+    K,
+    tau,
+    u,
+    J0,
+    sigma,
+    input_pattern,
+    bias,
+    g=0.0,
+    m=None,
+    n=None,
+):
     if ntype != 'relu_gaussian':
         raise ValueError("Only 'relu_gaussian' ntype is supported in this version.")
 
@@ -23,12 +40,20 @@ def relu2D_driven_step(re, ri, N, dt, npf, ntype, K, tau, u, J0, sigma, input_pa
     # 'bias' shifts the center of the Gaussian kernel
     # bias = 0.0  # Set your desired bias value here (e.g., bias=2.0)
     we = np.sum(dx * (2 * np.pi * sigma[0]**2)**-0.5 *
-                np.exp(-0.5 * (dx * (x[:, None] + k - bias))**2 / sigma[0]**2), axis=1)
+                np.exp(-0.5 * (dx * (x[:, None] + k + bias))**2 / sigma[0]**2), axis=1)
     wi = np.sum(dx * (2 * np.pi * sigma[1]**2)**-0.5 *
                 np.exp(-0.5 * (dx * (x[:, None] + k))**2 / sigma[1]**2), axis=1)
     we_kernel = torch.tensor(np.outer(we, we), dtype=torch.float32, device=device).unsqueeze(0).unsqueeze(0)
     wi_kernel = torch.tensor(np.outer(wi, wi), dtype=torch.float32, device=device).unsqueeze(0).unsqueeze(0)
     pad = (we_kernel.shape[-1] // 2, we_kernel.shape[-2] // 2)
+
+    if g != 0:
+        if m is None or n is None:
+            raise ValueError('m and n are required when g is not zero')
+        m_tensor = torch.as_tensor(m, dtype=re.dtype, device=device).flatten()
+        n_tensor = torch.as_tensor(n, dtype=re.dtype, device=device).flatten()
+        if m_tensor.numel() != N**2 or n_tensor.numel() != N**2:
+            raise ValueError('m and n must each contain N**2 values')
 
     for _ in range(npf):
         # periodic boundary padding
@@ -36,6 +61,8 @@ def relu2D_driven_step(re, ri, N, dt, npf, ntype, K, tau, u, J0, sigma, input_pa
         riP = F.pad(ri, (pad[0], pad[0], pad[1], pad[1]), mode='circular')
 
         conv_re = F.conv2d(reP, we_kernel)
+        if g != 0:
+            conv_re = conv_re + g * m_tensor.reshape(N, N) * torch.dot(n_tensor, re.flatten()) / N
         conv_ri = F.conv2d(riP, wi_kernel)
 
         mue = K**0.5 * (u[0] + J0[0, 0] * conv_re + J0[0, 1] * conv_ri + input_pattern)
@@ -48,7 +75,27 @@ def relu2D_driven_step(re, ri, N, dt, npf, ntype, K, tau, u, J0, sigma, input_pa
     ri = ri.squeeze().cpu().numpy()
     return re, ri, mue, mui
 
-def relu2D_bias(N, dt, Nstep_init, Nstep, npf, ntype, K, tau, u, J0, sigma, input_pattern, re0, ri0, bias, r_and_mu=False):
+def relu2D_bias(
+    N,
+    dt,
+    Nstep_init,
+    Nstep,
+    npf,
+    ntype,
+    K,
+    tau,
+    u,
+    J0,
+    sigma,
+    input_pattern,
+    re0,
+    ri0,
+    bias,
+    r_and_mu=False,
+    g=0.0,
+    m=None,
+    n=None,
+):
     if N % 2 != 1:
         raise ValueError('N must be an odd integer')
 
@@ -64,7 +111,10 @@ def relu2D_bias(N, dt, Nstep_init, Nstep, npf, ntype, K, tau, u, J0, sigma, inpu
         print(str_temp, end='', flush=True)
 
         input_pattern_t = input_pattern[:, :, n1 - 1]*0 ### no need to use input pattern in initialization
-        re, ri, mue, mui = relu2D_driven_step(re, ri, N, dt, npf, ntype, K, tau, u, J0, sigma, input_pattern_t, bias)
+        re, ri, mue, mui = relu2D_driven_step(
+            re, ri, N, dt, npf, ntype, K, tau, u, J0, sigma,
+            input_pattern_t, bias, g=g, m=m, n=n,
+        )
 
     print('\nrunning simulation... ', end='', flush=True)
     str_temp = ''
@@ -81,7 +131,10 @@ def relu2D_bias(N, dt, Nstep_init, Nstep, npf, ntype, K, tau, u, J0, sigma, inpu
         print(str_temp, end='', flush=True)
 
         input_pattern_t = input_pattern[:, :, n1 - 1]
-        re, ri, mue, mui = relu2D_driven_step(re, ri, N, dt, npf, ntype, K, tau, u, J0, sigma, input_pattern_t, bias)
+        re, ri, mue, mui = relu2D_driven_step(
+            re, ri, N, dt, npf, ntype, K, tau, u, J0, sigma,
+            input_pattern_t, bias, g=g, m=m, n=n,
+        )
 
         re_all[:, :, n1 - 1] = re
         ri_all[:, :, n1 - 1] = ri
@@ -104,8 +157,8 @@ if __name__ == "__main__":
     time_f, space_f, drift_rate, device = 1.0, 2.5*3, 0.0, 'cpu'
     N = L
     dt = 0.0001
-    Nstep_init = 1 * 10 ** 3
-    Nstep = 1 * 10 ** 3
+    Nstep_init = 2 * 10 ** 3
+    Nstep = 2 * 10 ** 3
     npf = 2
 
     I_xyt = torch.zeros((N, N, Nstep))  ### no input
@@ -113,7 +166,7 @@ if __name__ == "__main__":
     ### network parameters
     ntype = 'relu_gaussian'
     J0 = np.array([[1, -4], [2, -2]])
-    K = 10 ** 4  ### 0,1,2,4,8
+    K = 10 ** 5  ### 0,1,2,4,8
     tau = np.array([.01, .01])
     u = np.array([10, 0.0])
     sigma = 0.05 * np.array([1, np.sqrt(2)])
@@ -129,7 +182,7 @@ if __name__ == "__main__":
     yy = np.arange(1, L + 1) / L
 
     # Run simulation
-    bias = 5*1/N #2.0
+    bias = 3 #70/N #2.0
     re_all, ri_all = relu2D_bias(L, dt, Nstep_init, Nstep, npf, ntype, K, tau, u, J0, sigma, I_xyt, re0, ri0, bias)
 
     # Plot three time points of re_all

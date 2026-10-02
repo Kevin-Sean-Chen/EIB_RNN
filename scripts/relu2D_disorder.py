@@ -440,6 +440,7 @@ if __name__ == "__main__":
     # # Handle any zeros (though unlikely with sine/cosine)
     # mv[mv == 0] = 1
     # mv2[mv2 == 0] = 1
+
     #### now for nv and nv2
     x_coords = torch.arange(N, dtype=torch.float32)
     y_coords = torch.arange(N, dtype=torch.float32)
@@ -458,12 +459,12 @@ if __name__ == "__main__":
     G = gabor2d(N, f=5, theta=np.deg2rad(30), gamma=0.1, phi=.5, normalize=True) ### 0.5,1,1.5
     G = torch.tensor(G, dtype=mv.dtype, device=mv.device).reshape(-1, 1)
     nv = G*1  ### use gabor as nv
-    g = (mv, nv*.5)
+    g = (mv, nv*0.5)
     # g = (mv, nv*.5, mv2, nv2*5.)#, G)  ### pass in as a tuple
 
 
     plt.figure()
-    plt.imshow(G.reshape(N, N).cpu(), cmap='bwr')
+    plt.imshow(nv.reshape(N, N).cpu(), cmap='bwr')
     plt.colorbar()
     plt.title('Gabor Pattern used for nv')
     plt.show()
