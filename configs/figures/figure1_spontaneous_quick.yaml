@@ -1,0 +1,30 @@
+run:
+  output_directory: output/figures/figure1_quick
+
+network:
+  N: 9
+  J_ee: 1.0
+  J_ei: -4.0
+  J_ie: 2.0
+  J_ii: -2.0
+  sigma_e: 0.05
+  sigma_i: 0.07071067811865477
+  u_e: 10.0
+  u_i: 0.0
+
+simulation:
+  device: cpu
+  dt: 0.0001
+  init_steps: 50
+  record_steps: 100
+  steps_per_record: 5
+  tau_e: 0.01
+  tau_i: 0.02
+
+scan:
+  K_values: [1.0, 100.0, 10000.0]
+  seeds: [7]
+
+analysis:
+  max_lag_seconds: 0.005
+  spectrum_window_samples: 10

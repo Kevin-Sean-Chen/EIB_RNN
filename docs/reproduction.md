@@ -42,6 +42,29 @@ Each command creates one directory under `output/scans/`. The directory contains
 - `results.npz`: complete numerical arrays.
 - `summary.png`: summary figure.
 
+## Figure 1 panels B--G
+
+Create the matched spontaneous-activity panels:
+
+```bash
+python scripts/figures/figure1_spontaneous.py \
+  --config configs/figures/figure1_spontaneous.yaml
+```
+
+Use `configs/figures/figure1_spontaneous_quick.yaml` for a short workflow check.
+The production configuration uses `K = [1, 100, 10000]`, `tau_e = 0.01`, and
+`tau_i = 0.02`. It saves each panel as PDF and PNG under
+`output/figures/figure1/`. Numerical results and provenance are in the
+`data/` subfolder. The workflow does not assemble the full figure.
+
+Assemble the approved panel PNG files without rerunning simulations:
+
+```bash
+python scripts/figures/assemble_figure1.py
+```
+
+This command writes `figure1.png` and `figure1.pdf` beside the separate panels.
+
 Use `--run-id` only when you need a fixed directory name. The command stops if that directory already exists. This rule prevents accidental result replacement.
 
 ## Driven moving-dot task
