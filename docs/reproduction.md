@@ -28,7 +28,7 @@ Run the related scans:
 
 ```bash
 python scripts/baseline/scan_K_rhoF_modes.py \
-  --config configs/baseline/K_rhoF_modes.yaml
+  --config configs/baseline/K_rhoF_modes_tau_i_002.yaml
 
 python scripts/baseline/scan_spatial_statistics.py \
   --config configs/baseline/spatial_statistics.yaml
@@ -41,6 +41,16 @@ Each command creates one directory under `output/scans/`. The directory contains
 - `metrics.csv`: one summary row for each scan point.
 - `results.npz`: complete numerical arrays.
 - `summary.png`: summary figure.
+
+Create Figure 4 from the matched `tau_i = 0.02` scan:
+
+```bash
+python scripts/figures/figure4_disorder.py \
+  --source-directory output/scans/K_rhoF_modes/tau_i_002 \
+  --output-directory output/figures/figure4
+```
+
+This command does not run simulations. It writes six separate panels and one assembled figure as PDF and PNG files. The panels show the Gaussian local-plus-low-rank schematic, instantaneous activity at `K = 100` and `K = 10000`, full-network mode advantage, nonlocal-subspace alignment, active-site fractions, and low-rank susceptibility.
 
 ## Figure 1 panels B--G
 
@@ -196,6 +206,28 @@ For a faster `N=15` check, use `configs/analyses/dmd_quick.yaml`. Frequencies an
 
 ## Working memory with RLS
 
+Create the three Figure 2 task panels:
+
+```bash
+python scripts/figures/figure2_tasks.py \
+  --config configs/figures/figure2_tasks.yaml
+```
+
+Use `configs/figures/figure2_tasks_quick.yaml` for a short workflow check. The script writes separate PDF and PNG panels, numerical arrays, metrics, the resolved configuration, and metadata under `output/figures/figure2/`. Each panel shows the performance scan above the best and worst example trajectories.
+
+Use `configs/figures/figure2_tasks_tau_i_002.yaml` to reproduce the separate inhibitory-time-constant comparison under `output/figures/figure2_tau_i_002/`. This comparison does not overwrite the main Figure 2 output.
+
+Use `configs/figures/figure2_tasks_tau_i_002_memory_calibrated.yaml` to reproduce the calibrated memory candidate under `output/figures/figure2_tau_i_002_memory_calibrated/`. Its memory source is `configs/working_memory/K_scan_tau_i_002_calibrated.yaml`. The saved metrics include both training and held-out cue-readout `R2`.
+
+Assemble the first Figure 2 draft from its saved arrays. This command does not run a simulation:
+
+```bash
+python scripts/figures/assemble_figure2.py \
+  --panel-directory output/figures/figure2_tau_i_002_memory_calibrated
+```
+
+The command writes `figure2.png` and `figure2.pdf` in the panel directory.
+
 Train the spatial reservoir with online RLS/FORCE updates:
 
 ```bash
@@ -220,3 +252,24 @@ python scripts/working_memory/scan_K.py \
 ```
 
 Use `configs/working_memory/K_scan_quick.yaml` for a short check. The scan reports post-go MSE and R2 for the output and memory readouts. The legacy-matched configuration uses ridge fitting, no feedback, and no field clamp. Set `learning_method: rls`, `feedback_gain: 0.001`, and `field_clip: 100.0` only for a separate FORCE/RLS comparison.
+
+## Figure 5 asymmetric waves
+
+Run the full matched-seed scan and create the four panels and assembled figure:
+
+```bash
+python scripts/figures/figure5_asymmetry.py \
+  --config configs/figures/figure5_asymmetry.yaml
+```
+
+The command writes panels, the assembled figure, numerical arrays, the resolved configuration, and metadata under `output/figures/figure5/`. It uses `tau_i = 0.02`, five seeds, and noise amplitudes `0` and `0.5`. To rebuild plots from saved data without a simulation, add `--plot-only`.
+
+## Figure 3 mechanism placeholder
+
+Create the three labeled mechanism panels and the horizontal assembly:
+
+```bash
+python scripts/figures/figure3_placeholder.py
+```
+
+The command writes separate PDF and PNG panels plus `figure3.pdf` and `figure3.png` under `output/figures/figure3/`. The placeholder contains axis labels, planned legends, and no artificial data.

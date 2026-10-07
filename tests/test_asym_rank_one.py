@@ -140,6 +140,124 @@ class AsymmetricRankOneTest(unittest.TestCase):
             atol=1e-6,
         )
 
+    def test_noise_is_scaled_by_sqrt_K_and_only_changes_excitatory_input(self):
+        N = 3
+        zeros = np.zeros((N, N))
+        input_pattern = torch.zeros((N, N))
+
+        torch.manual_seed(1)
+        _, _, unit_mue, unit_mui = relu2D_driven_step(
+            zeros,
+            zeros,
+            N,
+            0.001,
+            1,
+            "relu_gaussian",
+            1.0,
+            np.ones(2),
+            np.zeros(2),
+            np.zeros((2, 2)),
+            np.array([0.05, 0.05]),
+            input_pattern,
+            0.0,
+            noise_strength=1.0,
+        )
+        torch.manual_seed(1)
+        _, _, scaled_mue, scaled_mui = relu2D_driven_step(
+            zeros,
+            zeros,
+            N,
+            0.001,
+            1,
+            "relu_gaussian",
+            4.0,
+            np.ones(2),
+            np.zeros(2),
+            np.zeros((2, 2)),
+            np.array([0.05, 0.05]),
+            input_pattern,
+            0.0,
+            noise_strength=1.0,
+        )
+
+        self.assertFalse(np.allclose(unit_mue.cpu().numpy(), 0.0))
+        np.testing.assert_allclose(
+            scaled_mue.cpu().numpy(),
+            2.0 * unit_mue.cpu().numpy(),
+        )
+        np.testing.assert_array_equal(unit_mui.cpu().numpy(), 0.0)
+        np.testing.assert_array_equal(scaled_mui.cpu().numpy(), 0.0)
+
+    def test_noise_is_redrawn_for_each_integration_substep(self):
+        N = 3
+        zeros = np.zeros((N, N))
+        input_pattern = torch.zeros((N, N))
+        arguments = (
+            zeros,
+            zeros,
+            N,
+            0.001,
+        )
+        trailing_arguments = (
+            "relu_gaussian",
+            1.0,
+            np.ones(2),
+            np.zeros(2),
+            np.zeros((2, 2)),
+            np.array([0.05, 0.05]),
+            input_pattern,
+            0.0,
+        )
+
+        torch.manual_seed(2)
+        _, _, first_mue, first_mui = relu2D_driven_step(
+            *arguments,
+            1,
+            *trailing_arguments,
+            noise_strength=1.0,
+        )
+        torch.manual_seed(2)
+        _, _, second_mue, second_mui = relu2D_driven_step(
+            *arguments,
+            2,
+            *trailing_arguments,
+            noise_strength=1.0,
+        )
+
+        self.assertFalse(
+            np.array_equal(first_mue.cpu().numpy(), second_mue.cpu().numpy())
+        )
+        np.testing.assert_array_equal(first_mui.cpu().numpy(), 0.0)
+        np.testing.assert_array_equal(second_mui.cpu().numpy(), 0.0)
+
+    def test_rate_cap_limits_both_populations_and_warns(self):
+        N = 3
+        zeros = np.zeros((N, N))
+
+        try:
+            with self.assertWarnsRegex(RuntimeWarning, "rate cap"):
+                re, ri, _, _ = relu2D_driven_step(
+                    zeros,
+                    zeros,
+                    N,
+                    1.0,
+                    1,
+                    "relu_gaussian",
+                    1.0,
+                    np.ones(2),
+                    np.array([4000.0, 5000.0]),
+                    np.zeros((2, 2)),
+                    np.array([0.05, 0.05]),
+                    torch.zeros((N, N)),
+                    0.0,
+                    rate_cap=3000.0,
+                )
+        except TypeError as error:
+            self.fail(f"The rate cap is not available: {error}")
+
+        np.testing.assert_array_equal(re, np.full((N, N), 3000.0))
+        np.testing.assert_array_equal(ri, np.full((N, N), 3000.0))
+
 
 if __name__ == "__main__":
     unittest.main()

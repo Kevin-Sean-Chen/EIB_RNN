@@ -5,6 +5,7 @@ import torch.nn.functional as F
 import scipy.io as sio
 from datetime import datetime
 import os
+import warnings
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 from PIL import Image
@@ -26,6 +27,8 @@ def relu2D_driven_step(
     g=0.0,
     m=None,
     n=None,
+    noise_strength=0.0,
+    rate_cap=None,
 ):
     if ntype != 'relu_gaussian':
         raise ValueError("Only 'relu_gaussian' ntype is supported in this version.")
@@ -65,11 +68,37 @@ def relu2D_driven_step(
             conv_re = conv_re + g * m_tensor.reshape(N, N) * torch.dot(n_tensor, re.flatten()) / N
         conv_ri = F.conv2d(riP, wi_kernel)
 
-        mue = K**0.5 * (u[0] + J0[0, 0] * conv_re + J0[0, 1] * conv_ri + input_pattern)
-        mui = K**0.5 * (u[1] + J0[1, 0] * conv_re + J0[1, 1] * conv_ri)
+        noise_e = (
+            noise_strength * torch.randn_like(conv_re)
+            if noise_strength != 0
+            else 0.0
+        )
+
+        mue = K**0.5 * (
+            u[0]
+            + J0[0, 0] * conv_re
+            + J0[0, 1] * conv_ri
+            + input_pattern
+            + noise_e
+        )
+        mui = K**0.5 * (
+            u[1]
+            + J0[1, 0] * conv_re
+            + J0[1, 1] * conv_ri
+        )
 
         re = re + (dt / tau[0]) * (-re + torch.relu(mue))
         ri = ri + (dt / tau[1]) * (-ri + torch.relu(mui))
+        if rate_cap is not None:
+            cap_reached = torch.any(re > rate_cap) or torch.any(ri > rate_cap)
+            if cap_reached:
+                warnings.warn(
+                    "Activity reached the rate cap.",
+                    RuntimeWarning,
+                    stacklevel=2,
+                )
+            re = torch.clamp(re, max=rate_cap)
+            ri = torch.clamp(ri, max=rate_cap)
 
     re = re.squeeze().cpu().numpy()
     ri = ri.squeeze().cpu().numpy()
@@ -95,6 +124,8 @@ def relu2D_bias(
     g=0.0,
     m=None,
     n=None,
+    noise_strength=0.0,
+    rate_cap=None,
 ):
     if N % 2 != 1:
         raise ValueError('N must be an odd integer')
@@ -114,6 +145,8 @@ def relu2D_bias(
         re, ri, mue, mui = relu2D_driven_step(
             re, ri, N, dt, npf, ntype, K, tau, u, J0, sigma,
             input_pattern_t, bias, g=g, m=m, n=n,
+            noise_strength=noise_strength,
+            rate_cap=rate_cap,
         )
 
     print('\nrunning simulation... ', end='', flush=True)
@@ -134,6 +167,8 @@ def relu2D_bias(
         re, ri, mue, mui = relu2D_driven_step(
             re, ri, N, dt, npf, ntype, K, tau, u, J0, sigma,
             input_pattern_t, bias, g=g, m=m, n=n,
+            noise_strength=noise_strength,
+            rate_cap=rate_cap,
         )
 
         re_all[:, :, n1 - 1] = re

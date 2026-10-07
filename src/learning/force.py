@@ -24,6 +24,7 @@ class ForceResult:
     evaluation_memory_mse: float
     evaluation_output_r2: float
     evaluation_memory_r2: float
+    final_output_accuracy: float
     output_weights: np.ndarray
     memory_weights: np.ndarray
     example_output: np.ndarray
@@ -39,10 +40,27 @@ def _input_at(stimulus: torch.Tensor, step: int, model_type: str) -> torch.Tenso
 
 
 @torch.no_grad()
-def run_trial(model, trial: Trial, model_type: str, state_seed: int):
+def settled_state(model, trial: Trial, model_type: str, seed: int, steps: int):
+    """Return a state settled under zero input."""
+    state = model.initial_state(seed)
+    zero_frame = torch.zeros_like(trial[2][:, :, 0])
+    zero_input = zero_frame if model_type == "spatial" else zero_frame.reshape(-1)
+    for _ in range(steps):
+        state = model.step(state, zero_input)
+    return state
+
+
+@torch.no_grad()
+def run_trial(
+    model,
+    trial: Trial,
+    model_type: str,
+    state_seed: int,
+    settle_steps: int = 0,
+):
     """Run one trial without readout updates."""
     output_target, memory_target, stimulus, choice = trial
-    state = model.initial_state(state_seed)
+    state = settled_state(model, trial, model_type, state_seed, settle_steps)
     outputs = []
     memories = []
     activities = []
@@ -76,6 +94,7 @@ def train_force(
     train_memory: bool,
     seed: int,
     evaluation_start_step: int = 0,
+    init_steps: int = 0,
 ) -> ForceResult:
     """Train output and memory readouts with RLS only."""
     feature_count = model.feature_count + 1
@@ -88,7 +107,9 @@ def train_force(
         # Alternate choices so each short training run includes both targets.
         trial = trial_factory(trial_index % 2)
         output_target, memory_target, stimulus, _ = trial
-        state = model.initial_state(seed + trial_index)
+        state = settled_state(
+            model, trial, model_type, seed + trial_index, init_steps,
+        )
         output_squared_error = 0.0
         memory_squared_error = 0.0
         for step in range(stimulus.shape[-1]):
@@ -129,9 +150,16 @@ def train_force(
     pooled_memory = []
     pooled_memory_target = []
     example = None
+    final_correct = []
     for trial_index in range(evaluation_trials):
         trial = trial_factory(trial_index % 2)
-        run = run_trial(model, trial, model_type, seed + training_trials + trial_index)
+        run = run_trial(
+            model,
+            trial,
+            model_type,
+            seed + training_trials + trial_index,
+            init_steps,
+        )
         output, memory, activity, output_target, memory_target, _ = run
         output_slice = output[evaluation_start_step:]
         output_target_slice = output_target[evaluation_start_step:]
@@ -145,6 +173,7 @@ def train_force(
         pooled_memory_target.append(memory_target_slice)
         if example is None:
             example = run
+        final_correct.append(float(output[-1] * output_target[-1] > 0))
 
     output, memory, activity, output_target, memory_target, _ = example
     def pooled_r2(predictions, targets) -> float:
@@ -161,6 +190,7 @@ def train_force(
         evaluation_memory_mse=float(np.mean(evaluation_memory)),
         evaluation_output_r2=pooled_r2(pooled_output, pooled_output_target),
         evaluation_memory_r2=pooled_r2(pooled_memory, pooled_memory_target),
+        final_output_accuracy=float(np.mean(final_correct)),
         output_weights=model.output_weights.cpu().numpy().copy(),
         memory_weights=model.memory_weights.cpu().numpy().copy(),
         example_output=output.cpu().numpy(),

@@ -189,6 +189,7 @@ def main() -> None:
         config.train_output,
         config.train_memory,
         config.seed,
+        init_steps=config.init_steps,
     )
     output_root = Path(run.get("output_root", "output/working_memory"))
     if not output_root.is_absolute():

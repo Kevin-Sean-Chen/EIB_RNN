@@ -35,7 +35,7 @@ FIGURE1_SECTIONS = {
     "simulation": (
         "device", "dt", "init_steps", "record_steps", "steps_per_record", "tau_e", "tau_i",
     ),
-    "scan": ("K_values", "seeds"),
+    "scan": ("K_values", "panel_K_values", "seeds"),
     "analysis": ("max_lag_seconds", "spectrum_window_samples"),
 }
 
@@ -61,6 +61,7 @@ class Figure1Config:
     tau_e: float = 0.01
     tau_i: float = 0.02
     K_values: list[float] | None = None
+    panel_K_values: list[float] | None = None
     seeds: list[int] | None = None
     max_lag_seconds: float = 0.25
     spectrum_window_samples: int = 1000
@@ -68,10 +69,16 @@ class Figure1Config:
     def __post_init__(self) -> None:
         if self.K_values is None:
             self.K_values = [1.0, 100.0, 10000.0]
+        if self.panel_K_values is None:
+            self.panel_K_values = [1.0, 100.0, 10000.0]
         if self.seeds is None:
             self.seeds = [7, 11, 19]
         if not self.K_values or any(value <= 0 for value in self.K_values):
             raise ValueError("K_values must contain positive values.")
+        if not self.panel_K_values or any(value <= 0 for value in self.panel_K_values):
+            raise ValueError("panel_K_values must contain positive values.")
+        if any(value not in self.K_values for value in self.panel_K_values):
+            raise ValueError("panel_K_values must be in K_values.")
         if not self.seeds:
             raise ValueError("seeds must not be empty.")
 
@@ -130,6 +137,13 @@ def _threshold_time(axis: np.ndarray, curve: np.ndarray) -> float:
     """Return the first axis value where a correlation reaches exp(-1)."""
     indices = np.flatnonzero(np.isfinite(curve) & (curve <= np.exp(-1.0)))
     return float(axis[indices[0]]) if indices.size else float(axis[-1])
+
+
+def panel_indices(K_values: np.ndarray, panel_K_values: np.ndarray) -> np.ndarray:
+    """Return scan indices for the selected panel conditions."""
+    return np.asarray(
+        [int(np.flatnonzero(np.isclose(K_values, value))[0]) for value in panel_K_values]
+    )
 
 
 def run_analysis(config: Figure1Config, data_directory: Path) -> dict[str, np.ndarray]:
@@ -213,6 +227,9 @@ def run_analysis(config: Figure1Config, data_directory: Path) -> dict[str, np.nd
 
     return {
         "K_values": np.asarray(config.K_values),
+        "panel_K_values": np.asarray(config.panel_K_values),
+        "tau_e": np.asarray(config.tau_e),
+        "tau_i": np.asarray(config.tau_i),
         "seeds": np.asarray(config.seeds),
         "time": result.time,
         "examples_e": np.asarray(examples_e),
@@ -238,7 +255,7 @@ def _mean_and_std(values: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     return np.nanmean(values, axis=1), np.nanstd(values, axis=1)
 
 
-def _draw_model_schematic(axis: plt.Axes) -> None:
+def _draw_model_schematic(axis: plt.Axes, tau_e: float, tau_i: float) -> None:
     """Draw the two-sheet local E/I model."""
     axis.set_xlim(0.0, 1.0)
     axis.set_ylim(0.0, 1.0)
@@ -253,8 +270,8 @@ def _draw_model_schematic(axis: plt.Axes) -> None:
     axis.add_patch(Polygon(top, facecolor=sheet_color, edgecolor=edge_color))
     axis.text(0.05, 0.66, "E", color=excitatory_color, fontsize=15, fontweight="bold")
     axis.text(0.05, 0.27, "I", color=inhibitory_color, fontsize=15, fontweight="bold")
-    axis.text(0.17, 0.60, r"$\tau_E=0.01$", fontsize=9)
-    axis.text(0.17, 0.21, r"$\tau_I=0.02$", fontsize=9)
+    axis.text(0.17, 0.60, rf"$\tau_E={tau_e:g}$", fontsize=9)
+    axis.text(0.17, 0.21, rf"$\tau_I={tau_i:g}$", fontsize=9)
 
     e_point = (0.52, 0.65)
     i_point = (0.52, 0.26)
@@ -375,17 +392,23 @@ def plot_cancellation(
 def plot_panels(arrays: dict[str, np.ndarray]) -> dict[str, plt.Figure]:
     """Return separate draft figures for panels B--G."""
     K_values = arrays["K_values"]
-    colors = plt.cm.viridis(np.linspace(0.12, 0.88, len(K_values)))
+    panel_K_values = arrays.get("panel_K_values", K_values)
+    selected = panel_indices(K_values, panel_K_values)
+    colors = plt.cm.viridis(np.linspace(0.12, 0.88, len(panel_K_values)))
     figures = {}
 
     figure = plt.figure(figsize=(12, 3.2), constrained_layout=True)
     grid = figure.add_gridspec(1, 4, width_ratios=[1.45, 1.0, 1.0, 1.0])
     schematic_axis = figure.add_subplot(grid[0, 0])
-    _draw_model_schematic(schematic_axis)
+    _draw_model_schematic(
+        schematic_axis,
+        float(arrays.get("tau_e", 0.01)),
+        float(arrays.get("tau_i", 0.01)),
+    )
     image = None
-    for index, (K, color) in enumerate(zip(K_values, colors)):
-        axis = figure.add_subplot(grid[0, index + 1])
-        frame = arrays["examples_e"][index, :, :, -1]
+    for panel_index, (scan_index, K, color) in enumerate(zip(selected, panel_K_values, colors)):
+        axis = figure.add_subplot(grid[0, panel_index + 1])
+        frame = arrays["examples_e"][scan_index, :, :, -1]
         scale = np.percentile(frame, 99.0)
         normalized = np.clip(frame / max(scale, np.finfo(float).eps), 0.0, 1.0)
         image = axis.imshow(normalized, origin="lower", cmap="viridis", vmin=0.0, vmax=1.0)
@@ -395,11 +418,11 @@ def plot_panels(arrays: dict[str, np.ndarray]) -> dict[str, plt.Figure]:
         figure.colorbar(image, ax=figure.axes[1:], fraction=0.025, pad=0.02)
     figures["panel_A_model_patterns"] = figure
 
-    figure, axes = plt.subplots(1, len(K_values), figsize=(12, 3.2), sharex=True)
+    figure, axes = plt.subplots(1, len(panel_K_values), figsize=(12, 3.2), sharex=True)
     center = arrays["examples_e"].shape[1] // 2
-    for index, (axis, K, color) in enumerate(zip(axes, K_values, colors)):
-        excitatory = arrays["examples_e"][index]
-        inhibitory = arrays["examples_i"][index]
+    for axis, scan_index, K, color in zip(axes, selected, panel_K_values, colors):
+        excitatory = arrays["examples_e"][scan_index]
+        inhibitory = arrays["examples_i"][scan_index]
         axis.plot(arrays["time"], excitatory.mean(axis=(0, 1)), color=color, label="E mean")
         axis.plot(arrays["time"], inhibitory.mean(axis=(0, 1)), color="tab:orange", label="I mean")
         axis.plot(
@@ -421,13 +444,13 @@ def plot_panels(arrays: dict[str, np.ndarray]) -> dict[str, plt.Figure]:
     plot_count = min(250, pc_rank.size)
     spatial_size = arrays["examples_e"].shape[1] * arrays["examples_e"].shape[2]
     dimension_mean = np.nanmean(arrays["dimension"], axis=1) * spatial_size
-    for index, (K, color) in enumerate(zip(K_values, colors)):
-        variance = np.nanmean(arrays["pca_variance"][index], axis=0)
+    for scan_index, K, color in zip(selected, panel_K_values, colors):
+        variance = np.nanmean(arrays["pca_variance"][scan_index], axis=0)
         axis.plot(
             pc_rank[:plot_count],
             variance[:plot_count],
             color=color,
-            label=rf"$K={K:g}$, $D_{{PR}}={dimension_mean[index]:.0f}$",
+            label=rf"$K={K:g}$, $D_{{PR}}={dimension_mean[scan_index]:.0f}$",
         )
     axis.set(
         xlabel="PC rank",
@@ -440,8 +463,8 @@ def plot_panels(arrays: dict[str, np.ndarray]) -> dict[str, plt.Figure]:
     figures["panel_C_dimension"] = figure
 
     figure, axis = plt.subplots(figsize=(4.2, 3.4))
-    for index, (K, color) in enumerate(zip(K_values, colors)):
-        mean, spread = _mean_and_std(arrays["spatial_correlation"][index : index + 1])
+    for scan_index, K, color in zip(selected, panel_K_values, colors):
+        mean, spread = _mean_and_std(arrays["spatial_correlation"][scan_index : scan_index + 1])
         axis.plot(arrays["spatial_distance"], mean[0], color=color, label=f"K={K:g}")
         axis.fill_between(arrays["spatial_distance"], mean[0] - spread[0], mean[0] + spread[0], color=color, alpha=0.18)
     axis.axhline(0.0, color="0.4", linewidth=0.8)
@@ -451,8 +474,8 @@ def plot_panels(arrays: dict[str, np.ndarray]) -> dict[str, plt.Figure]:
     figures["panel_D_spatial_correlation"] = figure
 
     figure, axis = plt.subplots(figsize=(4.2, 3.4))
-    for index, (K, color) in enumerate(zip(K_values, colors)):
-        mean, spread = _mean_and_std(arrays["temporal_correlation"][index : index + 1])
+    for scan_index, K, color in zip(selected, panel_K_values, colors):
+        mean, spread = _mean_and_std(arrays["temporal_correlation"][scan_index : scan_index + 1])
         axis.plot(arrays["temporal_lag"], mean[0], color=color, label=f"K={K:g}")
         axis.fill_between(arrays["temporal_lag"], mean[0] - spread[0], mean[0] + spread[0], color=color, alpha=0.18)
     axis.axhline(0.0, color="0.4", linewidth=0.8)
@@ -462,9 +485,9 @@ def plot_panels(arrays: dict[str, np.ndarray]) -> dict[str, plt.Figure]:
     figures["panel_E_temporal_correlation"] = figure
 
     figure, axes = plt.subplots(1, 2, figsize=(8.4, 3.4))
-    for index, (K, color) in enumerate(zip(K_values, colors)):
-        spatial_mean, _ = _mean_and_std(arrays["spatial_power"][index : index + 1])
-        temporal_mean, _ = _mean_and_std(arrays["temporal_power"][index : index + 1])
+    for scan_index, K, color in zip(selected, panel_K_values, colors):
+        spatial_mean, _ = _mean_and_std(arrays["spatial_power"][scan_index : scan_index + 1])
+        temporal_mean, _ = _mean_and_std(arrays["temporal_power"][scan_index : scan_index + 1])
         axes[0].plot(arrays["wave_number"], spatial_mean[0], color=color, label=f"K={K:g}")
         axes[1].plot(arrays["frequency"], temporal_mean[0], color=color, label=f"K={K:g}")
     axes[0].set(xlabel="Wave number k", ylabel="Normalized P(k)", yscale="log")

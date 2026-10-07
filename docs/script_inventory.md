@@ -32,6 +32,7 @@ Status terms:
 | `scripts/driven/scan_rigid_smoothing.py` | Compare spatial smoothing and fixed pixel permutation effects across spatial and one-population controls. | Reconstruction metrics, stimulus dimension, example frames, configuration, metadata, arrays, and a summary figure under `output/tasks/`. |
 | `scripts/figures/figure1_spontaneous.py` | Create matched spontaneous-activity panels A--G at `K = [1, 100, 10000]`. | Separate PDF and PNG panels under `output/figures/figure1/`, with activity, metrics, spectra, configuration, and metadata under `data/`. |
 | `scripts/figures/assemble_figure1.py` | Assemble approved Figure 1 panel PNG files without rerunning simulations. | `figure1.png` and `figure1.pdf` under `output/figures/figure1/`. |
+| `scripts/figures/figure4_disorder.py` | Create the approved six-panel Figure 4 draft from the saved `tau_i = 0.02` `K_rhoF` scan: schematic, snapshots, mode advantage, nonlocal alignment, active fraction, and low-rank susceptibility. | Separate panel PDF and PNG files plus `figure4.pdf` and `figure4.png` under `output/figures/figure4/`. |
 
 ## Figure 1 workflow coverage
 
@@ -53,11 +54,14 @@ Shared target: `u_e = 10`, `u_i = 0`, and `K = [0.1, 1, 10, 100, 1000, 10000]`.
 
 | Planned task | Current source | Coverage |
 |---|---|---|
-| Same-time rigid-shift signal decoding | `scripts/driven/train_rigid_reconstruction.py` | One-`K` workflow exists; add the common `K` scan and a small task schematic |
-| Moving-dot prediction by cross-correlation | `scripts/driven/scan_driven_dot.py` | Tracking scan exists; add a small task schematic and the common `K` range |
-| Final cue-readout working memory | `scripts/working_memory/scan_K.py` | Scan exists; select only the final cue-readout measure, add a small task schematic, and extend the `K` range |
+| Same-time rigid-shift signal decoding | `scripts/figures/figure2_tasks.py` | Six-point scan, best and worst traces, and panel files exist |
+| Moving-dot prediction by cross-correlation | `scripts/figures/figure2_tasks.py` | Six-point peak-delay scan, faded peak amplitude, matched lag-window examples, and panel files exist |
+| Figure 2 time-constant comparison | `configs/figures/figure2_tasks_tau_i_002.yaml` | Separate `tau_i = 0.02` task panels and metrics under `output/figures/figure2_tau_i_002/`; main output remains unchanged |
+| Calibrated Figure 2 memory candidate | `configs/figures/figure2_tasks_tau_i_002_memory_calibrated.yaml` | A 50 ms delay, stronger initial trigger, post-cue response score, full 200 ms trajectories, training `R2`, held-out `R2`, and separate panels under `output/figures/figure2_tau_i_002_memory_calibrated/` |
+| Final cue-readout working memory | `scripts/figures/figure2_tasks.py` | Six-point post-cue output-`R2` scan, best and worst task traces, and panel files exist |
+| Figure 2 assembly | `scripts/figures/assemble_figure2.py` | Three task rows; each row has the `K` scan on the left and best and worst examples on the right |
 
-The legacy `archive/legacy_driven/scan_driven.py` uses the complete six-point `K` range. The current tracking configuration omits `K = 0.1`. The current working-memory configuration omits `K = 0.1` and `K = 10000`.
+The Figure 2 configuration applies the complete six-point `K` range without changing the shorter task-specific source configurations.
 
 ## Figure 3 workflow coverage
 
@@ -66,6 +70,7 @@ The legacy `archive/legacy_driven/scan_driven.py` uses the complete six-point `K
 | Decoding signal-to-noise ratio | Rigid-reconstruction activity and readout arrays | Add repeated identical stimuli across trials or initial states |
 | Recurrent contribution to prediction | Driven activity and input-response cross-correlation | Add a spatially shuffled recurrence control and recurrent-to-input field power |
 | Empirical metastability | Working-memory delay activity without cue labels | Add reduced-state clustering, transition estimation, dwell times, and timescales |
+| Figure 3 placeholder | `scripts/figures/figure3_placeholder.py` | Three labeled panels and one horizontal assembly; no artificial data |
 
 ## Figure 4 workflow coverage
 
@@ -86,7 +91,7 @@ The legacy `archive/legacy_driven/scan_driven.py` uses the complete six-point `K
 | `relu2D_main.py` | Baseline local two-population ReLU E/I simulation. | Interactive activity figures and animation. | Replaced by `src/local.py` and `scripts/baseline/run_local.py`. Keep it until the legacy comparison and video decision are complete. |
 | `scripts/relu2D_disorder.py` | Add low-rank non-local disorder and measure spatial and temporal organization. | Interactive activity, coherence, dimension, autocorrelation, and optional GIF output. | Partly replaced by `src/disorder.py`, `src/metrics.py`, and `scripts/disorder/run_disorder.py`. Keep it until scan and video checks are complete. |
 | `scripts/relu2D_dense.py` | Validate a dense-matrix implementation of local and non-local connectivity. | Interactive activity, coherence metrics, and optional GIF output. | Dense reference model or validation tool under `src/`; a small comparison script. |
-| `scripts/relu2D_asym.py` | Simulate driven dynamics with an asymmetric excitatory kernel. | Interactive activity and optional GIF output. | Asymmetric connectivity in `src/`; a wave or direction-selectivity simulation script. |
+| `scripts/relu2D_asym.py` | Simulate driven dynamics with an asymmetric excitatory kernel. | Activity arrays and optional GIF output. | Used by the reproducible Figure 5 workflow. Keep it until the simulator moves into `src/`. |
 | `scripts/relu2D_DMD.py` | Apply dynamic mode decomposition to spontaneous or driven activity. | DMD eigenvalues, spatial modes, prediction error, dispersion, growth, and dimension figures. | The excitatory-rate workflow is ready in `src/analysis/dmd.py` and `scripts/analyses/run_dmd.py`. Keep this script until the legacy `mue_all` field analysis is reproduced or rejected. |
 | `scripts/scan_disorder.py` | Scan `K` and low-rank disorder strength or frequency. | Interactive heatmaps and dimension or coherence summaries. | Strength scan replaced by `scripts/disorder/scan_disorder_strength.py`. Preserve the commented frequency experiment before archive. |
 | `scripts/scan_rankone.py` | Scan rank-one strength and phase; inspect coherence and mode alignment. | Interactive heatmaps, spectra, and alignment plots. | Replaced by `scripts/disorder/scan_rank_one.py`. Keep it until the legacy-modulation figure receives visual confirmation. |
@@ -98,11 +103,11 @@ The legacy `archive/legacy_driven/scan_driven.py` uses the complete six-point `K
 |---|---|---|
 | `K` by `b` activity grid | `scripts/scan_asym.py` | Legacy snapshot grid exists |
 | Wave speed | `scripts/scan_asym.py` | Phase-correlation estimate exists |
-| Directional consistency | No supported workflow | Add a confidence or consistency measure |
+| Directional consistency | `src/analysis/asymmetric_waves.py` | Periodic phase-correlation displacement consistency |
 | Temporal coherence | `scripts/scan_asym.py` | Sampled autocorrelation exists |
 | Activity dimension | `scripts/scan_asym.py` | One-dimensional `b` scan exists; extend to `K` by `b` |
-| Noise robustness at small and large `K` | No supported workflow | Add Gaussian noise to the excitatory drive, scale it relative to `u_e`, and compare wave persistence |
-| Reproducible Figure 5 workflow | Legacy scripts only | Refactor pending |
+| Noise robustness across `K` | `scripts/figures/figure5_asymmetry.py` | Excitatory-only Gaussian noise at `b = 8`, with five matched seeds |
+| Reproducible Figure 5 workflow | `scripts/figures/figure5_asymmetry.py` | Separate panels, assembled figure, arrays, configuration, and metadata |
 
 ## Migration-pending driven and reservoir tasks
 

@@ -1,0 +1,27 @@
+run:
+  output_directory: output/figures/figure5
+
+network:
+  N: 31
+  u_e: 10.0
+  u_i: 0.0
+  sigma_e: 0.05
+  sigma_i: 0.07071067811865477
+
+simulation:
+  dt: 0.0001
+  tau_e: 0.01
+  tau_i: 0.02
+  init_steps: 4000
+  record_steps: 8000
+  steps_per_record: 2
+  rate_cap: 3000.0
+
+scan:
+  K_values: [1, 10, 100, 1000]
+  bias_values: [0, 2, 4, 8]
+  noise_values: [0.0, 0.5]
+  seeds: [7, 11, 19, 23, 29]
+
+analysis:
+  metric_lag_steps: 100

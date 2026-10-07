@@ -13,13 +13,14 @@ WORKING_MEMORY_SECTIONS = {
         "dt", "tau_e", "tau_i", "K", "J_ee", "J_ei", "J_ie", "J_ii",
         "sigma_e", "sigma_i", "u_e", "u_i", "recurrent_gain",
         "normalize_kernel", "balance_random_rows", "init_scale", "microsteps",
-        "field_clip",
+        "field_clip", "init_steps",
     ),
     "task": (
         "steps", "delay_steps", "cue_steps", "stimulus_gain", "ramp_memory",
         "trigger_one_frequency", "trigger_one_angle", "trigger_two_frequency",
         "trigger_two_angle", "go_frequency", "go_angle", "pattern_scale",
-        "go_pattern_type",
+        "trigger_scale", "go_scale", "go_pattern_type", "output_window_steps",
+        "response_after_cue",
     ),
     "learning": (
         "training_trials", "evaluation_trials", "delta", "forgetting_factor",
@@ -57,6 +58,7 @@ class WorkingMemoryConfig:
     init_scale: float = 0.1
     microsteps: int = 1
     field_clip: float | None = 100.0
+    init_steps: int = 333
     steps: int = 500
     delay_steps: int = 250
     cue_steps: int = 20
@@ -69,7 +71,11 @@ class WorkingMemoryConfig:
     go_frequency: float = 1.5
     go_angle: float = 90.0
     pattern_scale: float = 0.1
+    trigger_scale: float = 1.0
+    go_scale: float = 1.0
     go_pattern_type: str = "random"
+    output_window_steps: int | None = None
+    response_after_cue: bool = False
     training_trials: int = 10
     evaluation_trials: int = 10
     delta: float = 0.1
@@ -92,6 +98,8 @@ class WorkingMemoryConfig:
             raise ValueError("Trial counts must be positive.")
         if self.microsteps <= 0:
             raise ValueError("microsteps must be positive.")
+        if self.init_steps < 0:
+            raise ValueError("init_steps must not be negative.")
         if self.field_clip is not None and self.field_clip <= 0:
             raise ValueError("field_clip must be positive or null.")
         if self.learning_method not in ("rls", "ridge"):
@@ -102,6 +110,10 @@ class WorkingMemoryConfig:
             raise ValueError("RLS parameters are invalid.")
         if self.go_pattern_type not in ("random", "gabor"):
             raise ValueError("go_pattern_type must be 'random' or 'gabor'.")
+        if self.trigger_scale <= 0 or self.go_scale <= 0:
+            raise ValueError("Pattern scales must be positive.")
+        if self.output_window_steps is not None and self.output_window_steps <= 0:
+            raise ValueError("output_window_steps must be positive or null.")
 
     @property
     def coupling(self) -> np.ndarray:

@@ -1,0 +1,18 @@
+run:
+  output_directory: output/figures/figure2
+
+common:
+  u_e: 10.0
+  u_i: 0.0
+  tau_e: 0.01
+  tau_i: 0.01
+  init_duration_seconds: 0.5
+
+scan:
+  K_values: [0.1, 1, 10, 100, 1000, 10000]
+  seeds: [7, 11, 19]
+
+sources:
+  rigid: configs/driven/rigid_reconstruction.yaml
+  dot: configs/driven/dot_tracking.yaml
+  memory: configs/working_memory/K_scan.yaml

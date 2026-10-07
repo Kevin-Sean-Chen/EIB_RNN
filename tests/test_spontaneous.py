@@ -17,7 +17,13 @@ from src.analysis.spontaneous import (
     temporal_spectrum,
 )
 from src.local import LocalConfig
-from scripts.figures.figure1_spontaneous import plot_cancellation, save_panel
+from scripts.figures.figure1_spontaneous import (
+    Figure1Config,
+    _draw_model_schematic,
+    panel_indices,
+    plot_cancellation,
+    save_panel,
+)
 from scripts.figures.assemble_figure1 import assemble_figure
 
 
@@ -156,6 +162,31 @@ class SpontaneousAnalysisTests(unittest.TestCase):
             paths = save_panel(figure, Path(directory), "panel_B_traces")
             self.assertEqual({path.suffix for path in paths}, {".pdf", ".png"})
             self.assertTrue(all(path.exists() for path in paths))
+        plt.close(figure)
+
+    def test_panel_indices_select_requested_scan_values(self) -> None:
+        indices = panel_indices(
+            np.array([1.0, 10.0, 100.0, 1000.0, 10000.0]),
+            np.array([1.0, 10.0, 1000.0]),
+        )
+
+        np.testing.assert_array_equal(indices, np.array([0, 1, 3]))
+
+    def test_panel_value_must_exist_in_scan(self) -> None:
+        with self.assertRaisesRegex(ValueError, "panel_K_values must be in K_values"):
+            Figure1Config(
+                K_values=[1.0, 10.0, 100.0],
+                panel_K_values=[1.0, 1000.0],
+            )
+
+    def test_model_schematic_uses_configured_time_constants(self) -> None:
+        figure, axis = plt.subplots()
+
+        _draw_model_schematic(axis, tau_e=0.01, tau_i=0.01)
+
+        labels = [text.get_text() for text in axis.texts]
+        self.assertIn(r"$\tau_E=0.01$", labels)
+        self.assertIn(r"$\tau_I=0.01$", labels)
         plt.close(figure)
 
     def test_cancellation_curves_have_distinct_visible_styles(self) -> None:

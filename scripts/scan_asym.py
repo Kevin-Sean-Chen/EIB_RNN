@@ -22,7 +22,7 @@ L = 31
 N = L
 dt = 0.0001
 Nstep_init = 2 * 10 ** 3
-Nstep = 2 * 10 ** 3
+Nstep = 1 * 10 ** 3
 npf = 2
 
 I_xyt = torch.zeros((N, N, Nstep))  ### no input
@@ -31,12 +31,14 @@ I_xyt = torch.zeros((N, N, Nstep))  ### no input
 ntype = 'relu_gaussian'
 J0 = np.array([[1, -4], [2, -2]])
 K = 10 ** 4
-tau = np.array([.01, .01])
+tau = np.array([.01, .02])
 u = np.array([10, 0.0])
 sigma = 0.05 * np.array([1, np.sqrt(2)])
 
 # Set g to zero to disable the rank-one term. Replace m and n as needed.
-g = 0 #0.27984 #1.0
+g = 0. #0.27984 #1.0
+noise_strength = 0.5
+rate_cap = 3000.0
 m = torch.ones(N**2)
 n = torch.ones(N**2)
 rng = np.random.default_rng(1)
@@ -115,6 +117,8 @@ for bb in range(len(biass)):
     re_all, ri_all = relu2D_bias(
         L, dt, Nstep_init, Nstep, npf, ntype, K, tau, u, J0, sigma,
         I_xyt, re0, ri0, bias, g=g, m=m, n=n,
+        noise_strength=noise_strength,
+        rate_cap=rate_cap,
     )
     ### randomly sample samp from 1:N*N
     samp = np.random.randint(1, L * L, samps)
@@ -186,7 +190,7 @@ plt.show()
 
 
 # %% scan bias and K
-Ks = np.array([10**2, 10**3, 10**4, 10**5])
+Ks = np.array([10**1, 10**2, 10**3, 10**4])#, 10**5])
 biass = np.array([0, 2, 4, 8])
 
 mid_t_patterns = np.empty((len(biass), len(Ks), N, N))
@@ -213,6 +217,8 @@ for bb, bias in enumerate(biass):
             g=g,
             m=m,
             n=n,
+            noise_strength=noise_strength,
+            rate_cap=rate_cap,
         )
         mid_t_patterns[bb, kk] = re_all[:, :, mid_t_index]
 

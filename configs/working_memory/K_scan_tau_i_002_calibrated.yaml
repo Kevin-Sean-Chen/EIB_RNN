@@ -1,11 +1,11 @@
 run:
   output_root: output/scans
-  experiment: working_memory_K
+  experiment: working_memory_K_tau_i_002_calibrated
   run_id: null
 
 model:
   model_type: spatial
-  N: 9
+  N: 31
   device: cpu
   nonlinearity: relu
   seed: 7
@@ -13,7 +13,7 @@ model:
 network:
   dt: 0.001
   tau_e: 0.01
-  tau_i: 0.01
+  tau_i: 0.02
   K: 20.0
   J_ee: 1.0
   J_ei: -4.0
@@ -28,12 +28,12 @@ network:
   init_scale: 0.1
   microsteps: 1
   field_clip: null
-  init_steps: 10
+  init_steps: 500
 
 task:
-  steps: 80
-  delay_steps: 40
-  cue_steps: 10
+  steps: 200
+  delay_steps: 50
+  cue_steps: 20
   stimulus_gain: 10.0
   ramp_memory: false
   trigger_one_frequency: 2.5
@@ -43,11 +43,15 @@ task:
   go_frequency: 1.5
   go_angle: 90.0
   pattern_scale: 0.1
+  trigger_scale: 10.0
+  go_scale: 1.0
   go_pattern_type: random
+  output_window_steps: 20
+  response_after_cue: true
 
 learning:
-  training_trials: 4
-  evaluation_trials: 4
+  training_trials: 40
+  evaluation_trials: 20
   delta: 0.1
   forgetting_factor: 1.0
   feedback_gain: 0.0
@@ -57,7 +61,7 @@ learning:
   train_output: true
   train_memory: true
   learning_method: ridge
-  ridge_lambda: 0.01
+  ridge_lambda: 10.0
 
 scan:
-  K_values: [10, 20]
+  K_values: [0.1, 1, 10, 100, 1000, 10000]

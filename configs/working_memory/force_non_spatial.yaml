@@ -29,6 +29,7 @@ network:
   init_scale: 0.1
   microsteps: 1
   field_clip: 100.0
+  init_steps: 333
 
 task:
   steps: 500

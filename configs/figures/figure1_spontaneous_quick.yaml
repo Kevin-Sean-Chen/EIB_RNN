@@ -23,6 +23,7 @@ simulation:
 
 scan:
   K_values: [1.0, 100.0, 10000.0]
+  panel_K_values: [1.0, 100.0, 10000.0]
   seeds: [7]
 
 analysis:

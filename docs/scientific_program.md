@@ -27,7 +27,7 @@ These workflows define the baseline for all disorder and task comparisons.
 
 Figure 1 uses the canonical slice `u_e = 10` and `u_i = 0`, with `K` as the main scan parameter. It combines example activity, activity dimension, spatial correlation, temporal correlation, mean spatial and temporal spectra `P(k)` and `P(f)`, and E/I balance. A pilot scan showed that positive `u_e` mainly rescales activity and does not define a useful second regime axis. Panel A therefore uses only the model schematic. The complete panel-level plan is in `docs/figure_plan.md`.
 
-A pilot with `tau_i / tau_e = [1, 2, 4]` and fixed `tau_e = 0.01` showed that larger `K` increases irregularity and localization within each row. Slower inhibition shifts fluctuation onset to smaller `K`; at ratio 4, fluctuations are present at `K = 0.1`. Keep this comparison in the supplementary information. The main figure uses `tau_i / tau_e = 2` to show a wider dynamic range across `K`.
+A pilot with `tau_i / tau_e = [1, 2, 4]` and fixed `tau_e = 0.01` showed that larger `K` increases irregularity and localization within each row. Slower inhibition shifts fluctuation onset to smaller `K`; at ratio 4, fluctuations are present at `K = 0.1`. Keep this comparison in the supplementary information. The main figure uses `tau_i / tau_e = 2` because it gives a clearer dynamic range across `K`.
 
 The Figure 1 workflow produces matched results at `K = [1, 100, 10000]`. It saves separate panel files, averaged `P(k)` and `P(f)`, current-balance diagnostics, and the underlying numerical results.
 
@@ -72,7 +72,11 @@ The moving-dot workflow measures tracking without a trained readout. It compares
 
 Figure 2 compares signal decoding, prediction, and working memory at `u_e = 10` and `u_i = 0`. Each task uses `K = [0.1, 1, 10, 100, 1000, 10000]`. Signal decoding uses same-time rigid-shift reconstruction. Prediction uses moving-dot cross-correlation. Working memory uses only the final cue readout from the cue-readout task. Each task is one panel with a small task schematic, one representative example, and a performance measure across `K`. Disorder robustness remains in Figure 4.
 
-The current task configurations do not use one common `K` list. Align them before the final Figure 2 runs.
+The first Figure 2 pass is in `scripts/figures/figure2_tasks.py`. It applies one common `K` list, selects the best and worst examples for each task, and writes separate PDF and PNG panel files. The corrected pass uses the legacy task value `tau_i = 0.01`. A separate `tau_i = 0.02` output tests alignment with Figure 1 before replacement. At `tau_i = 0.01`, decoding has a broad optimum at `K = 10` to `100`, prediction delay is smallest at `K = 100`, and the working-memory output readout has a positive `R2` maximum at `K = 10`.
+
+The `tau_i = 0.02` comparison does not preserve the task structure. Its decoding optimum shifts toward `K = 1`, prediction amplitude decreases, and working-memory readout performance is non-positive across the scan. Keep this output as a time-constant sensitivity analysis and retain `tau_i = 0.01` for Figure 2.
+
+The calibrated `tau_i = 0.02` memory candidate shortens the delay to 50 ms, increases only the initial trigger amplitude, and scores a 20 ms response after the common cue. The complete trial lasts 200 ms. This task gives positive held-out performance through `K = 10`, with the maximum at `K = 1`. Large `K` fits the training trials but fails on held-out trials. This candidate is reproducible but has not replaced the current Figure 2 task.
 
 ### Figure 3 target
 
@@ -117,14 +121,14 @@ Scientific question: Does asymmetric local connectivity create directed propagat
 
 | Workflow | Source script | Intended output | Status |
 |---|---|---|---|
-| One asymmetric simulation | `scripts/relu2D_asym.py` | Activity movie, direction, speed, and temporal statistics | **Refactor pending** |
-| Asymmetry scan | `scripts/scan_asym.py` | Wave speed, autocorrelation, and dimension across asymmetry | **Refactor pending** |
+| One asymmetric simulation | `scripts/relu2D_asym.py` | Activity arrays with optional excitatory-drive noise | **Used by Figure 5** |
+| Asymmetry scan | `scripts/figures/figure5_asymmetry.py` | Pattern grid, signed speed, and directional coherence | **First draft complete** |
 
 This program item is secondary to the baseline, disorder, input-driven, and working-memory workflows.
 
 ### Figure 5 target
 
-Figure 5 scans `K = [1, 10, 100, 1000]` and excitatory-kernel shift `b`. It maps stationary, coherent-wave, and irregular regimes, then shows representative activity. A noise-robustness panel adds spatially and temporally independent Gaussian noise to the excitatory drive, with amplitude relative to `u_e`, and tests the prediction that noise disrupts waves at small `K` but not at large `K`. The wave classifier must combine speed with directional consistency or another coherence measure. Full speed, coherence, and dimension curves belong in the supplementary information.
+Figure 5 scans `K = [1, 10, 100, 1000]` and excitatory-kernel shift `b = [0, 2, 4, 8]`. It shows representative activity, signed wave speed, and directional coherence. The noise panel compares amplitudes `0` and `0.5` at `b = 8` with five matched seeds. Noise is spatially and temporally independent, acts only on the excitatory drive, and is inside the common `sqrt(K)` factor. The first draft supports a regime-specific noise effect, not a general robustness claim.
 
 ## 7. Adaptation and development
 

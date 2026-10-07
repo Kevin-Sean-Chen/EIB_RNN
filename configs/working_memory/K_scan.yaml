@@ -28,6 +28,7 @@ network:
   init_scale: 0.1
   microsteps: 1
   field_clip: null
+  init_steps: 333
 
 task:
   steps: 500
@@ -42,7 +43,11 @@ task:
   go_frequency: 1.5
   go_angle: 90.0
   pattern_scale: 0.1
+  trigger_scale: 1.0
+  go_scale: 1.0
   go_pattern_type: random
+  output_window_steps: null
+  response_after_cue: false
 
 learning:
   training_trials: 20

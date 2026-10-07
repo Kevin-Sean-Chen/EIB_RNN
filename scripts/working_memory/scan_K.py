@@ -17,7 +17,10 @@ from src.io import create_run_directory, runtime_metadata, save_csv, save_json, 
 from src.tasks.working_memory import WORKING_MEMORY_SECTIONS, WorkingMemoryConfig
 
 
-METRIC_FIELDS = ["K", "output_mse", "memory_mse", "output_r2", "memory_r2"]
+METRIC_FIELDS = [
+    "K", "output_mse", "memory_mse", "output_r2", "memory_r2",
+    "final_output_accuracy",
+]
 
 
 def parse_args() -> argparse.Namespace:
